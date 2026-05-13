@@ -1,0 +1,70 @@
+{
+  "name": "Incident",
+  "type": "object",
+  "properties": {
+    "incident_number": {
+      "type": "string",
+      "description": "Incident/CAD number"
+    },
+    "address": {
+      "type": "string",
+      "description": "Incident address"
+    },
+    "incident_type": {
+      "type": "string",
+      "enum": [
+        "structure_fire",
+        "wildland_fire",
+        "vehicle_fire",
+        "hazmat",
+        "rescue",
+        "mci",
+        "other"
+      ],
+      "default": "structure_fire"
+    },
+    "alarm_level": {
+      "type": "string",
+      "enum": [
+        "1st_alarm",
+        "2nd_alarm",
+        "3rd_alarm",
+        "4th_alarm",
+        "5th_alarm",
+        "task_force",
+        "strike_team"
+      ],
+      "default": "1st_alarm"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "under_control",
+        "overhaul",
+        "cleared"
+      ],
+      "default": "active"
+    },
+    "ic_name": {
+      "type": "string",
+      "description": "Incident Commander name"
+    },
+    "command_name": {
+      "type": "string",
+      "description": "Command name (e.g., 'Main Street Command')"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time incident started"
+    },
+    "notes": {
+      "type": "string",
+      "description": "General incident notes"
+    }
+  },
+  "required": [
+    "address"
+  ]
+}

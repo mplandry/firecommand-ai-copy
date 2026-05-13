@@ -1,0 +1,49 @@
+{
+  "name": "RadioLog",
+  "type": "object",
+  "properties": {
+    "incident_id": {
+      "type": "string",
+      "description": "Related incident ID"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "from_unit": {
+      "type": "string",
+      "description": "Unit transmitting"
+    },
+    "to_unit": {
+      "type": "string",
+      "description": "Unit being called"
+    },
+    "message": {
+      "type": "string",
+      "description": "Radio transmission text"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "routine",
+        "urgent",
+        "emergency",
+        "mayday"
+      ],
+      "default": "routine"
+    },
+    "parsed_action": {
+      "type": "string",
+      "description": "AI-parsed action from transmission"
+    },
+    "auto_applied": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the parsed action was auto-applied to the board"
+    }
+  },
+  "required": [
+    "incident_id",
+    "message"
+  ]
+}

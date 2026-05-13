@@ -1,0 +1,96 @@
+{
+  "name": "Unit",
+  "type": "object",
+  "properties": {
+    "incident_id": {
+      "type": "string",
+      "description": "Related incident ID"
+    },
+    "unit_name": {
+      "type": "string",
+      "description": "Unit designator (e.g., Engine 2, Truck 1, Rescue 3)"
+    },
+    "unit_type": {
+      "type": "string",
+      "enum": [
+        "engine",
+        "truck",
+        "rescue",
+        "squad",
+        "battalion",
+        "medic",
+        "tanker",
+        "brush",
+        "hazmat",
+        "other"
+      ],
+      "default": "engine"
+    },
+    "assignment": {
+      "type": "string",
+      "enum": [
+        "staging",
+        "division_a",
+        "division_b",
+        "division_c",
+        "division_d",
+        "roof",
+        "interior",
+        "rit",
+        "rehab",
+        "water_supply",
+        "ventilation",
+        "search",
+        "medical",
+        "exposure",
+        "unassigned"
+      ],
+      "default": "unassigned"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "dispatched",
+        "responding",
+        "on_scene",
+        "working",
+        "par",
+        "mayday",
+        "available",
+        "rehab",
+        "out_of_service"
+      ],
+      "default": "dispatched"
+    },
+    "personnel_count": {
+      "type": "number",
+      "description": "Number of personnel on unit"
+    },
+    "officer": {
+      "type": "string",
+      "description": "Officer/Company officer name"
+    },
+    "on_scene_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time unit arrived on scene"
+    },
+    "last_par_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last PAR check time"
+    },
+    "air_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time personnel went on air (SCBA)"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "unit_name",
+    "incident_id"
+  ]
+}
