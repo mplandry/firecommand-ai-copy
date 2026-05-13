@@ -18,7 +18,7 @@ import ConnectionStatus from '@/components/command/ConnectionStatus';
 import StructureTactical from '@/components/command/StructureTactical';
 import FloorTracker from '@/components/command/FloorTracker';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { enqueue, getCached, setCached } from '@/lib/offlineQueue';
+import { enqueue, getCached, setCached, patchCachedUnit, addCachedUnit, addCachedRadioLog } from '@/lib/offlineQueue';
 
 const BOARD_SECTIONS = [
   ['division_a', 'division_b', 'division_c', 'division_d'],
@@ -56,6 +56,7 @@ export default function CommandBoard() {
       setCached(incidentId, { units: data });
       return data;
     },
+    placeholderData: () => getCached(incidentId).units || [],
     enabled: !!incidentId,
     staleTime: 30000,
   });
@@ -68,6 +69,7 @@ export default function CommandBoard() {
       setCached(incidentId, { radioLogs: data });
       return data;
     },
+    placeholderData: () => getCached(incidentId).radioLogs || [],
     enabled: !!incidentId,
     staleTime: 30000,
   });
@@ -81,7 +83,13 @@ export default function CommandBoard() {
   const createUnit = useMutation({
     mutationFn: async (data) => {
       const payload = { ...data, incident_id: incidentId };
-      if (!navigator.onLine) { enqueue({ type: 'unit_create', data: payload }); updatePending(); return payload; }
+      if (!navigator.onLine) {
+        const tempUnit = { ...payload, id: `offline_${Date.now()}`, created_date: new Date().toISOString() };
+        enqueue({ type: 'unit_create', data: payload });
+        addCachedUnit(incidentId, tempUnit);
+        updatePending();
+        return tempUnit;
+      }
       return base44.entities.Unit.create(payload);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['units', incidentId] }),
@@ -89,7 +97,12 @@ export default function CommandBoard() {
 
   const updateUnit = useMutation({
     mutationFn: async ({ id, data }) => {
-      if (!navigator.onLine) { enqueue({ type: 'unit_update', id, data }); updatePending(); return data; }
+      if (!navigator.onLine) {
+        enqueue({ type: 'unit_update', id, data });
+        patchCachedUnit(incidentId, id, data);
+        updatePending();
+        return data;
+      }
       return base44.entities.Unit.update(id, data);
     },
     onSuccess: () => {
@@ -108,7 +121,13 @@ export default function CommandBoard() {
 
   const createRadioLog = useMutation({
     mutationFn: async (data) => {
-      if (!navigator.onLine) { enqueue({ type: 'radio_log_create', data }); updatePending(); return data; }
+      if (!navigator.onLine) {
+        const tempLog = { ...data, id: `offline_${Date.now()}`, created_date: new Date().toISOString() };
+        enqueue({ type: 'radio_log_create', data });
+        addCachedRadioLog(incidentId, tempLog);
+        updatePending();
+        return tempLog;
+      }
       return base44.entities.RadioLog.create(data);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['radioLogs', incidentId] }),
@@ -149,8 +168,13 @@ export default function CommandBoard() {
             updateData.on_scene_time = new Date().toISOString();
           }
           if (Object.keys(updateData).length > 0) {
-            if (!navigator.onLine) { enqueue({ type: 'unit_update', id: existingUnit.id, data: updateData }); updatePending(); }
-            else { await base44.entities.Unit.update(existingUnit.id, updateData); }
+            if (!navigator.onLine) {
+              enqueue({ type: 'unit_update', id: existingUnit.id, data: updateData });
+              patchCachedUnit(incidentId, existingUnit.id, updateData);
+              updatePending();
+            } else {
+              await base44.entities.Unit.update(existingUnit.id, updateData);
+            }
           }
         }
       }
@@ -167,8 +191,14 @@ export default function CommandBoard() {
             status: newUnit.status || 'dispatched',
             assignment: newUnit.assignment || 'unassigned',
           };
-          if (!navigator.onLine) { enqueue({ type: 'unit_create', data: newUnitPayload }); updatePending(); }
-          else { await base44.entities.Unit.create(newUnitPayload); }
+          if (!navigator.onLine) {
+            const tempUnit = { ...newUnitPayload, id: `offline_${Date.now()}`, created_date: new Date().toISOString() };
+            enqueue({ type: 'unit_create', data: newUnitPayload });
+            addCachedUnit(incidentId, tempUnit);
+            updatePending();
+          } else {
+            await base44.entities.Unit.create(newUnitPayload);
+          }
         }
       }
     }
