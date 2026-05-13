@@ -6,6 +6,8 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import CommandBoard from './pages/CommandBoard';
+import IncidentsDashboard from './pages/IncidentsDashboard';
+import DepartmentSettings from './pages/DepartmentSettings';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -34,7 +36,9 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={<CommandBoard />} />
+      <Route path="/" element={<IncidentsDashboard />} />
+      <Route path="/incident/:incidentId" element={<CommandBoard />} />
+      <Route path="/settings" element={<DepartmentSettings />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

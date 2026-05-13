@@ -35,7 +35,7 @@ export default function IncidentHeader({ incident, onStatusChange }) {
   if (!incident) return null;
 
   return (
-    <div className="bg-card border-b border-border px-4 py-3">
+    <div className="flex-1 px-2 py-1">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
