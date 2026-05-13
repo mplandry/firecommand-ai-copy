@@ -11,6 +11,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
     unit_type: 'engine',
     status: 'dispatched',
     assignment: 'unassigned',
+    floor: '',
     personnel_count: 4,
     officer: '',
   });
@@ -18,7 +19,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
   const handleCreate = () => {
     if (!form.unit_name.trim()) return;
     onCreate(form);
-    setForm({ unit_name: '', unit_type: 'engine', status: 'dispatched', assignment: 'unassigned', personnel_count: 4, officer: '' });
+    setForm({ unit_name: '', unit_type: 'engine', status: 'dispatched', assignment: 'unassigned', floor: '', personnel_count: 4, officer: '' });
   };
 
   return (
@@ -67,6 +68,27 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
                 className="bg-secondary font-mono"
               />
             </div>
+          </div>
+          <div>
+            <Label className="text-xs font-mono">Floor / Level</Label>
+            <Select value={form.floor || 'none'} onValueChange={(v) => setForm({ ...form, floor: v === 'none' ? '' : v })}>
+              <SelectTrigger className="bg-secondary font-mono text-xs">
+                <SelectValue placeholder="No floor assigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— No floor —</SelectItem>
+                <SelectItem value="Basement">Basement</SelectItem>
+                <SelectItem value="1st Floor">1st Floor</SelectItem>
+                <SelectItem value="2nd Floor">2nd Floor</SelectItem>
+                <SelectItem value="3rd Floor">3rd Floor</SelectItem>
+                <SelectItem value="4th Floor">4th Floor</SelectItem>
+                <SelectItem value="5th Floor">5th Floor</SelectItem>
+                <SelectItem value="6th Floor">6th Floor</SelectItem>
+                <SelectItem value="7th Floor">7th Floor</SelectItem>
+                <SelectItem value="8th Floor">8th Floor</SelectItem>
+                <SelectItem value="Roof">Roof</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label className="text-xs font-mono">Officer</Label>

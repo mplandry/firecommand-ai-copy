@@ -110,6 +110,7 @@ FIREGROUND TERMINOLOGY REFERENCE:
 - "out of service" / "OOS" = status → out_of_service
 - "working fire" / "working" = status → working
 - "dispatched" / "responding" = status → dispatched or responding
+- "first floor" / "second floor" / "floor 2" / "3rd floor" / "basement" / "roof" = set floor field (e.g., "1st Floor", "2nd Floor", "Basement", "Roof")
 
 Respond with JSON:
 {
@@ -122,6 +123,7 @@ Respond with JSON:
       "changes": {
         "status": "new status or null",
         "assignment": "new assignment or null",
+        "floor": "floor label or null (e.g. '2nd Floor', 'Basement', 'Roof')",
         "set_air_time": true/false,
         "personnel_count": number or null,
         "officer": "name or null"
@@ -157,7 +159,8 @@ Respond with JSON:
                     assignment: { type: 'string' },
                     set_air_time: { type: 'boolean' },
                     personnel_count: { type: 'number' },
-                    officer: { type: 'string' }
+                    officer: { type: 'string' },
+                    floor: { type: 'string' }
                   }
                 }
               }

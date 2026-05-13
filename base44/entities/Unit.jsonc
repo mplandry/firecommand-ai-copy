@@ -47,6 +47,10 @@
       ],
       "default": "unassigned"
     },
+    "floor": {
+      "type": "string",
+      "description": "Floor/level assignment (e.g., '1', '2', 'Basement', 'Roof')"
+    },
     "status": {
       "type": "string",
       "enum": [

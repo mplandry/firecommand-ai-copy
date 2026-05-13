@@ -79,6 +79,11 @@ export default function UnitCard({ unit, onStatusChange, onEdit }) {
             <Users className="w-3 h-3" /> {unit.personnel_count}
           </span>
         )}
+        {unit.floor && (
+          <span className="flex items-center gap-1 font-mono text-cyan-400 font-semibold">
+            ▲ {unit.floor}
+          </span>
+        )}
         {unit.air_time && airElapsed && (
           <span className="flex items-center gap-1 text-accent font-mono">
             <Wind className="w-3 h-3" /> {airElapsed}

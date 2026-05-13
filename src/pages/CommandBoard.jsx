@@ -15,6 +15,7 @@ import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import ExportIncidentPDF from '@/components/command/ExportIncidentPDF';
 import ConnectionStatus from '@/components/command/ConnectionStatus';
 import StructureTactical from '@/components/command/StructureTactical';
+import FloorTracker from '@/components/command/FloorTracker';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { enqueue, getCached, setCached } from '@/lib/offlineQueue';
 
@@ -138,6 +139,7 @@ export default function CommandBoard() {
           const updateData = {};
           if (action.changes.status) updateData.status = action.changes.status;
           if (action.changes.assignment) updateData.assignment = action.changes.assignment;
+          if (action.changes.floor) updateData.floor = action.changes.floor;
           if (action.changes.set_air_time) updateData.air_time = new Date().toISOString();
           if (action.changes.personnel_count) updateData.personnel_count = action.changes.personnel_count;
           if (action.changes.officer) updateData.officer = action.changes.officer;
@@ -287,6 +289,7 @@ export default function CommandBoard() {
 
         <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border flex flex-col overflow-y-auto p-4 gap-4">
           <StructureTactical units={units} />
+          <FloorTracker units={units} />
           <PARTracker units={units} onRequestPAR={isReadOnly ? null : handleRequestAllPAR} />
           <RadioLogPanel logs={radioLogs} />
         </div>
