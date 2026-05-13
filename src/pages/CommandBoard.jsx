@@ -10,6 +10,7 @@ import DivisionColumn from '@/components/command/DivisionColumn';
 import RadioInput from '@/components/command/RadioInput';
 import RadioLogPanel from '@/components/command/RadioLogPanel';
 import PARTracker from '@/components/command/PARTracker';
+import ICAccountabilitySummary from '@/components/command/ICAccountabilitySummary';
 import EditUnitDialog from '@/components/command/EditUnitDialog';
 import AddUnitDialog from '@/components/command/AddUnitDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
@@ -352,6 +353,7 @@ export default function CommandBoard() {
         </div>
 
         <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border flex flex-col overflow-y-auto p-4 gap-4">
+          <ICAccountabilitySummary units={units} />
           <StructureTactical
             units={units}
             onUpdateUnit={isReadOnly ? null : (unit, data) => updateUnit.mutate({ id: unit.id, data })}
