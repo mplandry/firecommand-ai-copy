@@ -14,6 +14,7 @@ import AddUnitDialog from '@/components/command/AddUnitDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import ExportIncidentPDF from '@/components/command/ExportIncidentPDF';
 import ConnectionStatus from '@/components/command/ConnectionStatus';
+import StructureTactical from '@/components/command/StructureTactical';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { enqueue, getCached, setCached } from '@/lib/offlineQueue';
 
@@ -285,6 +286,7 @@ export default function CommandBoard() {
         </div>
 
         <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border flex flex-col overflow-y-auto p-4 gap-4">
+          <StructureTactical units={units} />
           <PARTracker units={units} onRequestPAR={isReadOnly ? null : handleRequestAllPAR} />
           <RadioLogPanel logs={radioLogs} />
         </div>
