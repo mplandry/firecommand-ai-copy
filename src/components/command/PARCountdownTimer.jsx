@@ -3,7 +3,7 @@ import { Timer, AlertTriangle, RotateCcw, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // How long (in minutes) before a PAR check is considered overdue
-const PAR_INTERVAL_MINUTES = 10;
+const PAR_INTERVAL_MINUTES = 20;
 const PAR_WARNING_MINUTES = 2; // warn when this many minutes remain
 const TOTAL_SECONDS = PAR_INTERVAL_MINUTES * 60;
 const WARNING_SECONDS = PAR_WARNING_MINUTES * 60;
