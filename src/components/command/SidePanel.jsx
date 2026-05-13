@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { ShieldCheck, LayoutGrid, CheckCircle, Layers, Map } from 'lucide-react';
+import { ShieldCheck, LayoutGrid, CheckCircle, Layers, Map, Maximize2 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import ICAccountabilitySummary from './ICAccountabilitySummary';
 import StructureTactical from './StructureTactical';
 import PARTracker from './PARTracker';
@@ -18,6 +19,8 @@ const TABS = [
 
 export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, onRequestPAR, onMarkUnitPAR }) {
   const [activeTab, setActiveTab] = useState('ic');
+  const navigate = useNavigate();
+  const { incidentId } = useParams();
 
   // Track the most recent radio log timestamp to reset PAR timer
   const lastRadioLogTime = useMemo(() => {
@@ -52,6 +55,13 @@ export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, 
             {label}
           </button>
         ))}
+        <button
+          onClick={() => navigate(`/incident/${incidentId}/panel?tab=${activeTab}`)}
+          className="px-2 py-2.5 text-muted-foreground hover:text-foreground hover:bg-secondary/40 border-b-2 border-transparent transition-colors"
+          title="Expand to full page"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* Panel content */}
