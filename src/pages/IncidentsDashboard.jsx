@@ -64,9 +64,24 @@ export default function IncidentsDashboard() {
   });
 
   const createIncident = useMutation({
-    mutationFn: (data) => base44.entities.Incident.create(data),
+    mutationFn: async (data) => {
+      const { _template, ...incidentData } = data;
+      const incident = await base44.entities.Incident.create(incidentData);
+      if (_template?.units?.length > 0) {
+        await base44.entities.Unit.bulkCreate(
+          _template.units.map(u => ({
+            ...u,
+            incident_id: incident.id,
+            floor: u.floor || undefined,
+            on_scene_time: new Date().toISOString(),
+          }))
+        );
+      }
+      return incident;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidents-all'] });
+      queryClient.invalidateQueries({ queryKey: ['unit-counts'] });
       setShowNew(false);
     },
   });
