@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +76,19 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
     command_name: '',
   });
 
-  const selectedTemplate = INCIDENT_TEMPLATES.find(t => t.id === selectedTemplateId) || null;
+  const { data: savedTemplates = [] } = useQuery({
+    queryKey: ['incident-templates'],
+    queryFn: () => base44.entities.IncidentTemplate.list('-created_date', 100),
+    enabled: open,
+  });
+
+  // Saved templates get a prefixed id to avoid collision with built-ins
+  const allTemplates = [
+    ...savedTemplates.map(t => ({ ...t, _saved: true })),
+    ...INCIDENT_TEMPLATES,
+  ];
+
+  const selectedTemplate = allTemplates.find(t => t.id === selectedTemplateId) || null;
 
   const handleNext = () => {
     if (selectedTemplate) {
@@ -142,6 +156,17 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
               </div>
             </button>
 
+            {savedTemplates.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Custom Templates</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {savedTemplates.map(t => (
+                    <TemplateCard key={t.id} template={t} selected={selectedTemplateId} onSelect={setSelectedTemplateId} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Built-in Templates</p>
             <div className="grid grid-cols-1 gap-2">
               {INCIDENT_TEMPLATES.map(t => (
                 <TemplateCard

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser } from 'lucide-react';
+import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, LayoutTemplate } from 'lucide-react';
 import NewIncidentDialog from '@/components/command/NewIncidentDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import { formatDistanceToNow } from 'date-fns';
@@ -111,6 +111,11 @@ export default function IncidentsDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link to="/templates">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+              <LayoutTemplate className="w-4 h-4" /> Templates
+            </Button>
+          </Link>
           <Link to="/roster">
             <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
               <BookUser className="w-4 h-4" /> Roster

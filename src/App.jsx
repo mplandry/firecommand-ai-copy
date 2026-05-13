@@ -11,6 +11,7 @@ import DepartmentSettings from './pages/DepartmentSettings';
 import TerminologySettings from './pages/TerminologySettings';
 import AccountabilityDashboard from './pages/AccountabilityDashboard';
 import RosterManager from './pages/RosterManager';
+import TemplateManager from './pages/TemplateManager';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -45,6 +46,7 @@ const AuthenticatedApp = () => {
       <Route path="/terminology" element={<TerminologySettings />} />
       <Route path="/incident/:incidentId/accountability" element={<AccountabilityDashboard />} />
       <Route path="/roster" element={<RosterManager />} />
+      <Route path="/templates" element={<TemplateManager />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

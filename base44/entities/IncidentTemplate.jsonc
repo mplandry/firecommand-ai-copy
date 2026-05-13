@@ -1,0 +1,74 @@
+{
+  "name": "IncidentTemplate",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "description": "Template display name (e.g. 'Commercial Alarm')"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji icon"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of the scenario"
+    },
+    "incident_type": {
+      "type": "string",
+      "enum": [
+        "structure_fire",
+        "wildland_fire",
+        "vehicle_fire",
+        "hazmat",
+        "rescue",
+        "mci",
+        "other"
+      ],
+      "default": "structure_fire"
+    },
+    "alarm_level": {
+      "type": "string",
+      "enum": [
+        "1st_alarm",
+        "2nd_alarm",
+        "3rd_alarm",
+        "4th_alarm",
+        "5th_alarm",
+        "task_force",
+        "strike_team"
+      ],
+      "default": "1st_alarm"
+    },
+    "units": {
+      "type": "array",
+      "description": "Units to pre-populate on the board",
+      "items": {
+        "type": "object",
+        "properties": {
+          "unit_name": {
+            "type": "string"
+          },
+          "unit_type": {
+            "type": "string"
+          },
+          "assignment": {
+            "type": "string"
+          },
+          "floor": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "personnel_count": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "label"
+  ]
+}
