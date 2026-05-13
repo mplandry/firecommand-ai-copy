@@ -292,7 +292,10 @@ export default function CommandBoard() {
             units={units}
             onUpdateUnit={isReadOnly ? null : (unit, data) => updateUnit.mutate({ id: unit.id, data })}
           />
-          <FloorTracker units={units} />
+          <FloorTracker
+            units={units}
+            onUpdateUnit={isReadOnly ? null : (unit, data) => updateUnit.mutate({ id: unit.id, data })}
+          />
           <PARTracker units={units} onRequestPAR={isReadOnly ? null : handleRequestAllPAR} />
           <RadioLogPanel logs={radioLogs} />
         </div>
