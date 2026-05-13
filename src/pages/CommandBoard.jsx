@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor } from 'lucide-react';
 import IncidentHeader from '@/components/command/IncidentHeader';
 import RosterUploadDialog from '@/components/command/RosterUploadDialog';
 import DivisionColumn from '@/components/command/DivisionColumn';
@@ -274,6 +274,11 @@ export default function CommandBoard() {
           <Link to={`/incident/${incidentId}/accountability`}>
             <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground">
               <ShieldCheck className="w-3.5 h-3.5" /> Accountability
+            </Button>
+          </Link>
+          <Link to={`/incident/${incidentId}/kiosk`}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+              <Monitor className="w-3.5 h-3.5" /> Kiosk
             </Button>
           </Link>
           {!isReadOnly && (
