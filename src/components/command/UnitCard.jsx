@@ -94,6 +94,12 @@ export default function UnitCard({ unit, onStatusChange, onEdit }) {
         )}
       </div>
 
+      {unit.personnel?.length > 0 && (
+        <div className="mt-1 text-[10px] font-mono text-muted-foreground/70 truncate">
+          {unit.personnel.join(' · ')}
+        </div>
+      )}
+
       {isMayday && (
         <div className="mt-1.5 flex items-center gap-1 text-red-400 text-xs font-bold">
           <AlertTriangle className="w-3.5 h-3.5" />

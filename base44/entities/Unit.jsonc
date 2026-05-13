@@ -74,6 +74,13 @@
       "type": "string",
       "description": "Officer/Company officer name"
     },
+    "personnel": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of personnel names assigned to this unit"
+    },
     "on_scene_time": {
       "type": "string",
       "format": "date-time",

@@ -186,6 +186,7 @@ export default function CommandBoard() {
         status: u.status || 'dispatched',
         personnel_count: u.personnel_count || null,
         officer: u.officer || null,
+        personnel: u.personnel || [],
         incident_id: incidentId,
       };
       if (existing) {
