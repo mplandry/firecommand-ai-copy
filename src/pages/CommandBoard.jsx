@@ -3,8 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine } from 'lucide-react';
 import IncidentHeader from '@/components/command/IncidentHeader';
+import RosterUploadDialog from '@/components/command/RosterUploadDialog';
 import DivisionColumn from '@/components/command/DivisionColumn';
 import RadioInput from '@/components/command/RadioInput';
 import RadioLogPanel from '@/components/command/RadioLogPanel';
@@ -32,6 +33,7 @@ export default function CommandBoard() {
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
   const [showClose, setShowClose] = useState(false);
+  const [showRosterUpload, setShowRosterUpload] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: incident, isLoading: loadingIncident } = useQuery({
@@ -174,6 +176,27 @@ export default function CommandBoard() {
     queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
   };
 
+  const handleImportRoster = async (parsedUnits) => {
+    for (const u of parsedUnits) {
+      const existing = units.find(e => e.unit_name.toLowerCase() === u.unit_name.toLowerCase());
+      const payload = {
+        unit_name: u.unit_name,
+        unit_type: u.unit_type,
+        assignment: u.assignment,
+        status: u.status || 'dispatched',
+        personnel_count: u.personnel_count || null,
+        officer: u.officer || null,
+        incident_id: incidentId,
+      };
+      if (existing) {
+        await base44.entities.Unit.update(existing.id, payload);
+      } else {
+        await base44.entities.Unit.create({ ...payload, on_scene_time: new Date().toISOString() });
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
+  };
+
   const handleRequestAllPAR = () => {
     const workingUnits = units.filter(u => ['on_scene', 'working', 'par'].includes(u.status));
     const parData = { last_par_time: new Date().toISOString(), status: 'par' };
@@ -220,6 +243,16 @@ export default function CommandBoard() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <ConnectionStatus isOnline={isOnline} pendingCount={pendingCount} replaying={replaying} />
+          {!isReadOnly && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs text-muted-foreground"
+                onClick={() => setShowRosterUpload(true)}
+              >
+                <ScanLine className="w-3.5 h-3.5" /> Roster
+              </Button>
+            )}
           <ExportIncidentPDF
             incident={incident}
             units={units}
@@ -317,6 +350,12 @@ export default function CommandBoard() {
             onClose={() => setEditingUnit(null)}
             onSave={(form) => updateUnit.mutate({ id: form.id, data: form })}
             onDelete={(id) => deleteUnit.mutate(id)}
+          />
+          <RosterUploadDialog
+            open={showRosterUpload}
+            onClose={() => setShowRosterUpload(false)}
+            existingUnits={units}
+            onImportUnits={handleImportRoster}
           />
           <CloseIncidentDialog
             incident={incident}
