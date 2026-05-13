@@ -14,6 +14,13 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
   const [isListening, setIsListening] = useState(false);
   const [listenError, setListenError] = useState('');
   const recognitionRef = useRef(null);
+  const [corrections, setCorrections] = useState([]);
+
+  useEffect(() => {
+    base44.entities.TerminologyCorrection.list('-created_date', 50)
+      .then(data => setCorrections(data || []))
+      .catch(() => {});
+  }, []);
 
   const hasSpeech = !!SpeechRecognition;
 
@@ -78,9 +85,17 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     const finalMessage = isMayday ? `MAYDAY MAYDAY MAYDAY — ${message}` : message;
     const unitNames = units.map(u => u.unit_name).join(', ');
 
+    const correctionExamples = corrections.length > 0
+      ? `\nLEARNED CORRECTIONS FROM THIS DEPARTMENT (apply these first — highest priority):\n` +
+        corrections.map(c =>
+          `  - "${c.raw_phrase}" → unit: ${c.correct_unit || '?'}, assignment: ${c.correct_assignment || '?'}, status: ${c.correct_status || '?'}` +
+          (c.correct_summary ? ` (meaning: ${c.correct_summary})` : '')
+        ).join('\n')
+      : '';
+
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are an expert fire department radio traffic parser for an Incident Command System (ICS) tactical board.
-
+${correctionExamples}
 CURRENT UNITS ON SCENE (match against these exactly — use fuzzy matching for spoken/spelled variants):
 ${units.map(u => `  - "${u.unit_name}" (type: ${u.unit_type})`).join('\n')}
 

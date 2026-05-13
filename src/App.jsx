@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import CommandBoard from './pages/CommandBoard';
 import IncidentsDashboard from './pages/IncidentsDashboard';
 import DepartmentSettings from './pages/DepartmentSettings';
+import TerminologySettings from './pages/TerminologySettings';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -39,6 +40,7 @@ const AuthenticatedApp = () => {
       <Route path="/" element={<IncidentsDashboard />} />
       <Route path="/incident/:incidentId" element={<CommandBoard />} />
       <Route path="/settings" element={<DepartmentSettings />} />
+      <Route path="/terminology" element={<TerminologySettings />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

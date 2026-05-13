@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Radio, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import RadioLogFeedback from './RadioLogFeedback';
 
 const priorityColors = {
   routine: 'text-muted-foreground',
@@ -18,7 +19,7 @@ const priorityBadge = {
   mayday: 'bg-red-600/30 text-red-300 border-red-500/50',
 };
 
-export default function RadioLogPanel({ logs }) {
+export default function RadioLogPanel({ logs, isReadOnly }) {
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden h-full flex flex-col">
       <div className="px-4 py-3 bg-secondary/50 border-b border-border flex items-center gap-2">
@@ -69,6 +70,7 @@ export default function RadioLogPanel({ logs }) {
                   ↳ {log.parsed_action}
                 </p>
               )}
+              {!isReadOnly && <RadioLogFeedback log={log} />}
             </div>
           ))}
         </div>

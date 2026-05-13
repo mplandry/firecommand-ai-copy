@@ -1,0 +1,38 @@
+{
+  "name": "TerminologyCorrection",
+  "type": "object",
+  "properties": {
+    "raw_phrase": {
+      "type": "string",
+      "description": "The original spoken/typed phrase that was misunderstood"
+    },
+    "correct_unit": {
+      "type": "string",
+      "description": "The correct unit name it should have matched"
+    },
+    "correct_assignment": {
+      "type": "string",
+      "description": "The correct assignment it should have applied"
+    },
+    "correct_status": {
+      "type": "string",
+      "description": "The correct status it should have applied"
+    },
+    "correct_summary": {
+      "type": "string",
+      "description": "What the transmission actually meant"
+    },
+    "original_summary": {
+      "type": "string",
+      "description": "What the AI originally interpreted it as"
+    },
+    "confirmed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this correction was confirmed as accurate"
+    }
+  },
+  "required": [
+    "raw_phrase"
+  ]
+}

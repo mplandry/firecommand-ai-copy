@@ -331,7 +331,7 @@ export default function CommandBoard() {
             onUpdateUnit={isReadOnly ? null : (unit, data) => updateUnit.mutate({ id: unit.id, data })}
           />
           <PARTracker units={units} onRequestPAR={isReadOnly ? null : handleRequestAllPAR} />
-          <RadioLogPanel logs={radioLogs} />
+          <RadioLogPanel logs={radioLogs} isReadOnly={isReadOnly} />
         </div>
       </div>
 
