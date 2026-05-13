@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -13,6 +13,9 @@ import EditUnitDialog from '@/components/command/EditUnitDialog';
 import AddUnitDialog from '@/components/command/AddUnitDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import ExportIncidentPDF from '@/components/command/ExportIncidentPDF';
+import ConnectionStatus from '@/components/command/ConnectionStatus';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { enqueue, getCached, setCached } from '@/lib/offlineQueue';
 
 const BOARD_SECTIONS = [
   ['division_a', 'division_b', 'division_c', 'division_d'],
@@ -36,16 +39,33 @@ export default function CommandBoard() {
     enabled: !!incidentId,
   });
 
+  const { isOnline, pendingCount, replaying, updatePending } = useOnlineStatus(() => {
+    queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
+    queryClient.invalidateQueries({ queryKey: ['radioLogs', incidentId] });
+  });
+
   const { data: units = [] } = useQuery({
     queryKey: ['units', incidentId],
-    queryFn: () => base44.entities.Unit.filter({ incident_id: incidentId }),
+    queryFn: async () => {
+      if (!navigator.onLine) return getCached(incidentId).units || [];
+      const data = await base44.entities.Unit.filter({ incident_id: incidentId });
+      setCached(incidentId, { units: data });
+      return data;
+    },
     enabled: !!incidentId,
+    staleTime: 30000,
   });
 
   const { data: radioLogs = [] } = useQuery({
     queryKey: ['radioLogs', incidentId],
-    queryFn: () => base44.entities.RadioLog.filter({ incident_id: incidentId }, '-created_date', 100),
+    queryFn: async () => {
+      if (!navigator.onLine) return getCached(incidentId).radioLogs || [];
+      const data = await base44.entities.RadioLog.filter({ incident_id: incidentId }, '-created_date', 100);
+      setCached(incidentId, { radioLogs: data });
+      return data;
+    },
     enabled: !!incidentId,
+    staleTime: 30000,
   });
 
   const { data: departments = [] } = useQuery({
@@ -55,12 +75,19 @@ export default function CommandBoard() {
   const department = departments[0] || null;
 
   const createUnit = useMutation({
-    mutationFn: (data) => base44.entities.Unit.create({ ...data, incident_id: incidentId }),
+    mutationFn: async (data) => {
+      const payload = { ...data, incident_id: incidentId };
+      if (!navigator.onLine) { enqueue({ type: 'unit_create', data: payload }); updatePending(); return payload; }
+      return base44.entities.Unit.create(payload);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['units', incidentId] }),
   });
 
   const updateUnit = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Unit.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      if (!navigator.onLine) { enqueue({ type: 'unit_update', id, data }); updatePending(); return data; }
+      return base44.entities.Unit.update(id, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
       setEditingUnit(null);
@@ -76,7 +103,10 @@ export default function CommandBoard() {
   });
 
   const createRadioLog = useMutation({
-    mutationFn: (data) => base44.entities.RadioLog.create(data),
+    mutationFn: async (data) => {
+      if (!navigator.onLine) { enqueue({ type: 'radio_log_create', data }); updatePending(); return data; }
+      return base44.entities.RadioLog.create(data);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['radioLogs', incidentId] }),
   });
 
@@ -114,7 +144,8 @@ export default function CommandBoard() {
             updateData.on_scene_time = new Date().toISOString();
           }
           if (Object.keys(updateData).length > 0) {
-            await base44.entities.Unit.update(existingUnit.id, updateData);
+            if (!navigator.onLine) { enqueue({ type: 'unit_update', id: existingUnit.id, data: updateData }); updatePending(); }
+            else { await base44.entities.Unit.update(existingUnit.id, updateData); }
           }
         }
       }
@@ -124,13 +155,15 @@ export default function CommandBoard() {
       for (const newUnit of parsed.new_units) {
         const exists = units.find(u => u.unit_name.toLowerCase() === newUnit.unit_name?.toLowerCase());
         if (!exists) {
-          await base44.entities.Unit.create({
+          const newUnitPayload = {
             incident_id: incidentId,
             unit_name: newUnit.unit_name,
             unit_type: newUnit.unit_type || 'engine',
             status: newUnit.status || 'dispatched',
             assignment: newUnit.assignment || 'unassigned',
-          });
+          };
+          if (!navigator.onLine) { enqueue({ type: 'unit_create', data: newUnitPayload }); updatePending(); }
+          else { await base44.entities.Unit.create(newUnitPayload); }
         }
       }
     }
@@ -140,9 +173,12 @@ export default function CommandBoard() {
 
   const handleRequestAllPAR = () => {
     const workingUnits = units.filter(u => ['on_scene', 'working', 'par'].includes(u.status));
+    const parData = { last_par_time: new Date().toISOString(), status: 'par' };
     workingUnits.forEach(unit => {
-      base44.entities.Unit.update(unit.id, { last_par_time: new Date().toISOString(), status: 'par' });
+      if (!navigator.onLine) { enqueue({ type: 'unit_update', id: unit.id, data: parData }); }
+      else { base44.entities.Unit.update(unit.id, parData); }
     });
+    if (!navigator.onLine) updatePending();
     queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
   };
 
@@ -180,6 +216,7 @@ export default function CommandBoard() {
           <IncidentHeader incident={incident} />
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <ConnectionStatus isOnline={isOnline} pendingCount={pendingCount} replaying={replaying} />
           <ExportIncidentPDF
             incident={incident}
             units={units}
