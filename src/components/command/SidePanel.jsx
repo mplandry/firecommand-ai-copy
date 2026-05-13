@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ShieldCheck, LayoutGrid, CheckCircle, Layers } from 'lucide-react';
 import ICAccountabilitySummary from './ICAccountabilitySummary';
 import StructureTactical from './StructureTactical';
 import PARTracker from './PARTracker';
 import FloorTracker from './FloorTracker';
 import RadioLogPanel from './RadioLogPanel';
+import PARCountdownTimer from './PARCountdownTimer';
 
 const TABS = [
   { id: 'ic',       label: 'IC Summary',  icon: ShieldCheck },
@@ -16,8 +17,23 @@ const TABS = [
 export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, onRequestPAR, onMarkUnitPAR }) {
   const [activeTab, setActiveTab] = useState('ic');
 
+  // Track the most recent radio log timestamp to reset PAR timer
+  const lastRadioLogTime = useMemo(() => {
+    if (!radioLogs?.length) return null;
+    const sorted = [...radioLogs].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    return sorted[0]?.created_date || null;
+  }, [radioLogs]);
+
   return (
     <div className="flex flex-col border-t lg:border-t-0 lg:border-l border-border bg-card/50">
+      {/* PAR Countdown — always visible above tabs */}
+      {!isReadOnly && (
+        <PARCountdownTimer
+          lastRadioLogTime={lastRadioLogTime}
+          onRequestPAR={onRequestPAR}
+          isReadOnly={isReadOnly}
+        />
+      )}
       {/* Tab bar */}
       <div className="flex border-b border-border shrink-0">
         {TABS.map(({ id, label, icon: Icon }) => (
