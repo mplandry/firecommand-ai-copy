@@ -1,0 +1,62 @@
+{
+  "name": "Roster",
+  "type": "object",
+  "properties": {
+    "shift": {
+      "type": "string",
+      "enum": [
+        "day",
+        "night"
+      ],
+      "description": "Day or night shift"
+    },
+    "shift_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the shift"
+    },
+    "unit_name": {
+      "type": "string",
+      "description": "Unit designator (e.g. Engine 1, Truck 3)"
+    },
+    "unit_type": {
+      "type": "string",
+      "enum": [
+        "engine",
+        "truck",
+        "rescue",
+        "squad",
+        "battalion",
+        "medic",
+        "tanker",
+        "brush",
+        "hazmat",
+        "other"
+      ],
+      "default": "engine"
+    },
+    "officer": {
+      "type": "string",
+      "description": "Officer / Company Officer name"
+    },
+    "personnel": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of crew member names"
+    },
+    "personnel_count": {
+      "type": "number",
+      "description": "Total personnel on unit"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "unit_name",
+    "shift",
+    "shift_date"
+  ]
+}
