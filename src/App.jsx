@@ -9,6 +9,7 @@ import CommandBoard from './pages/CommandBoard';
 import IncidentsDashboard from './pages/IncidentsDashboard';
 import DepartmentSettings from './pages/DepartmentSettings';
 import TerminologySettings from './pages/TerminologySettings';
+import AccountabilityDashboard from './pages/AccountabilityDashboard';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -41,6 +42,7 @@ const AuthenticatedApp = () => {
       <Route path="/incident/:incidentId" element={<CommandBoard />} />
       <Route path="/settings" element={<DepartmentSettings />} />
       <Route path="/terminology" element={<TerminologySettings />} />
+      <Route path="/incident/:incidentId/accountability" element={<AccountabilityDashboard />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

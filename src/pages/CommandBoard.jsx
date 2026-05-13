@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive, ScanLine } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck } from 'lucide-react';
 import IncidentHeader from '@/components/command/IncidentHeader';
 import RosterUploadDialog from '@/components/command/RosterUploadDialog';
 import DivisionColumn from '@/components/command/DivisionColumn';
@@ -271,6 +271,11 @@ export default function CommandBoard() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <ConnectionStatus isOnline={isOnline} pendingCount={pendingCount} replaying={replaying} />
+          <Link to={`/incident/${incidentId}/accountability`}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+              <ShieldCheck className="w-3.5 h-3.5" /> Accountability
+            </Button>
+          </Link>
           {!isReadOnly && (
               <Button
                 variant="outline"
