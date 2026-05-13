@@ -79,54 +79,73 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     const unitNames = units.map(u => u.unit_name).join(', ');
 
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a fire department radio traffic parser for an Incident Command System (ICS) tactical board.
+      prompt: `You are an expert fire department radio traffic parser for an Incident Command System (ICS) tactical board.
 
-Current units on scene: ${unitNames}
+CURRENT UNITS ON SCENE (match against these exactly — use fuzzy matching for spoken/spelled variants):
+${units.map(u => `  - "${u.unit_name}" (type: ${u.unit_type})`).join('\n')}
 
-Parse this radio transmission and determine what board actions to take:
+RADIO TRANSMISSION TO PARSE:
 "${finalMessage}"
 
-FIREGROUND TERMINOLOGY REFERENCE:
-- "on scene" / "on location" = unit arrived, status → on_scene
-- "assuming [division/group]" = assign unit to that division/group
-- "Division A/Alpha" = front/address side → assignment: division_a
-- "Division B/Bravo" = left side → assignment: division_b
-- "Division C/Charlie" = rear side → assignment: division_c
-- "Division D/Delta" = right side → assignment: division_d
-- "A side / Alpha side / B side / Bravo side / C side / Charlie side / D side / Delta side" = same as above
-- "going interior" = assignment → interior
-- "on air" / "going on air" / "masking up" = SCBA in use, set air_time
-- "PAR" / "PAR complete" / "all accounted for" = status → par
-- "MAYDAY" = status → mayday (HIGHEST PRIORITY)
-- "RIT" / "Rapid Intervention" = assignment → rit
-- "rehab" = assignment → rehab, status → rehab
-- "staging" = assignment → staging
-- "roof" / "going to the roof" = assignment → roof
-- "ventilation" / "vent group" = assignment → ventilation
-- "water supply" = assignment → water_supply
-- "search" / "primary search" / "secondary search" = assignment → search
-- "exposure" = assignment → exposure
-- "available" / "in service" = status → available
-- "out of service" / "OOS" = status → out_of_service
-- "working fire" / "working" = status → working
-- "dispatched" / "responding" = status → dispatched or responding
-- "first floor" / "second floor" / "floor 2" / "3rd floor" / "basement" / "roof" = set floor field (e.g., "1st Floor", "2nd Floor", "Basement", "Roof")
+CRITICAL UNIT NAME MATCHING RULES:
+- Always match spoken/voice variants to the closest existing unit name above
+- "Tower one" → "Tower 1", "engine three" → "Engine 3", "truck two" → "Truck 2"
+- "E-4", "E4" → "Engine 4"; "T-1", "T1" → "Truck 1"; "R-2", "R2" → "Rescue 2"
+- Number words: one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10
+- If a unit name is close but not exact (e.g., "Tower one" when "Tower 1" is on scene), use the existing unit's exact name
+- Only create a NEW unit (in new_units) if there is clearly NO match in the current units list
 
-Respond with JSON:
+ASSIGNMENT MAPPING (map these spoken phrases to the exact assignment values):
+- "Division A" / "Alpha side" / "A side" / "Alpha Division" → division_a
+- "Division B" / "Bravo side" / "B side" / "Bravo Division" → division_b
+- "Division C" / "Charlie side" / "C side" / "Charlie Division" → division_c
+- "Division D" / "Delta side" / "D side" / "Delta Division" → division_d
+- "interior" / "going interior" / "working interior" → interior
+- "roof" / "going to the roof" / "on the roof" → roof
+- "RIT" / "rapid intervention" / "RIT group" → rit
+- "rehab" / "rehabilitation" → rehab (also set status: rehab)
+- "staging" / "in staging" → staging
+- "ventilation" / "vent group" / "venting" → ventilation
+- "water supply" / "on hydrant" / "catching a plug" → water_supply
+- "search" / "primary search" / "secondary search" / "search group" → search
+- "medical group" / "treatment" / "triage" → medical
+- "exposure" / "exposure protection" → exposure
+
+STATUS MAPPING:
+- "on scene" / "on location" / "on the scene" → on_scene
+- "on air" / "going on air" / "masking up" / "bottles on" → set_air_time: true, status: working
+- "PAR" / "PAR complete" / "all accounted for" / "personnel accountability" → par
+- "MAYDAY" → mayday (HIGHEST PRIORITY — always set this if heard)
+- "working" / "working fire" / "we have a worker" → working
+- "available" / "in service" / "back in service" → available
+- "out of service" / "OOS" / "taking out of service" → out_of_service
+- "responding" / "en route" → responding
+
+FLOOR MAPPING (set the floor field with a clean label):
+- "first floor" / "1st floor" / "floor one" → "1st Floor"
+- "second floor" / "2nd floor" / "floor two" → "2nd Floor"
+- "third floor" / "3rd floor" → "3rd Floor"
+- "fourth floor" / "4th floor" → "4th Floor"
+- "fifth floor" / "5th floor" → "5th Floor"
+- "basement" / "sub-basement" → "Basement"
+- "roof" (when used as floor location) → "Roof"
+- "lobby" → "Lobby"
+
+Respond with this exact JSON structure:
 {
-  "from_unit": "unit name transmitting or null",
-  "to_unit": "unit being called or null",
+  "from_unit": "exact unit name from list or null",
+  "to_unit": "exact unit name from list or null",
   "priority": "routine|urgent|emergency|mayday",
   "actions": [
     {
-      "unit_name": "exact unit name from the list or new unit name",
+      "unit_name": "MUST be exact name from existing units list above, or new name if truly new",
       "changes": {
-        "status": "new status or null",
-        "assignment": "new assignment or null",
-        "floor": "floor label or null (e.g. '2nd Floor', 'Basement', 'Roof')",
-        "set_air_time": true/false,
+        "status": "new status value or null",
+        "assignment": "new assignment value or null",
+        "floor": "floor label string or null",
+        "set_air_time": true or false,
         "personnel_count": number or null,
-        "officer": "name or null"
+        "officer": "officer name or null"
       }
     }
   ],
@@ -138,7 +157,7 @@ Respond with JSON:
       "assignment": "assignment or unassigned"
     }
   ],
-  "summary": "brief summary of what happened"
+  "summary": "one sentence summary of what happened"
 }`,
       response_json_schema: {
         type: 'object',
