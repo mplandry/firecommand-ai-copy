@@ -8,16 +8,12 @@ import IncidentHeader from '@/components/command/IncidentHeader';
 import RosterUploadDialog from '@/components/command/RosterUploadDialog';
 import DivisionColumn from '@/components/command/DivisionColumn';
 import RadioInput from '@/components/command/RadioInput';
-import RadioLogPanel from '@/components/command/RadioLogPanel';
-import PARTracker from '@/components/command/PARTracker';
-import ICAccountabilitySummary from '@/components/command/ICAccountabilitySummary';
 import EditUnitDialog from '@/components/command/EditUnitDialog';
 import AddUnitDialog from '@/components/command/AddUnitDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import ExportIncidentPDF from '@/components/command/ExportIncidentPDF';
 import ConnectionStatus from '@/components/command/ConnectionStatus';
-import StructureTactical from '@/components/command/StructureTactical';
-import FloorTracker from '@/components/command/FloorTracker';
+import SidePanel from '@/components/command/SidePanel';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { enqueue, getCached, setCached, patchCachedUnit, addCachedUnit, addCachedRadioLog } from '@/lib/offlineQueue';
 
@@ -352,18 +348,14 @@ export default function CommandBoard() {
           </div>
         </div>
 
-        <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border flex flex-col overflow-y-auto p-4 gap-4">
-          <ICAccountabilitySummary units={units} />
-          <StructureTactical
+        <div className="w-full lg:w-[480px] xl:w-[520px] border-t lg:border-t-0 lg:border-l border-border flex flex-col overflow-hidden">
+          <SidePanel
             units={units}
-            onUpdateUnit={isReadOnly ? null : (unit, data) => updateUnit.mutate({ id: unit.id, data })}
+            radioLogs={radioLogs}
+            isReadOnly={isReadOnly}
+            onUpdateUnit={(unit, data) => updateUnit.mutate({ id: unit.id, data })}
+            onRequestPAR={handleRequestAllPAR}
           />
-          <FloorTracker
-            units={units}
-            onUpdateUnit={isReadOnly ? null : (unit, data) => updateUnit.mutate({ id: unit.id, data })}
-          />
-          <PARTracker units={units} onRequestPAR={isReadOnly ? null : handleRequestAllPAR} />
-          <RadioLogPanel logs={radioLogs} isReadOnly={isReadOnly} />
         </div>
       </div>
 
