@@ -13,7 +13,7 @@ const TABS = [
   { id: 'floors',   label: 'Floors',      icon: Layers      },
 ];
 
-export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, onRequestPAR }) {
+export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, onRequestPAR, onMarkUnitPAR }) {
   const [activeTab, setActiveTab] = useState('ic');
 
   return (
@@ -51,7 +51,7 @@ export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, 
           />
         )}
         {activeTab === 'par' && (
-          <PARTracker units={units} onRequestPAR={isReadOnly ? null : onRequestPAR} />
+          <PARTracker units={units} onRequestPAR={isReadOnly ? null : onRequestPAR} onMarkUnitPAR={isReadOnly ? null : onMarkUnitPAR} />
         )}
         {activeTab === 'floors' && (
           <FloorTracker

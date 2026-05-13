@@ -355,6 +355,7 @@ export default function CommandBoard() {
             isReadOnly={isReadOnly}
             onUpdateUnit={(unit, data) => updateUnit.mutate({ id: unit.id, data })}
             onRequestPAR={handleRequestAllPAR}
+            onMarkUnitPAR={(unit) => updateUnit.mutate({ id: unit.id, data: { status: 'par', last_par_time: new Date().toISOString() } })}
           />
         </div>
       </div>
