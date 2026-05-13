@@ -1,17 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { ShieldCheck, LayoutGrid, CheckCircle, Layers } from 'lucide-react';
+import { ShieldCheck, LayoutGrid, CheckCircle, Layers, Map } from 'lucide-react';
 import ICAccountabilitySummary from './ICAccountabilitySummary';
 import StructureTactical from './StructureTactical';
 import PARTracker from './PARTracker';
 import FloorTracker from './FloorTracker';
 import RadioLogPanel from './RadioLogPanel';
 import PARCountdownTimer from './PARCountdownTimer';
+import SiteMap from './SiteMap';
 
 const TABS = [
   { id: 'ic',       label: 'IC Summary',  icon: ShieldCheck },
   { id: 'tactical', label: 'Tactical',    icon: LayoutGrid  },
   { id: 'par',      label: 'PAR',         icon: CheckCircle },
   { id: 'floors',   label: 'Floors',      icon: Layers      },
+  { id: 'sitemap',  label: 'Site Map',    icon: Map         },
 ];
 
 export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, onRequestPAR, onMarkUnitPAR }) {
@@ -74,6 +76,9 @@ export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, 
             units={units}
             onUpdateUnit={isReadOnly ? null : onUpdateUnit}
           />
+        )}
+        {activeTab === 'sitemap' && (
+          <SiteMap units={units} isReadOnly={isReadOnly} />
         )}
       </div>
     </div>
