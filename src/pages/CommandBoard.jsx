@@ -288,7 +288,10 @@ export default function CommandBoard() {
         </div>
 
         <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border flex flex-col overflow-y-auto p-4 gap-4">
-          <StructureTactical units={units} />
+          <StructureTactical
+            units={units}
+            onUpdateUnit={isReadOnly ? null : (unit, data) => updateUnit.mutate({ id: unit.id, data })}
+          />
           <FloorTracker units={units} />
           <PARTracker units={units} onRequestPAR={isReadOnly ? null : handleRequestAllPAR} />
           <RadioLogPanel logs={radioLogs} />
