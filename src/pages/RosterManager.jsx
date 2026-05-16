@@ -22,10 +22,13 @@ const TODAY = format(new Date(), 'yyyy-MM-dd');
 const encodePerson = (name, position) => position ? `${name}|${position}` : name;
 const decodePerson = (str) => {
   const parts = (str || '').split('|');
-  const isOT = parts.some(p => p.trim().toUpperCase() === 'OT');
+  const flags = parts.slice(1).map(p => p.trim().toUpperCase());
+  const isOT = flags.includes('OT');
   const name = parts[0]?.trim() || '';
   const position = parts[1]?.trim() || '';
-  return { name, position, isOT };
+  // OOG = Out of Grade — detected from name text or flags
+  const isOOG = /\boog\b|out.of.grade/i.test(name) || flags.includes('OOG');
+  return { name, position, isOT, isOOG };
 };
 
 // ── Person row in edit mode ───────────────────────────────────────────────────
@@ -57,7 +60,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
   const [editing, setEditing] = useState(!!isNew);
 
   // Parse stored officer as "Name|Position"
-  const { name: officerName, position: officerPos } = decodePerson(entry.officer || '');
+  const { name: officerName, position: officerPos, isOOG: officerIsOOG } = decodePerson(entry.officer || '');
 
   // Form state
   const [officerStr, setOfficerStr] = useState(entry.officer || '');
@@ -125,20 +128,20 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
         <div className="divide-y divide-border/30">
           {/* Officer row */}
           {entry.officer ? (
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-cyan-950/20">
+            <div className={`flex items-center gap-3 px-4 py-2.5 ${officerIsOOG ? 'bg-red-950/20' : 'bg-cyan-950/20'}`}>
               <div className="w-20 shrink-0 flex items-center gap-1.5">
-                <span className="text-[9px] font-mono font-bold text-cyan-500 uppercase tracking-widest bg-cyan-900/40 border border-cyan-700/30 rounded px-1.5 py-0.5">
+                <span className={`text-[9px] font-mono font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${officerIsOOG ? 'text-red-400 bg-red-900/40 border border-red-700/30' : 'text-cyan-500 bg-cyan-900/40 border border-cyan-700/30'}`}>
                   {entry.unit_type === 'deputy' ? 'Deputy'
                     : /\bcapt(ain)?\b/i.test(officerName) ? 'Capt'
                     : /\blt\.?\b|lieutenant/i.test(officerName) ? 'Lt'
-                    : /\boog\b|out.of.grade/i.test(officerName) ? 'OOG'
+                    : officerIsOOG ? 'OOG'
                     : 'Officer'}
                 </span>
                 {officerPos && (
-                  <span className="text-[9px] font-mono text-cyan-600/70">{officerPos}</span>
+                  <span className={`text-[9px] font-mono ${officerIsOOG ? 'text-red-600/70' : 'text-cyan-600/70'}`}>{officerPos}</span>
                 )}
               </div>
-              <span className="text-sm font-mono font-semibold text-cyan-300">{officerName || entry.officer}</span>
+              <span className={`text-sm font-mono font-semibold ${officerIsOOG ? 'text-red-300' : 'text-cyan-300'}`}>{officerName || entry.officer}</span>
             </div>
           ) : (
             <div className="px-4 py-2.5 text-xs font-mono text-muted-foreground/40 italic">No officer assigned</div>
@@ -146,19 +149,27 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
 
           {/* Crew rows */}
           {entry.personnel?.length > 0 ? entry.personnel.map((p, i) => {
-            const { name, position, isOT } = decodePerson(p);
+            const { name, position, isOT, isOOG } = decodePerson(p);
+            const rowBg = isOOG ? 'bg-red-950/20' : isOT ? 'bg-green-950/20' : '';
+            const badgeClass = isOOG
+              ? 'text-red-400 bg-red-900/40 border border-red-700/40'
+              : isOT
+              ? 'text-green-400 bg-green-900/40 border border-green-700/40'
+              : 'text-muted-foreground bg-secondary/60 border border-border/50';
+            const nameClass = isOOG ? 'text-red-300' : isOT ? 'text-green-300' : 'text-foreground';
+            const posClass = isOOG ? 'text-red-600' : isOT ? 'text-green-600' : 'text-muted-foreground/60';
             return (
-              <div key={i} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors ${isOT ? 'bg-green-950/20' : ''}`}>
+              <div key={i} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors ${rowBg}`}>
                 <div className="w-20 shrink-0 flex items-center gap-1.5">
-                  <span className={`text-[9px] font-mono font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${isOT ? 'text-green-400 bg-green-900/40 border border-green-700/40' : 'text-muted-foreground bg-secondary/60 border border-border/50'}`}>
-                    {entry.unit_type === 'deputy' ? 'Aide' : 'FF'}
+                  <span className={`text-[9px] font-mono font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${badgeClass}`}>
+                    {isOOG ? 'OOG' : entry.unit_type === 'deputy' ? 'Aide' : 'FF'}
                   </span>
                   {position && (
-                    <span className={`text-[9px] font-mono ${isOT ? 'text-green-600' : 'text-muted-foreground/60'}`}>{position}</span>
+                    <span className={`text-[9px] font-mono ${posClass}`}>{position}</span>
                   )}
-                  {isOT && <span className="text-[9px] font-mono font-bold text-green-400 bg-green-900/40 border border-green-700/40 rounded px-1 py-0.5">OT</span>}
+                  {isOT && !isOOG && <span className="text-[9px] font-mono font-bold text-green-400 bg-green-900/40 border border-green-700/40 rounded px-1 py-0.5">OT</span>}
                 </div>
-                <span className={`text-sm font-mono ${isOT ? 'text-green-300' : 'text-foreground'}`}>{name || p}</span>
+                <span className={`text-sm font-mono ${nameClass}`}>{name || p}</span>
               </div>
             );
           }) : (
