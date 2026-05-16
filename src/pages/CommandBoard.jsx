@@ -14,6 +14,7 @@ import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import ExportIncidentPDF from '@/components/command/ExportIncidentPDF';
 import ConnectionStatus from '@/components/command/ConnectionStatus';
 import SidePanel from '@/components/command/SidePanel';
+import PARAlert from '@/components/command/PARAlert';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { enqueue, getCached, setCached, patchCachedUnit, addCachedUnit, addCachedRadioLog } from '@/lib/offlineQueue';
 
@@ -326,6 +327,15 @@ export default function CommandBoard() {
             onTransmission={handleRadioTransmission}
           />
         </div>
+      )}
+
+      {/* PAR Alert Bar */}
+      {!isReadOnly && (
+        <PARAlert
+          lastRadioLogTime={radioLogs[0]?.created_date}
+          onRequestPAR={handleRequestAllPAR}
+          isReadOnly={isReadOnly}
+        />
       )}
 
       {/* Main Content */}
