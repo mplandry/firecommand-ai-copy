@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
   ArrowLeft, Sun, Moon, Camera, Upload, Loader2, AlertTriangle,
-  Plus, Trash2, Users, Edit2, Check, X, Copy
+  Plus, Trash2, Users, Edit2, Check, X, Copy, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -415,6 +415,8 @@ export default function RosterManager() {
   const [showPhotoImport, setShowPhotoImport] = useState(false);
   const [tempNewEntry, setTempNewEntry] = useState(null);
   const [isCopying, setIsCopying] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const queryClient = useQueryClient();
 
   const qKey = ['roster', shift, date];
@@ -483,6 +485,16 @@ export default function RosterManager() {
   const totalPersonnel = entries.reduce((s, e) => {
     return s + (e.personnel?.length || e.personnel_count || 0);
   }, 0);
+
+  const handleDeleteRoster = useCallback(async () => {
+    setIsDeleting(true);
+    for (const e of entries) {
+      await base44.entities.Roster.delete(e.id);
+    }
+    queryClient.invalidateQueries({ queryKey: qKey });
+    setIsDeleting(false);
+    setConfirmDelete(false);
+  }, [entries, queryClient, qKey]);
 
   const handleCopyLastRoster = useCallback(async () => {
     setIsCopying(true);
@@ -571,6 +583,32 @@ export default function RosterManager() {
             )}
 
             {/* Actions */}
+            {entries.length > 0 && !confirmDelete && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmDelete(true)}
+                className="gap-1.5 text-xs text-red-400 border-red-800/50 hover:bg-red-950/40 hover:text-red-300"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete Roster
+              </Button>
+            )}
+            {confirmDelete && (
+              <div className="flex items-center gap-2 bg-red-950/40 border border-red-700/50 rounded-lg px-3 py-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                <span className="text-[11px] font-mono text-red-300">Delete all {entries.length} units?</span>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-6 px-2 text-[10px] font-mono gap-1"
+                  onClick={handleDeleteRoster}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Yes, delete'}
+                </Button>
+                <button onClick={() => setConfirmDelete(false)} className="text-red-400/60 hover:text-red-300 text-sm">✕</button>
+              </div>
+            )}
             <Button
               size="sm"
               variant="outline"
