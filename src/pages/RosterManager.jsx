@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const UNIT_TYPES = ['engine','truck','rescue','squad','battalion','medic','tanker','brush','hazmat','other'];
+const UNIT_TYPES = ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'];
 const UNIT_ICONS = {
   engine:'', truck:'', rescue:'', squad:'',
   battalion:'', medic:'', tanker:'', brush:'', hazmat:'', other:'',
@@ -306,7 +306,7 @@ CRITICAL RULES:
 2. RIDING POSITIONS = the 3-digit numbers (100, 101, 102, 200, etc.) next to personnel names. These are seat/position codes, NOT part of the unit name.
 3. The OFFICER is the first person listed for a unit (Captain, Lieutenant, or most senior rank). Store their riding position code separately.
 4. PERSONNEL = all crew members listed under that unit besides the officer. Each person may have a riding position number next to their name — store it with the person as "Name|PositionCode" (e.g. "James Vanaria|101").
-5. Command officers: C1 = Fire Chief, C2/C3/C4 = Deputy Chiefs. All command units (C1, C2, C3, C4) are unit_type: "battalion". H1/H2 = special non-vehicle officer positions, unit_type: "other".
+5. Command officers: C1 = Fire Chief, unit_type: "deputy". C2/C3/C4 = Deputy Chiefs, unit_type: "deputy". H1/H2 = special non-vehicle officer positions, unit_type: "other".
 6. Boats, marine units = unit_type: "other". RTV = unit_type: "other". 6A = a pickup truck, unit_type: "other".
 7. Do NOT split the same unit into multiple entries. Merge all personnel for a given unit name onto one entry.
 
@@ -328,7 +328,7 @@ Combine across all pages. Return every unit found.`,
               type: 'object',
               properties: {
                 unit_name: { type: 'string' },
-                unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','battalion','medic','tanker','brush','hazmat','other'] },
+                unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'] },
                 officer: { type: 'string' },
                 personnel: { type: 'array', items: { type: 'string' } },
                 personnel_count: { type: 'number' },
