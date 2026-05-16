@@ -141,7 +141,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
               <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors">
                 <div className="w-16 shrink-0">
                   <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-widest bg-secondary/60 border border-border/50 rounded px-1.5 py-0.5">
-                    {position || `FF ${i + 1}`}
+                    {position || 'FF'}
                   </span>
                 </div>
                 <span className="text-sm font-mono text-foreground">{name || p}</span>
