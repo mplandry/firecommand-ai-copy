@@ -19,7 +19,7 @@ const ASSIGNMENT_LABELS = {
 function TemplateCard({ template, selected, onSelect }) {
   return (
     <button
-      onClick={() => onSelect(template.id === selected ? null : template.id)}
+      onClick={() => onSelect(template.id)}
       className={`w-full text-left rounded-lg border p-3 transition-all ${
         selected === template.id
           ? 'border-primary bg-primary/10 ring-1 ring-primary'
@@ -140,7 +140,7 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
           <div>
             {/* No template option */}
             <button
-              onClick={() => setSelectedTemplateId(selectedTemplateId === '__blank' ? null : '__blank')}
+              onClick={() => setSelectedTemplateId('__blank')}
               className={`w-full text-left rounded-lg border p-3 mb-3 transition-all ${
                 selectedTemplateId === '__blank'
                   ? 'border-primary bg-primary/10 ring-1 ring-primary'
