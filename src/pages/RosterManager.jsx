@@ -128,6 +128,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
                   {entry.unit_type === 'deputy' ? 'Deputy'
                     : /\bcapt(ain)?\b/i.test(officerName) ? 'Capt'
                     : /\blt\.?\b|lieutenant/i.test(officerName) ? 'Lt'
+                    : /\boog\b|out.of.grade/i.test(officerName) ? 'OOG'
                     : 'Officer'}
                 </span>
                 {officerPos && (
