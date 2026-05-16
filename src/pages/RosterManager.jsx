@@ -39,28 +39,58 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
 
   if (!editing) {
     return (
-      <div className="group grid grid-cols-[auto_1fr_1fr_auto_auto] gap-3 items-center px-3 py-2.5 border-b border-border/40 hover:bg-secondary/20 transition-colors">
-        <span className="text-xl leading-none">{UNIT_ICONS[entry.unit_type] || '🚐'}</span>
-        <div className="min-w-0">
-          <div className="font-mono text-sm font-bold text-foreground">{entry.unit_name}</div>
-          {entry.officer && <div className="text-[10px] text-cyan-400 font-mono">{entry.officer}</div>}
-          {entry.personnel?.length > 0 && (
-            <div className="text-[10px] text-muted-foreground font-mono truncate">
-              {entry.personnel.join(', ')}
+      <div className="group border border-border rounded-xl bg-card hover:border-primary/30 transition-colors overflow-hidden">
+        {/* Unit header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-secondary/30 border-b border-border/50">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl leading-none">{UNIT_ICONS[entry.unit_type] || '🚐'}</span>
+            <div>
+              <div className="font-mono text-base font-black text-foreground tracking-wide">{entry.unit_name}</div>
+              <div className="text-[10px] font-mono text-muted-foreground capitalize">{entry.unit_type}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-xs font-mono font-bold text-green-400">{totalPAX > 0 ? `${totalPAX} FF` : '—'}</div>
+              <div className="text-[10px] font-mono text-muted-foreground">personnel</div>
+            </div>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => setEditing(true)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors rounded hover:bg-secondary/60">
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={onDelete} className="p-1.5 text-muted-foreground hover:text-red-400 transition-colors rounded hover:bg-secondary/60">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* Personnel list */}
+        <div className="px-4 py-3 space-y-1.5">
+          {entry.officer && (
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest w-14 shrink-0">Officer</span>
+              <span className="text-sm font-mono font-semibold text-cyan-400">{entry.officer}</span>
+              <span className="text-[9px] bg-cyan-900/30 border border-cyan-700/30 text-cyan-500 font-mono rounded px-1.5 py-0.5">OIC</span>
             </div>
           )}
-        </div>
-        <div className="text-xs font-mono text-muted-foreground capitalize">{entry.unit_type}</div>
-        <div className="text-xs font-mono font-bold text-green-400">
-          {totalPAX > 0 ? `${totalPAX} FF` : '—'}
-        </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setEditing(true)} className="p-1 text-muted-foreground hover:text-primary transition-colors">
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={onDelete} className="p-1 text-muted-foreground hover:text-red-400 transition-colors">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {entry.personnel?.length > 0 && (
+            <div className="flex items-start gap-2">
+              <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest w-14 shrink-0 pt-0.5">Crew</span>
+              <div className="flex flex-wrap gap-1.5">
+                {entry.personnel.map((name, i) => (
+                  <span key={i} className="text-xs font-mono bg-secondary/70 border border-border/70 text-foreground rounded-md px-2 py-0.5">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {!entry.officer && (!entry.personnel || entry.personnel.length === 0) && (
+            <p className="text-xs font-mono text-muted-foreground/50 italic">No personnel listed</p>
+          )}
+          {entry.notes && (
+            <p className="text-[10px] font-mono text-muted-foreground/70 border-t border-border/30 pt-1.5 mt-1.5">{entry.notes}</p>
+          )}
         </div>
       </div>
     );
@@ -454,46 +484,38 @@ export default function RosterManager() {
           />
         )}
 
-        {/* Roster table */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          {/* Table header */}
-          <div className="px-3 py-2.5 bg-secondary/50 border-b border-border flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${shift === 'day' ? 'bg-accent' : 'bg-primary'}`} />
-            <span className="text-xs font-bold font-mono text-foreground uppercase tracking-wider">
-              {shift === 'day' ? '☀️ Day Shift' : '🌙 Night Shift'} — {format(new Date(date + 'T12:00:00'), 'MMMM d, yyyy')}
-            </span>
+        {/* Shift label */}
+        <div className="flex items-center gap-2 pb-1">
+          <div className={`w-2 h-2 rounded-full ${shift === 'day' ? 'bg-accent' : 'bg-primary'}`} />
+          <span className="text-xs font-bold font-mono text-muted-foreground uppercase tracking-wider">
+            {shift === 'day' ? '☀️ Day Shift' : '🌙 Night Shift'} — {format(new Date(date + 'T12:00:00'), 'MMMM d, yyyy')}
+          </span>
+        </div>
+
+        {/* Temp new entry */}
+        {tempNewEntry && (
+          <RosterRow
+            entry={tempNewEntry}
+            isNew
+            onSave={(form) => handleSave(form, null)}
+            onDelete={() => setTempNewEntry(null)}
+          />
+        )}
+
+        {/* Roster cards */}
+        {isLoading && (
+          <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground font-mono text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading roster…
           </div>
-
-          {/* Column headers */}
-          <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-3 px-3 py-1.5 bg-secondary/20 border-b border-border/50">
-            {['', 'Unit', 'Type', 'PAX', ''].map((h, i) => (
-              <span key={i} className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">{h}</span>
-            ))}
+        )}
+        {!isLoading && entries.length === 0 && !tempNewEntry && (
+          <div className="text-center py-16 space-y-3">
+            <Users className="w-8 h-8 text-muted-foreground/30 mx-auto" />
+            <p className="text-sm font-mono text-muted-foreground">No roster entries for this shift.</p>
+            <p className="text-xs font-mono text-muted-foreground/60">Import from a photo or add units manually.</p>
           </div>
-
-          {/* Temp new entry row */}
-          {tempNewEntry && (
-            <RosterRow
-              entry={tempNewEntry}
-              isNew
-              onSave={(form) => handleSave(form, null)}
-              onDelete={() => setTempNewEntry(null)}
-            />
-          )}
-
-          {/* Existing entries */}
-          {isLoading && (
-            <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground font-mono text-sm">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading roster…
-            </div>
-          )}
-          {!isLoading && entries.length === 0 && !tempNewEntry && (
-            <div className="text-center py-12 space-y-3">
-              <Users className="w-8 h-8 text-muted-foreground/30 mx-auto" />
-              <p className="text-sm font-mono text-muted-foreground">No roster entries for this shift.</p>
-              <p className="text-xs font-mono text-muted-foreground/60">Import from a photo or add units manually.</p>
-            </div>
-          )}
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {entries.map(entry => (
             <RosterRow
               key={entry.id}
