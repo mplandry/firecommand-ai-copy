@@ -36,18 +36,33 @@ const decodePerson = (str) => {
 };
 
 // ── Person row in edit mode ───────────────────────────────────────────────────
-function PersonRow({ value, onChange, onRemove, placeholder, posPlaceholder }) {
+function PersonRow({ value, onChange, onRemove, posPlaceholder }) {
   const { name, position } = decodePerson(value);
+  const parts = name.split(' ');
+  const firstName = parts[0] || '';
+  const lastName = parts.slice(1).join(' ') || '';
+
+  const updateName = (first, last) => {
+    const combined = [first, last].filter(Boolean).join(' ');
+    onChange(encodePerson(combined, position));
+  };
+
   return (
     <div className="flex gap-2 items-center">
       <input
         className="flex-1 bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
-        value={name}
-        onChange={e => onChange(encodePerson(e.target.value, position))}
-        placeholder={placeholder || 'Name'}
+        value={firstName}
+        onChange={e => updateName(e.target.value, lastName)}
+        placeholder="First"
       />
       <input
-        className="w-24 bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground text-center"
+        className="flex-1 bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
+        value={lastName}
+        onChange={e => updateName(firstName, e.target.value)}
+        placeholder="Last"
+      />
+      <input
+        className="w-20 bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground text-center"
         value={position}
         onChange={e => onChange(encodePerson(name, e.target.value))}
         placeholder={posPlaceholder || '100'}
