@@ -453,11 +453,10 @@ export default function RosterManager() {
         shift,
         shift_date: date,
       };
-      if (existing) {
-        await base44.entities.Roster.update(existing.id, payload);
-      } else {
+      if (!existing) {
         await base44.entities.Roster.create(payload);
       }
+      // skip units that already exist — don't overwrite
     }
     queryClient.invalidateQueries({ queryKey: qKey });
     setShowPhotoImport(false);
