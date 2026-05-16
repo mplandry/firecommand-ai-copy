@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
   ArrowLeft, Sun, Moon, Camera, Upload, Loader2, AlertTriangle,
-  Plus, Trash2, Save, Users, ChevronDown, ChevronUp, Edit2, Check, X
+  Plus, Trash2, Users, Edit2, Check, X, Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -396,6 +396,7 @@ export default function RosterManager() {
   const [date, setDate] = useState(TODAY);
   const [showPhotoImport, setShowPhotoImport] = useState(false);
   const [tempNewEntry, setTempNewEntry] = useState(null);
+  const [isCopying, setIsCopying] = useState(false);
   const queryClient = useQueryClient();
 
   const qKey = ['roster', shift, date];
@@ -465,6 +466,30 @@ export default function RosterManager() {
   const totalPersonnel = entries.reduce((s, e) => {
     return s + (e.personnel?.length || e.personnel_count || 0);
   }, 0);
+
+  const handleCopyLastRoster = useCallback(async () => {
+    setIsCopying(true);
+    // Find the most recent roster for same shift before current date
+    const allRecent = await base44.entities.Roster.filter({ shift }, '-shift_date', 50);
+    const lastEntries = allRecent.filter(e => e.shift_date < date);
+    if (!lastEntries.length) { setIsCopying(false); return; }
+    // Get entries from the most recent date found
+    const lastDate = lastEntries[0].shift_date;
+    const toCopy = lastEntries.filter(e => e.shift_date === lastDate);
+    for (const e of toCopy) {
+      const exists = entries.find(x => x.unit_name.toLowerCase() === e.unit_name.toLowerCase());
+      if (!exists) {
+        await base44.entities.Roster.create({
+          unit_name: e.unit_name, unit_type: e.unit_type || 'engine',
+          officer: e.officer || '', personnel: e.personnel || [],
+          personnel_count: e.personnel_count || null, notes: e.notes || '',
+          shift, shift_date: date,
+        });
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: qKey });
+    setIsCopying(false);
+  }, [shift, date, entries, queryClient, qKey]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -589,7 +614,11 @@ export default function RosterManager() {
           <div className="text-center py-16 space-y-3">
             <Users className="w-8 h-8 text-muted-foreground/30 mx-auto" />
             <p className="text-sm font-mono text-muted-foreground">No roster entries for this shift.</p>
-            <p className="text-xs font-mono text-muted-foreground/60">Import from a photo or add units manually.</p>
+            <p className="text-xs font-mono text-muted-foreground/60">Import from a photo, add units manually, or copy the last roster.</p>
+            <Button size="sm" variant="outline" onClick={handleCopyLastRoster} disabled={isCopying} className="gap-1.5 text-xs mx-auto">
+              {isCopying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+              Copy Last Roster
+            </Button>
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
