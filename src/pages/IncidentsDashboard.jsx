@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, LayoutTemplate } from 'lucide-react';
+import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, LayoutTemplate, Trash2 } from 'lucide-react';
 import NewIncidentDialog from '@/components/command/NewIncidentDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import { formatDistanceToNow } from 'date-fns';
@@ -92,6 +92,14 @@ export default function IncidentsDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidents-all'] });
       setClosingIncident(null);
+    },
+  });
+
+  const deleteIncident = useMutation({
+    mutationFn: (id) => base44.entities.Incident.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['incidents-all'] });
+      queryClient.invalidateQueries({ queryKey: ['unit-counts'] });
     },
   });
 
@@ -245,6 +253,14 @@ export default function IncidentsDashboard() {
                         {incident.status === 'cleared' ? 'View' : 'Open Board'}
                       </Button>
                     </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-950/40"
+                      onClick={() => { if (window.confirm('Delete this incident? This cannot be undone.')) deleteIncident.mutate(incident.id); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
               </div>
