@@ -23,6 +23,16 @@ const statusLabels = {
   cleared: 'CLEARED',
 };
 
+const alarmLabels = {
+  '1st_alarm': '1st Alarm',
+  '2nd_alarm': '2nd Alarm',
+  '3rd_alarm': '3rd Alarm',
+  '4th_alarm': '4th Alarm',
+  '5th_alarm': '5th Alarm',
+  'task_force': 'Task Force',
+  'strike_team': 'Strike Team',
+};
+
 const typeLabels = {
   structure_fire: 'Structure Fire',
   wildland_fire: 'Wildland Fire',
@@ -208,7 +218,7 @@ export default function IncidentsDashboard() {
                         {statusLabels[incident.status] || incident.status}
                       </Badge>
                       <Badge variant="outline" className="font-mono text-xs">
-                        {incident.alarm_level?.replace(/_/g, ' ').toUpperCase()}
+                        {alarmLabels[incident.alarm_level] || incident.alarm_level || 'Unknown'}
                       </Badge>
                       <span className="text-xs text-muted-foreground font-mono">
                         {typeLabels[incident.incident_type] || incident.incident_type}
