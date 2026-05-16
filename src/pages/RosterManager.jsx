@@ -299,16 +299,25 @@ function PhotoImportPanel({ onParsed, onClose }) {
     const fileUrls = uploads.map(u => u.file_url);
 
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a fire department roster parser. Analyze these daily roster sheet images (they may be multiple pages of the same roster) and extract ALL units/apparatus and their personnel across all pages.
+      prompt: `You are a fire department daily roster parser. Analyze these roster sheet images (may be multiple pages) and extract ALL units and their personnel.
 
-For each unit found, extract:
-- unit_name: the unit designator (e.g. "Engine 1", "Truck 3", "Rescue 2", "Battalion 1", "Medic 4")
-- unit_type: one of engine/truck/rescue/squad/battalion/medic/tanker/brush/hazmat/other
-- officer: the officer/captain/lieutenant name if visible
-- personnel: array of ALL crew member names listed for that unit (not including the officer)
-- personnel_count: total count of ALL personnel on unit including officer
+CRITICAL RULES:
+1. UNIT NAME = the apparatus name only (e.g. "Engine 1", "Engine 2", "Ladder 2", "Tower 1", "Rescue 1", "Squad 5", "C2", "C3", "Moody Boat", "Central Boat", "RTV"). NEVER include riding position numbers in the unit name.
+2. RIDING POSITIONS = the 3-digit numbers (100, 101, 102, 200, etc.) next to personnel names. These are seat/position codes, NOT part of the unit name.
+3. The OFFICER is the first person listed for a unit (Captain, Lieutenant, or most senior rank). Store their riding position code separately.
+4. PERSONNEL = all crew members listed under that unit besides the officer. Each person may have a riding position number next to their name — store it with the person as "Name|PositionCode" (e.g. "James Vanaria|101").
+5. Battalion chiefs, Deputy Chiefs, and Command officers like "C2", "C3", "C4" are unit_type: "battalion".
+6. Boats, marine units = unit_type: "other". RTV = unit_type: "other".
+7. Do NOT split the same unit into multiple entries. Merge all personnel for a given unit name onto one entry.
 
-Combine units across all pages. If the same unit appears on multiple pages, merge the data. Return all units you can find.`,
+For each unit extract:
+- unit_name: apparatus name only (e.g. "Engine 1", "Ladder 2", "C2", "Tower 1")
+- unit_type: engine/truck/rescue/squad/battalion/medic/tanker/brush/hazmat/other
+- officer: officer name string (e.g. "Damon Ferranti") - just the name, no position code
+- personnel: array of crew member strings in format "Name|PositionCode" or just "Name" if no position visible
+- personnel_count: total headcount including officer
+
+Combine across all pages. Return every unit found.`,
       file_urls: fileUrls,
       response_json_schema: {
         type: 'object',
