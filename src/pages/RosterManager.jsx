@@ -18,43 +18,96 @@ const UNIT_ICONS = {
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
 
-// ── Inline-editable row ────────────────────────────────────────────────────────
+// Personnel stored as "Name|Position" strings e.g. "Smith J.|E100"
+const encodePerson = (name, position) => position ? `${name}|${position}` : name;
+const decodePerson = (str) => {
+  const [name, position] = (str || '').split('|');
+  return { name: name?.trim() || '', position: position?.trim() || '' };
+};
+
+// ── Person row in edit mode ───────────────────────────────────────────────────
+function PersonRow({ value, onChange, onRemove, placeholder, posPlaceholder }) {
+  const { name, position } = decodePerson(value);
+  return (
+    <div className="flex gap-2 items-center">
+      <input
+        className="flex-1 bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
+        value={name}
+        onChange={e => onChange(encodePerson(e.target.value, position))}
+        placeholder={placeholder || 'Name'}
+      />
+      <input
+        className="w-24 bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground text-center"
+        value={position}
+        onChange={e => onChange(encodePerson(name, e.target.value))}
+        placeholder={posPlaceholder || '100'}
+      />
+      <button onClick={onRemove} className="p-1.5 text-muted-foreground hover:text-red-400 rounded">
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// ── Roster card (view + edit) ─────────────────────────────────────────────────
 function RosterRow({ entry, onSave, onDelete, isNew }) {
   const [editing, setEditing] = useState(!!isNew);
-  const [form, setForm] = useState({ ...entry });
+
+  // Parse stored officer as "Name|Position"
+  const { name: officerName, position: officerPos } = decodePerson(entry.officer || '');
+
+  // Form state
+  const [officerStr, setOfficerStr] = useState(entry.officer || '');
+  const [unitName, setUnitName] = useState(entry.unit_name || '');
+  const [unitType, setUnitType] = useState(entry.unit_type || 'engine');
+  const [crew, setCrew] = useState(entry.personnel || []);
+  const [notes, setNotes] = useState(entry.notes || '');
+
+  const totalPAX = 1 + crew.length; // officer + crew
+
+  const addCrewMember = () => setCrew(c => [...c, '']);
 
   const save = () => {
-    onSave(form);
+    onSave({
+      unit_name: unitName,
+      unit_type: unitType,
+      officer: officerStr,
+      personnel: crew.filter(p => decodePerson(p).name),
+      personnel_count: 1 + crew.filter(p => decodePerson(p).name).length,
+      notes,
+    });
     setEditing(false);
   };
+
   const cancel = () => {
     if (isNew) { onDelete(); return; }
-    setForm({ ...entry });
+    setOfficerStr(entry.officer || '');
+    setUnitName(entry.unit_name || '');
+    setUnitType(entry.unit_type || 'engine');
+    setCrew(entry.personnel || []);
+    setNotes(entry.notes || '');
     setEditing(false);
   };
 
-  const totalPAX = form.personnel?.length
-    ? form.personnel.length
-    : (form.personnel_count || 0);
-
+  // ── VIEW ──
   if (!editing) {
     return (
       <div className="group border border-border rounded-xl bg-card hover:border-primary/30 transition-colors overflow-hidden">
         {/* Unit header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-secondary/30 border-b border-border/50">
+        <div className="flex items-center justify-between px-4 py-3 bg-secondary/40 border-b border-border/60">
           <div className="flex items-center gap-3">
             <span className="text-2xl leading-none">{UNIT_ICONS[entry.unit_type] || '🚐'}</span>
             <div>
-              <div className="font-mono text-base font-black text-foreground tracking-wide">{entry.unit_name}</div>
+              <div className="font-mono text-lg font-black text-foreground tracking-wide">{entry.unit_name}</div>
               <div className="text-[10px] font-mono text-muted-foreground capitalize">{entry.unit_type}</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-xs font-mono font-bold text-green-400">{totalPAX > 0 ? `${totalPAX} FF` : '—'}</div>
-              <div className="text-[10px] font-mono text-muted-foreground">personnel</div>
+          <div className="flex items-center gap-2">
+            <div className="bg-green-900/30 border border-green-700/30 rounded-lg px-2.5 py-1 text-center">
+              <div className="text-sm font-mono font-black text-green-400">{totalPAX > 1 ? totalPAX : entry.personnel_count || '—'}</div>
+              <div className="text-[9px] font-mono text-green-600 uppercase">total</div>
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => setEditing(true)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors rounded hover:bg-secondary/60">
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
@@ -64,122 +117,146 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
             </div>
           </div>
         </div>
-        {/* Personnel list */}
-        <div className="px-4 py-3 space-y-1.5">
-          {entry.officer && (
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest w-14 shrink-0">Officer</span>
-              <span className="text-sm font-mono font-semibold text-cyan-400">{entry.officer}</span>
-              <span className="text-[9px] bg-cyan-900/30 border border-cyan-700/30 text-cyan-500 font-mono rounded px-1.5 py-0.5">OIC</span>
-            </div>
-          )}
-          {entry.personnel?.length > 0 && (
-            <div className="flex items-start gap-2">
-              <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest w-14 shrink-0 pt-0.5">Crew</span>
-              <div className="flex flex-wrap gap-1.5">
-                {entry.personnel.map((name, i) => (
-                  <span key={i} className="text-xs font-mono bg-secondary/70 border border-border/70 text-foreground rounded-md px-2 py-0.5">
-                    {name}
-                  </span>
-                ))}
+
+        {/* Personnel rows */}
+        <div className="divide-y divide-border/30">
+          {/* Officer row */}
+          {entry.officer ? (
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-cyan-950/20">
+              <div className="w-16 shrink-0">
+                <span className="text-[9px] font-mono font-bold text-cyan-500 uppercase tracking-widest bg-cyan-900/40 border border-cyan-700/30 rounded px-1.5 py-0.5">
+                  {officerPos || 'Officer'}
+                </span>
               </div>
+              <span className="text-sm font-mono font-semibold text-cyan-300">{officerName || entry.officer}</span>
             </div>
+          ) : (
+            <div className="px-4 py-2.5 text-xs font-mono text-muted-foreground/40 italic">No officer assigned</div>
           )}
-          {!entry.officer && (!entry.personnel || entry.personnel.length === 0) && (
-            <p className="text-xs font-mono text-muted-foreground/50 italic">No personnel listed</p>
-          )}
-          {entry.notes && (
-            <p className="text-[10px] font-mono text-muted-foreground/70 border-t border-border/30 pt-1.5 mt-1.5">{entry.notes}</p>
+
+          {/* Crew rows */}
+          {entry.personnel?.length > 0 ? entry.personnel.map((p, i) => {
+            const { name, position } = decodePerson(p);
+            return (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors">
+                <div className="w-16 shrink-0">
+                  <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-widest bg-secondary/60 border border-border/50 rounded px-1.5 py-0.5">
+                    {position || `FF ${i + 1}`}
+                  </span>
+                </div>
+                <span className="text-sm font-mono text-foreground">{name || p}</span>
+              </div>
+            );
+          }) : (
+            <div className="px-4 py-2.5 text-xs font-mono text-muted-foreground/40 italic">No crew listed</div>
           )}
         </div>
+
+        {entry.notes && (
+          <div className="px-4 py-2 bg-secondary/20 border-t border-border/30">
+            <p className="text-[10px] font-mono text-muted-foreground/70">{entry.notes}</p>
+          </div>
+        )}
       </div>
     );
   }
 
-  // Edit mode
-  const personnelStr = form.personnel?.join(', ') || '';
-
+  // ── EDIT ──
   return (
-    <div className="px-3 py-3 border-b border-primary/20 bg-primary/5 space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Unit Name *</label>
-          <input
-            className="mt-0.5 w-full bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
-            value={form.unit_name}
-            onChange={e => setForm(f => ({ ...f, unit_name: e.target.value }))}
-            placeholder="e.g. Engine 1"
-          />
-        </div>
-        <div>
-          <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Unit Type</label>
-          <Select value={form.unit_type} onValueChange={v => setForm(f => ({ ...f, unit_type: v }))}>
-            <SelectTrigger className="mt-0.5 bg-secondary h-8 text-xs font-mono">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {UNIT_TYPES.map(t => <SelectItem key={t} value={t} className="text-xs font-mono capitalize">{UNIT_ICONS[t]} {t}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="border border-primary/30 rounded-xl bg-primary/5 overflow-hidden col-span-full">
+      <div className="px-4 py-3 bg-primary/10 border-b border-primary/20 flex items-center justify-between">
+        <span className="text-xs font-mono font-bold text-primary uppercase tracking-wider">
+          {isNew ? 'New Unit' : `Editing ${unitName}`}
+        </span>
+        <button onClick={cancel} className="text-muted-foreground hover:text-foreground">
+          <X className="w-4 h-4" />
+        </button>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+
+      <div className="p-4 space-y-4">
+        {/* Unit info */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Unit Name *</label>
+            <input
+              className="mt-0.5 w-full bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
+              value={unitName}
+              onChange={e => setUnitName(e.target.value)}
+              placeholder="e.g. Engine 1"
+            />
+          </div>
+          <div>
+            <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Unit Type</label>
+            <Select value={unitType} onValueChange={setUnitType}>
+              <SelectTrigger className="mt-0.5 bg-secondary h-8 text-xs font-mono">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {UNIT_TYPES.map(t => <SelectItem key={t} value={t} className="text-xs font-mono capitalize">{UNIT_ICONS[t]} {t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Officer */}
         <div>
-          <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Officer / Captain</label>
-          <input
-            className="mt-0.5 w-full bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
-            value={form.officer || ''}
-            onChange={e => setForm(f => ({ ...f, officer: e.target.value }))}
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[9px] font-mono text-cyan-500 uppercase tracking-wider font-bold">Officer</label>
+            <span className="text-[9px] font-mono text-muted-foreground">Name · Position (e.g. E100)</span>
+          </div>
+          <PersonRow
+            value={officerStr}
+            onChange={setOfficerStr}
             placeholder="Captain Smith"
+            posPlaceholder="E100"
           />
         </div>
+
+        {/* Crew */}
         <div>
-          <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Personnel Count</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider font-bold">Firefighters</label>
+            <span className="text-[9px] font-mono text-muted-foreground">Name · Position (e.g. 101)</span>
+          </div>
+          <div className="space-y-2">
+            {crew.map((p, i) => (
+              <PersonRow
+                key={i}
+                value={p}
+                onChange={v => setCrew(c => c.map((x, j) => j === i ? v : x))}
+                onRemove={() => setCrew(c => c.filter((_, j) => j !== i))}
+                placeholder={`Firefighter ${i + 1}`}
+                posPlaceholder={`${101 + i}`}
+              />
+            ))}
+            <button
+              onClick={addCrewMember}
+              className="w-full border border-dashed border-border/60 rounded-lg py-2 text-xs font-mono text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Firefighter
+            </button>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Notes</label>
           <input
-            type="number" min={0} max={20}
             className="mt-0.5 w-full bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
-            value={form.personnel_count || ''}
-            onChange={e => setForm(f => ({ ...f, personnel_count: parseInt(e.target.value) || null }))}
-            placeholder="3"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Optional notes..."
           />
         </div>
-      </div>
-      <div>
-        <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
-          Crew Names <span className="normal-case opacity-60">(comma-separated)</span>
-        </label>
-        <input
-          className="mt-0.5 w-full bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
-          value={personnelStr}
-          onChange={e => setForm(f => ({ ...f, personnel: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
-          placeholder="Smith J., Jones R., Brown T."
-        />
-      </div>
-      {form.personnel?.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {form.personnel.map((name, i) => (
-            <span key={i} className="text-[10px] font-mono bg-secondary/80 text-foreground border border-border rounded px-1.5 py-0.5">
-              {name}
-            </span>
-          ))}
+
+        <div className="flex gap-2 pt-1">
+          <Button size="sm" onClick={save} disabled={!unitName.trim()} className="gap-1.5 text-xs">
+            <Check className="w-3.5 h-3.5" /> Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={cancel} className="text-xs text-muted-foreground gap-1.5">
+            Cancel
+          </Button>
         </div>
-      )}
-      <div>
-        <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Notes</label>
-        <input
-          className="mt-0.5 w-full bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
-          value={form.notes || ''}
-          onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-          placeholder="Optional notes..."
-        />
-      </div>
-      <div className="flex gap-2 pt-1">
-        <Button size="sm" onClick={save} disabled={!form.unit_name.trim()} className="gap-1.5 text-xs">
-          <Check className="w-3.5 h-3.5" /> Save
-        </Button>
-        <Button size="sm" variant="ghost" onClick={cancel} className="text-xs text-muted-foreground gap-1.5">
-          <X className="w-3.5 h-3.5" /> Cancel
-        </Button>
       </div>
     </div>
   );
@@ -463,7 +540,7 @@ export default function RosterManager() {
             <Button
               size="sm"
               onClick={() => {
-                setTempNewEntry({ unit_name: '', unit_type: 'engine', officer: '', personnel: [], personnel_count: null, notes: '' });
+                setTempNewEntry({ unit_name: '', unit_type: 'engine', officer: '|E100', personnel: ['|101', '|102'], personnel_count: null, notes: '' });
               }}
               className="gap-1.5 text-xs"
               disabled={!!tempNewEntry}
