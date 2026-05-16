@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const UNIT_TYPES = ['engine','truck','rescue','squad','battalion','medic','tanker','brush','hazmat','other'];
 const UNIT_ICONS = {
-  engine:'🚒', truck:'🪜', rescue:'🚑', squad:'🔧',
-  battalion:'⭐', medic:'🏥', tanker:'💧', brush:'🌿', hazmat:'☣️', other:'🚐',
+  engine:'', truck:'', rescue:'', squad:'',
+  battalion:'', medic:'', tanker:'', brush:'', hazmat:'', other:'',
 };
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
@@ -96,7 +96,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
         {/* Unit header */}
         <div className="flex items-center justify-between px-4 py-3 bg-secondary/40 border-b border-border/60">
           <div className="flex items-center gap-3">
-            <span className="text-2xl leading-none">{UNIT_ICONS[entry.unit_type] || '🚐'}</span>
+            <span className="text-2xl leading-none">{UNIT_ICONS[entry.unit_type] || ''}</span>
             <div>
               <div className="font-mono text-lg font-black text-foreground tracking-wide">{entry.unit_name}</div>
               <div className="text-[10px] font-mono text-muted-foreground capitalize">{entry.unit_type}</div>
@@ -198,7 +198,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {UNIT_TYPES.map(t => <SelectItem key={t} value={t} className="text-xs font-mono capitalize">{UNIT_ICONS[t]} {t}</SelectItem>)}
+                {UNIT_TYPES.map(t => <SelectItem key={t} value={t} className="text-xs font-mono capitalize">{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -660,7 +660,7 @@ export default function RosterManager() {
         <div className="flex items-center gap-2 pb-1">
           <div className={`w-2 h-2 rounded-full ${shift === 'day' ? 'bg-accent' : 'bg-primary'}`} />
           <span className="text-xs font-bold font-mono text-muted-foreground uppercase tracking-wider">
-            {shift === 'day' ? '☀️ Day Shift' : '🌙 Night Shift'} — {format(new Date(date + 'T12:00:00'), 'MMMM d, yyyy')}
+            {shift === 'day' ? 'Day Shift' : 'Night Shift'} — {format(new Date(date + 'T12:00:00'), 'MMMM d, yyyy')}
           </span>
         </div>
 
