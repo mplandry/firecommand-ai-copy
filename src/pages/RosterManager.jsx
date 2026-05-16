@@ -334,9 +334,10 @@ For each unit extract:
 - unit_name: apparatus name only (e.g. "Engine 1", "Ladder 2", "C2", "Tower 1")
 - unit_type: engine/truck/rescue/squad/battalion/medic/tanker/brush/hazmat/other
 - officer: officer name string (e.g. "Damon Ferranti") - just the name, no position code
-- personnel: array of crew member strings in format "Name|PositionCode" or just "Name" if no position visible
+- personnel: array of ALL crew member strings (everyone EXCEPT the officer). Include every single person listed under the unit — do NOT skip anyone. Format: "Name|PositionCode" or just "Name" if no position visible.
 - personnel_count: total headcount including officer
 
+IMPORTANT: Do NOT leave personnel arrays empty if people are listed. If Engine 3 has 3 people listed, all 3 must appear (officer + 2 in personnel). Never truncate or omit crew members.
 Combine across all pages. Return every unit found.`,
       file_urls: fileUrls,
       response_json_schema: {
@@ -508,10 +509,11 @@ export default function RosterManager() {
         shift,
         shift_date: date,
       };
-      if (!existing) {
+      if (existing) {
+        await base44.entities.Roster.update(existing.id, payload);
+      } else {
         await base44.entities.Roster.create(payload);
       }
-      // skip units that already exist — don't overwrite
     }
     queryClient.invalidateQueries({ queryKey: qKey });
     setShowPhotoImport(false);
