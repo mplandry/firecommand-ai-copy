@@ -307,7 +307,7 @@ CRITICAL RULES:
 3. The OFFICER is the first person listed for a unit (Captain, Lieutenant, or most senior rank). Store their riding position code separately.
 4. PERSONNEL = all crew members listed under that unit besides the officer. Each person may have a riding position number next to their name — store it with the person as "Name|PositionCode" (e.g. "James Vanaria|101").
 5. Command officers: C1 = Fire Chief, C2/C3/C4 = Deputy/Assistant Chiefs. All command units (C1, C2, C3, C4) are unit_type: "battalion".
-6. Boats, marine units = unit_type: "other". RTV = unit_type: "other".
+6. Boats, marine units = unit_type: "other". RTV = unit_type: "other". 6A = a pickup truck, unit_type: "other".
 7. Do NOT split the same unit into multiple entries. Merge all personnel for a given unit name onto one entry.
 
 For each unit extract:
