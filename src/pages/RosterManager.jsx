@@ -11,6 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const UNIT_TYPES = ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'];
+
+// Units exempt from the 3-person minimum requirement
+const EXEMPT_UNITS = ['c2','c3','c4'];
+const isExempt = (unitName) => EXEMPT_UNITS.includes((unitName || '').trim().toLowerCase());
 const UNIT_ICONS = {
   engine:'', truck:'', rescue:'', squad:'',
   battalion:'', medic:'', tanker:'', brush:'', hazmat:'', other:'',
@@ -70,6 +74,8 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
   const [notes, setNotes] = useState(entry.notes || '');
 
   const totalPAX = 1 + crew.length; // officer + crew
+  const displayPAX = totalPAX > 1 ? totalPAX : entry.personnel_count || 0;
+  const understaffed = !isExempt(entry.unit_name || unitName) && displayPAX < 3;
 
   const addCrewMember = () => setCrew(c => [...c, '']);
 
@@ -98,20 +104,27 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
   // ── VIEW ──
   if (!editing) {
     return (
-      <div className="group border border-border rounded-xl bg-card hover:border-primary/30 transition-colors overflow-hidden">
+      <div className={`group border rounded-xl bg-card transition-colors overflow-hidden ${understaffed ? 'border-red-600/60 hover:border-red-500/80' : 'border-border hover:border-primary/30'}`}>
         {/* Unit header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-secondary/40 border-b border-border/60">
+        <div className={`flex items-center justify-between px-4 py-3 border-b border-border/60 ${understaffed ? 'bg-red-950/30' : 'bg-secondary/40'}`}>
           <div className="flex items-center gap-3">
             <span className="text-2xl leading-none">{UNIT_ICONS[entry.unit_type] || ''}</span>
             <div>
               <div className="font-mono text-lg font-black text-foreground tracking-wide">{entry.unit_name}</div>
-              <div className="text-[10px] font-mono text-muted-foreground capitalize">{entry.unit_type}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono text-muted-foreground capitalize">{entry.unit_type}</span>
+                {understaffed && (
+                  <span className="text-[9px] font-mono font-bold text-red-400 bg-red-900/40 border border-red-700/40 rounded px-1.5 py-0.5 uppercase tracking-wider flex items-center gap-1">
+                    <AlertTriangle className="w-2.5 h-2.5" /> Understaffed
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="bg-green-900/30 border border-green-700/30 rounded-lg px-2.5 py-1 text-center">
-              <div className="text-sm font-mono font-black text-green-400">{totalPAX > 1 ? totalPAX : entry.personnel_count || '—'}</div>
-              <div className="text-[9px] font-mono text-green-600 uppercase">total</div>
+            <div className={`border rounded-lg px-2.5 py-1 text-center ${understaffed ? 'bg-red-900/30 border-red-700/40' : 'bg-green-900/30 border-green-700/30'}`}>
+              <div className={`text-sm font-mono font-black ${understaffed ? 'text-red-400' : 'text-green-400'}`}>{displayPAX || '—'}</div>
+              <div className={`text-[9px] font-mono uppercase ${understaffed ? 'text-red-600' : 'text-green-600'}`}>total</div>
             </div>
             <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => setEditing(true)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors rounded hover:bg-secondary/60">
@@ -713,6 +726,32 @@ export default function RosterManager() {
             </Button>
           </div>
         )}
+        {/* Understaffed warning banner */}
+        {(() => {
+          const understaffedUnits = entries.filter(e => {
+            const pax = (e.personnel?.length || 0) + (e.officer ? 1 : 0) || e.personnel_count || 0;
+            return !isExempt(e.unit_name) && pax < 3;
+          });
+          return understaffedUnits.length > 0 ? (
+            <div className="flex items-center gap-3 bg-red-950/40 border border-red-700/50 rounded-lg px-4 py-3">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <div>
+                <p className="text-xs font-mono font-bold text-red-300">
+                  Roster Incomplete — {understaffedUnits.length} unit{understaffedUnits.length > 1 ? 's' : ''} understaffed (min. 3 personnel required)
+                </p>
+                <p className="text-[10px] font-mono text-red-500 mt-0.5">
+                  {understaffedUnits.map(e => e.unit_name).join(', ')}
+                </p>
+              </div>
+            </div>
+          ) : entries.length > 0 ? (
+            <div className="flex items-center gap-2 bg-green-950/30 border border-green-700/30 rounded-lg px-4 py-2.5">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <p className="text-xs font-mono text-green-400 font-semibold">Roster complete — all units staffed</p>
+            </div>
+          ) : null;
+        })()}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {entries.map(entry => (
             <RosterRow
