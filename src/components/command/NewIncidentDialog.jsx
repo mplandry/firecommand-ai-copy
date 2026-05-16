@@ -67,7 +67,7 @@ function TemplatePreview({ template }) {
 
 export default function NewIncidentDialog({ open, onClose, onCreate }) {
   const [step, setStep] = useState('template'); // 'template' | 'details'
-  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('__blank');
   const [form, setForm] = useState({
     address: '',
     incident_type: 'structure_fire',
@@ -113,13 +113,13 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
     });
     // Reset
     setStep('template');
-    setSelectedTemplateId(null);
+    setSelectedTemplateId('__blank');
     setForm({ address: '', incident_type: 'structure_fire', alarm_level: '1st_alarm', ic_name: '', command_name: '' });
   };
 
   const handleClose = () => {
     setStep('template');
-    setSelectedTemplateId(null);
+    setSelectedTemplateId('__blank');
     onClose();
   };
 
