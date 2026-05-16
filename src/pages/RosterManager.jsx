@@ -18,11 +18,14 @@ const UNIT_ICONS = {
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
 
-// Personnel stored as "Name|Position" strings e.g. "Smith J.|E100"
+// Personnel stored as "Name|Position|OT" strings e.g. "Smith J.|E100" or "Smith J.|101|OT"
 const encodePerson = (name, position) => position ? `${name}|${position}` : name;
 const decodePerson = (str) => {
-  const [name, position] = (str || '').split('|');
-  return { name: name?.trim() || '', position: position?.trim() || '' };
+  const parts = (str || '').split('|');
+  const isOT = parts.some(p => p.trim().toUpperCase() === 'OT');
+  const name = parts[0]?.trim() || '';
+  const position = parts[1]?.trim() || '';
+  return { name, position, isOT };
 };
 
 // ── Person row in edit mode ───────────────────────────────────────────────────
@@ -143,18 +146,19 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
 
           {/* Crew rows */}
           {entry.personnel?.length > 0 ? entry.personnel.map((p, i) => {
-            const { name, position } = decodePerson(p);
+            const { name, position, isOT } = decodePerson(p);
             return (
-              <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors">
+              <div key={i} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors ${isOT ? 'bg-green-950/20' : ''}`}>
                 <div className="w-20 shrink-0 flex items-center gap-1.5">
-                  <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-widest bg-secondary/60 border border-border/50 rounded px-1.5 py-0.5">
+                  <span className={`text-[9px] font-mono font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${isOT ? 'text-green-400 bg-green-900/40 border border-green-700/40' : 'text-muted-foreground bg-secondary/60 border border-border/50'}`}>
                     {entry.unit_type === 'deputy' ? 'Aide' : 'FF'}
                   </span>
                   {position && (
-                    <span className="text-[9px] font-mono text-muted-foreground/60">{position}</span>
+                    <span className={`text-[9px] font-mono ${isOT ? 'text-green-600' : 'text-muted-foreground/60'}`}>{position}</span>
                   )}
+                  {isOT && <span className="text-[9px] font-mono font-bold text-green-400 bg-green-900/40 border border-green-700/40 rounded px-1 py-0.5">OT</span>}
                 </div>
-                <span className="text-sm font-mono text-foreground">{name || p}</span>
+                <span className={`text-sm font-mono ${isOT ? 'text-green-300' : 'text-foreground'}`}>{name || p}</span>
               </div>
             );
           }) : (
@@ -309,7 +313,7 @@ CRITICAL RULES:
 1. UNIT NAME = the apparatus name only (e.g. "Engine 1", "Engine 2", "Ladder 2", "Tower 1", "Rescue 1", "Squad 5", "C2", "C3", "Moody Boat", "Central Boat", "RTV"). NEVER include riding position numbers in the unit name.
 2. RIDING POSITIONS = the 3-digit numbers (100, 101, 102, 200, etc.) next to personnel names. These are seat/position codes, NOT part of the unit name.
 3. The OFFICER is the first person listed for a unit (Captain, Lieutenant, or most senior rank). Store their riding position code separately.
-4. PERSONNEL = all crew members listed under that unit besides the officer. Each person may have a riding position number next to their name — store it with the person as "Name|PositionCode" (e.g. "James Vanaria|101").
+4. PERSONNEL = all crew members listed under that unit besides the officer. Each person may have a riding position number next to their name — store it with the person as "Name|PositionCode" (e.g. "James Vanaria|101"). If a person is marked as overtime (highlighted in green, labeled OT, or otherwise indicated as overtime), append "|OT" to their string (e.g. "James Vanaria|101|OT" or "James Vanaria|OT").
 5. Command officers: C1 = Fire Chief, unit_type: "deputy". C2/C3/C4 = Deputy Chiefs, unit_type: "deputy". H1/H2 = special non-vehicle officer positions, unit_type: "other".
 6. Boats, marine units = unit_type: "other". RTV = unit_type: "other". 6A = a pickup truck, unit_type: "other".
 7. Do NOT split the same unit into multiple entries. Merge all personnel for a given unit name onto one entry.
