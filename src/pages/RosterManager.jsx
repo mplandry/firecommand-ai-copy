@@ -123,10 +123,13 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
           {/* Officer row */}
           {entry.officer ? (
             <div className="flex items-center gap-3 px-4 py-2.5 bg-cyan-950/20">
-              <div className="w-16 shrink-0">
+              <div className="w-20 shrink-0 flex items-center gap-1.5">
                 <span className="text-[9px] font-mono font-bold text-cyan-500 uppercase tracking-widest bg-cyan-900/40 border border-cyan-700/30 rounded px-1.5 py-0.5">
-                  {officerPos || 'Officer'}
+                  Officer
                 </span>
+                {officerPos && (
+                  <span className="text-[9px] font-mono text-cyan-600/70">{officerPos}</span>
+                )}
               </div>
               <span className="text-sm font-mono font-semibold text-cyan-300">{officerName || entry.officer}</span>
             </div>
@@ -139,10 +142,13 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
             const { name, position } = decodePerson(p);
             return (
               <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors">
-                <div className="w-16 shrink-0">
+                <div className="w-20 shrink-0 flex items-center gap-1.5">
                   <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-widest bg-secondary/60 border border-border/50 rounded px-1.5 py-0.5">
-                    {position || 'FF'}
+                    FF
                   </span>
+                  {position && (
+                    <span className="text-[9px] font-mono text-muted-foreground/60">{position}</span>
+                  )}
                 </div>
                 <span className="text-sm font-mono text-foreground">{name || p}</span>
               </div>
