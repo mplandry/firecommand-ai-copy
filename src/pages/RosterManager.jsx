@@ -264,28 +264,36 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
 
 // ── Photo upload + parse panel ─────────────────────────────────────────────────
 function PhotoImportPanel({ onParsed, onClose }) {
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState('');
   const fileInputRef = useRef(null);
 
-  const handleFile = (file) => {
-    if (!file?.type.startsWith('image/')) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+  const handleFiles = (files) => {
+    const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (!imgs.length) return;
+    setImageFiles(prev => [...prev, ...imgs]);
+    setImagePreviews(prev => [...prev, ...imgs.map(f => URL.createObjectURL(f))]);
     setParseError('');
   };
 
+  const removeImage = (i) => {
+    setImageFiles(prev => prev.filter((_, j) => j !== i));
+    setImagePreviews(prev => prev.filter((_, j) => j !== i));
+  };
+
   const handleParse = async () => {
-    if (!imageFile) return;
+    if (!imageFiles.length) return;
     setIsParsing(true);
     setParseError('');
 
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
+    // Upload all images in parallel
+    const uploads = await Promise.all(imageFiles.map(f => base44.integrations.Core.UploadFile({ file: f })));
+    const fileUrls = uploads.map(u => u.file_url);
 
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a fire department roster parser. Analyze this daily roster sheet image and extract all units/apparatus and their personnel.
+      prompt: `You are a fire department roster parser. Analyze these daily roster sheet images (they may be multiple pages of the same roster) and extract ALL units/apparatus and their personnel across all pages.
 
 For each unit found, extract:
 - unit_name: the unit designator (e.g. "Engine 1", "Truck 3", "Rescue 2", "Battalion 1", "Medic 4")
@@ -294,8 +302,8 @@ For each unit found, extract:
 - personnel: array of ALL crew member names listed for that unit (not including the officer)
 - personnel_count: total count of ALL personnel on unit including officer
 
-Return all units you can find. If you cannot identify any units, return an empty units array.`,
-      file_urls: [file_url],
+Combine units across all pages. If the same unit appears on multiple pages, merge the data. Return all units you can find.`,
+      file_urls: fileUrls,
       response_json_schema: {
         type: 'object',
         properties: {
@@ -321,7 +329,7 @@ Return all units you can find. If you cannot identify any units, return an empty
     setIsParsing(false);
 
     if (!result?.units?.length) {
-      setParseError('No units found in this image. Try a clearer, well-lit photo of the roster.');
+      setParseError('No units found in these images. Try clearer, well-lit photos of the roster.');
       return;
     }
 
@@ -339,51 +347,61 @@ Return all units you can find. If you cannot identify any units, return an empty
     <div className="border border-border rounded-lg overflow-hidden bg-card">
       <div className="px-3 py-2.5 bg-secondary/40 border-b border-border flex items-center justify-between">
         <span className="text-xs font-mono font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-          <Camera className="w-3.5 h-3.5 text-primary" /> Import from Photo
+          <Camera className="w-3.5 h-3.5 text-primary" /> Import from Photos
         </span>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
           <X className="w-4 h-4" />
         </button>
       </div>
       <div className="p-3 space-y-3">
-        {!imagePreview ? (
-          <div
-            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-            onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
-            onDragOver={e => e.preventDefault()}
-          >
-            <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm font-mono text-foreground font-semibold">Drop roster photo or tap to browse</p>
-            <p className="text-[10px] font-mono text-muted-foreground mt-1">JPG, PNG, HEIC — take a photo of the printed sheet</p>
-            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
-              onChange={e => handleFile(e.target.files[0])} />
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="relative rounded-lg overflow-hidden border border-border">
-              <img src={imagePreview} alt="Roster" className="w-full max-h-52 object-cover object-top" />
-              <button
-                onClick={() => { setImageFile(null); setImagePreview(null); }}
-                className="absolute top-2 right-2 bg-black/60 rounded-full p-1 text-white hover:bg-black/80"
-              ><Trash2 className="w-3.5 h-3.5" /></button>
-            </div>
-            {!isParsing && (
-              <Button onClick={handleParse} className="w-full gap-2 text-sm">
-                <Camera className="w-4 h-4" /> Extract Units with AI
-              </Button>
-            )}
-            {isParsing && (
-              <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground font-mono text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" /> Reading roster with AI…
+        {/* Drop zone — always visible so user can add more photos */}
+        <div
+          className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+          onClick={() => fileInputRef.current?.click()}
+          onDrop={e => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
+          onDragOver={e => e.preventDefault()}
+        >
+          <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
+          <p className="text-sm font-mono text-foreground font-semibold">
+            {imageFiles.length === 0 ? 'Drop roster photos or tap to browse' : 'Add more pages'}
+          </p>
+          <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Select multiple pages at once or add one by one</p>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+            onChange={e => handleFiles(e.target.files)} />
+        </div>
+
+        {/* Previews */}
+        {imagePreviews.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {imagePreviews.map((src, i) => (
+              <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-border shrink-0">
+                <img src={src} alt={`Page ${i + 1}`} className="w-full h-full object-cover object-top" />
+                <button
+                  onClick={() => removeImage(i)}
+                  className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-black/80"
+                ><X className="w-3 h-3" /></button>
+                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-center text-[9px] font-mono text-white py-0.5">
+                  Page {i + 1}
+                </div>
               </div>
-            )}
-            {parseError && (
-              <div className="flex items-center gap-2 bg-red-900/20 border border-red-700/40 rounded px-3 py-2 text-xs font-mono text-red-400">
-                <AlertTriangle className="w-4 h-4 shrink-0" /> {parseError}
-              </div>
-            )}
+            ))}
           </div>
+        )}
+
+        {isParsing && (
+          <div className="flex items-center justify-center gap-2 py-3 text-muted-foreground font-mono text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" /> Reading {imageFiles.length} page{imageFiles.length > 1 ? 's' : ''} with AI…
+          </div>
+        )}
+        {parseError && (
+          <div className="flex items-center gap-2 bg-red-900/20 border border-red-700/40 rounded px-3 py-2 text-xs font-mono text-red-400">
+            <AlertTriangle className="w-4 h-4 shrink-0" /> {parseError}
+          </div>
+        )}
+        {!isParsing && imageFiles.length > 0 && (
+          <Button onClick={handleParse} className="w-full gap-2 text-sm">
+            <Camera className="w-4 h-4" /> Extract Units from {imageFiles.length} Page{imageFiles.length > 1 ? 's' : ''} with AI
+          </Button>
         )}
       </div>
     </div>
