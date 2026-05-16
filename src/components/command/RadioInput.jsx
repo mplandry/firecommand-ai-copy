@@ -127,11 +127,12 @@ ASSIGNMENT MAPPING (map these spoken phrases to the exact assignment values):
 - "exposure" / "exposure protection" → exposure
 
 STATUS MAPPING:
-- "on scene" / "on location" / "on the scene" → on_scene
+- "on scene" / "on location" / "on the scene" / "arriving" / "we're arriving" / "pulling up" / "on the box" / "on the hydrant" / "on the plug" / "just arrived" / "have arrived" / "we're there" / "at the address" / "at scene" / "at location" / "[unit] is on scene" → on_scene (also set on_scene_time)
+- ARRIVAL DETECTION: Any phrase where a unit reports physically arriving at the incident address should set status to on_scene. Look for verbs like "arriving", "arrived", "pulling up", "on scene", "on location", "at [address/scene/location]".
+- "working" / "working fire" / "we have a worker" / "confirming working fire" / "we have fire" / "fire showing" → working
 - "on air" / "going on air" / "masking up" / "bottles on" → set_air_time: true, status: working
 - "PAR" / "PAR complete" / "all accounted for" / "personnel accountability" → par
 - "MAYDAY" → mayday (HIGHEST PRIORITY — always set this if heard)
-- "working" / "working fire" / "we have a worker" → working
 - "available" / "in service" / "back in service" → available
 - "out of service" / "OOS" / "taking out of service" → out_of_service
 - "responding" / "en route" → responding
