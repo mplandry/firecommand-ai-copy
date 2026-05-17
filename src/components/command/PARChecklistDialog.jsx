@@ -13,8 +13,9 @@ const UNIT_ICONS = {
 // or notes starting with "Mutual Aid"
 function isMutualAid(unit) {
   if (unit.notes?.toLowerCase().includes('mutual aid')) return true;
+  if (/watertown/i.test(unit.unit_name)) return true;
   // Names like "CAM Engine 1", "ARL Ladder 1"
-  const knownPrefixes = /^(CAM|ARL|LEX|BEL|NAT|NED|WAY|STO|WAL|WIN|WOB|MED|MAL|EVE|SOM|CHE|WES|NEE|FRA|MIL|MED|BRO|QUI|DEU|NEW)/i;
+  const knownPrefixes = /^(CAM|ARL|LEX|BEL|NAT|NED|WAY|STO|WAL|WIN|WOB|MED|MAL|EVE|SOM|CHE|WES|NEE|FRA|MIL|MED|BRO|QUI|DEU|NEW|WAT|WTW)/i;
   const parts = unit.unit_name?.split(' ');
   if (parts?.length > 1 && knownPrefixes.test(parts[0])) return true;
   return false;
