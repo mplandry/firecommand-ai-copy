@@ -1,6 +1,7 @@
 import React from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import UnitCard from './UnitCard';
+import RITQuickInput from './RITQuickInput';
 
 const divisionConfig = {
   division_a:   { label: 'DIVISION A', sub: 'ALPHA',    accent: 'border-t-red-500',    dot: 'bg-red-500',    count: 'text-red-400' },
@@ -20,10 +21,17 @@ const divisionConfig = {
   unassigned:   { label: 'UNASSIGNED', sub: 'UNITS',    accent: 'border-t-slate-600',  dot: 'bg-slate-600',  count: 'text-slate-500' },
 };
 
-export default function DivisionColumn({ assignment, units, onEditUnit }) {
+export default function DivisionColumn({ assignment, units, onEditUnit, allUnits = [] }) {
   const cfg = divisionConfig[assignment] || divisionConfig.unassigned;
   const isEmpty = units.length === 0;
   const isRITEmpty = assignment === 'rit' && isEmpty;
+
+  const handleAssignToRIT = (unitId) => {
+    const unit = allUnits.find(u => u.id === unitId);
+    if (unit && onEditUnit) {
+      onEditUnit({ ...unit, assignment: 'rit' });
+    }
+  };
 
   return (
     <div className={`flex flex-col bg-card/80 border border-border/60 rounded-xl overflow-hidden border-t-2 ${cfg.accent} backdrop-blur-sm ${isRITEmpty ? 'border-destructive animate-flash-contrast' : ''}`}>
@@ -54,8 +62,12 @@ export default function DivisionColumn({ assignment, units, onEditUnit }) {
             }`}
           >
             {units.length === 0 && !snapshot.isDraggingOver ? (
-              <div className="h-full flex items-center justify-center py-6">
-                <span className="text-[10px] font-mono text-muted-foreground/30 tracking-wider">CLEAR</span>
+              <div className="h-full flex items-center justify-center py-6 px-2">
+                {isRITEmpty ? (
+                  <RITQuickInput units={allUnits} onAssignUnit={handleAssignToRIT} />
+                ) : (
+                  <span className="text-[10px] font-mono text-muted-foreground/30 tracking-wider">CLEAR</span>
+                )}
               </div>
             ) : (
               units.map((unit, index) => (
