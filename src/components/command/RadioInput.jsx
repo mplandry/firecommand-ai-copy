@@ -42,6 +42,7 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     recognition.interimResults = true;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
+    recognition.timeout = 10000;
 
     // Fire department terminology hints for better recognition
     const fireTerms = [
