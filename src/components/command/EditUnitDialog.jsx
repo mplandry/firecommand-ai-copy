@@ -144,22 +144,38 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
             />
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onSave({ ...form, air_time: new Date().toISOString() })}
-              className="text-xs"
-            >
-              Mark On Air
-            </Button>
-            {form.air_time && (
+            {form.air_time ? (
+              <>
+                {(() => {
+                  const elapsed = (Date.now() - new Date(form.air_time).getTime()) / 1000 / 60;
+                  const isOverLimit = elapsed > 20;
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`text-xs ${isOverLimit ? 'animate-pulse-red' : ''}`}
+                    >
+                      On Air {Math.floor(elapsed)}m
+                    </Button>
+                  );
+                })()}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSave({ ...form, air_time: null })}
+                  className="text-xs text-muted-foreground hover:text-destructive"
+                >
+                  Clear Air Time
+                </Button>
+              </>
+            ) : (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={() => onSave({ ...form, air_time: null })}
-                className="text-xs text-muted-foreground hover:text-destructive"
+                onClick={() => onSave({ ...form, air_time: new Date().toISOString() })}
+                className="text-xs"
               >
-                Clear Air Time
+                Mark On Air
               </Button>
             )}
             <Button
