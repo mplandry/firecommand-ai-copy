@@ -43,6 +43,29 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     recognition.continuous = false;
     recognition.maxAlternatives = 1;
 
+    // Fire department terminology hints for better recognition
+    const fireTerms = [
+      'Engine', 'Truck', 'Rescue', 'Squad', 'Battalion', 'Medic', 'Tanker', 'Hazmat',
+      'Division A', 'Division B', 'Division C', 'Division D',
+      'interior', 'roof', 'RIT', 'rehab', 'staging', 'ventilation', 'water supply',
+      'on scene', 'working fire', 'MAYDAY', 'all clear', 'PAR', 'available',
+      'Alpha', 'Bravo', 'Charlie', 'Delta', '1st Floor', '2nd Floor', '3rd Floor'
+    ].join(', ');
+
+    // Attempt to use grammar hints (Chrome feature)
+    if ('SpeechGrammarList' in window) {
+      const grammar = `#JSGF V1.0; grammar fire_terms; public <fire> = (${
+        ['Engine', 'Truck', 'Rescue', 'Squad', 'Medic'].join('|')
+      }) [0-9];`;
+      try {
+        const grammarList = new window.SpeechGrammarList();
+        grammarList.addFromString(grammar, 1);
+        recognition.grammars = grammarList;
+      } catch (e) {
+        // Grammar list not fully supported, continue with hints
+      }
+    }
+
     recognition.onstart = () => setIsListening(true);
 
     recognition.onresult = (event) => {
