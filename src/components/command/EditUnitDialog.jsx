@@ -152,6 +152,16 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
             >
               Mark On Air
             </Button>
+            {form.air_time && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onSave({ ...form, air_time: null })}
+                className="text-xs text-muted-foreground hover:text-destructive"
+              >
+                Clear Air Time
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
