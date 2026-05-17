@@ -5,6 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const defaultPersonnel = {
+  engine: 4, truck: 3, rescue: 4, squad: 4,
+  deputy: 1, medic: 2, tanker: 3, brush: 3,
+  hazmat: 4, other: 3,
+};
+
 export default function AddUnitDialog({ open, onClose, onCreate }) {
   const [form, setForm] = useState({
     unit_name: '',
@@ -41,7 +47,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-mono">Type</Label>
-              <Select value={form.unit_type} onValueChange={(v) => setForm({ ...form, unit_type: v })}>
+              <Select value={form.unit_type} onValueChange={(v) => setForm({ ...form, unit_type: v, personnel_count: defaultPersonnel[v] ?? 3 })}>
                 <SelectTrigger className="bg-secondary font-mono text-xs">
                   <SelectValue />
                 </SelectTrigger>
