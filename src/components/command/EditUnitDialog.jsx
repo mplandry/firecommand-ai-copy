@@ -52,6 +52,14 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
           <DialogTitle className="font-mono">{unit.unit_name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <div>
+            <Label className="text-xs font-mono">Unit Name</Label>
+            <Input
+              value={form.unit_name || ''}
+              onChange={(e) => setForm({ ...form, unit_name: e.target.value })}
+              className="bg-secondary font-mono text-sm"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-mono">Status</Label>
