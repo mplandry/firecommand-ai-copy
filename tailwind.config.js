@@ -77,12 +77,17 @@ module.exports = {
   			'pulse-red': {
   				'0%, 100%': { opacity: '1' },
   				'50%': { opacity: '0.5' }
+  			},
+  			'flash-contrast': {
+  				'0%, 100%': { borderColor: 'hsl(0 72% 51%)', backgroundColor: 'hsl(0 72% 51% / 0.15)' },
+  				'50%': { borderColor: 'hsl(0 100% 71%)', backgroundColor: 'hsl(0 100% 71% / 0.3)' }
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out',
-  			'pulse-red': 'pulse-red 1s ease-in-out infinite'
+  			'pulse-red': 'pulse-red 1s ease-in-out infinite',
+  			'flash-contrast': 'flash-contrast 0.8s ease-in-out infinite'
   		}
   	}
   },
