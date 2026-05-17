@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, CheckCircle2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Trash2, CheckCircle2, MessageSquare, Ear } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
+import RadioTrainingTab from '@/components/terminology/RadioTrainingTab';
 
 export default function TerminologySettings() {
   const queryClient = useQueryClient();
@@ -38,57 +40,74 @@ export default function TerminologySettings() {
           </div>
         </div>
 
-        {isLoading && (
-          <div className="text-center py-12 text-muted-foreground font-mono text-sm">Loading...</div>
-        )}
+        <Tabs defaultValue="training" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="training" className="gap-2">
+              <Ear className="w-4 h-4" /> Radio Training
+            </TabsTrigger>
+            <TabsTrigger value="corrections" className="gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Corrections Log
+            </TabsTrigger>
+          </TabsList>
 
-        {!isLoading && corrections.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground/50 font-mono text-sm">
-            <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-30" />
-            No corrections saved yet. Use the 👎 button on radio log entries to teach the AI your terminology.
-          </div>
-        )}
+          <TabsContent value="training">
+            <RadioTrainingTab />
+          </TabsContent>
 
-        {corrections.length > 0 && (
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-4 py-2 bg-secondary/50 border-b border-border text-[10px] font-mono text-muted-foreground uppercase tracking-wider grid grid-cols-[1fr_auto_auto_auto_auto] gap-3">
-              <span>Original Phrase</span>
-              <span>Unit</span>
-              <span>Assignment</span>
-              <span>Status</span>
-              <span></span>
-            </div>
-            {corrections.map(c => (
-              <div
-                key={c.id}
-                className="px-4 py-3 border-b border-border/40 last:border-0 grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-start hover:bg-secondary/20 transition-colors"
-              >
-                <div>
-                  <p className="font-mono text-xs text-foreground">"{c.raw_phrase}"</p>
-                  {c.original_summary && (
-                    <p className="text-[10px] font-mono text-red-400/70 mt-0.5">AI said: {c.original_summary}</p>
-                  )}
-                  {c.correct_summary && (
-                    <p className="text-[10px] font-mono text-green-400/70 mt-0.5">Should mean: {c.correct_summary}</p>
-                  )}
-                  <p className="text-[9px] font-mono text-muted-foreground/40 mt-1">
-                    {format(new Date(c.created_date), 'MMM d, HH:mm')}
-                  </p>
-                </div>
-                <span className="text-xs font-mono text-cyan-400">{c.correct_unit || '—'}</span>
-                <span className="text-xs font-mono text-yellow-400">{c.correct_assignment || '—'}</span>
-                <span className="text-xs font-mono text-blue-400">{c.correct_status || '—'}</span>
-                <button
-                  onClick={() => deleteCorrection.mutate(c.id)}
-                  className="text-muted-foreground/40 hover:text-red-400 transition-colors"
-                  title="Remove this correction"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+          <TabsContent value="corrections">
+            {isLoading && (
+              <div className="text-center py-12 text-muted-foreground font-mono text-sm">Loading...</div>
+            )}
+
+            {!isLoading && corrections.length === 0 && (
+              <div className="text-center py-16 text-muted-foreground/50 font-mono text-sm">
+                <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                No corrections saved yet. Use the 👎 button on radio log entries to teach the AI your terminology.
               </div>
-            ))}
-          </div>
-        )}
+            )}
+
+            {corrections.length > 0 && (
+              <div className="bg-card border border-border rounded-lg overflow-hidden">
+                <div className="px-4 py-2 bg-secondary/50 border-b border-border text-[10px] font-mono text-muted-foreground uppercase tracking-wider grid grid-cols-[1fr_auto_auto_auto_auto] gap-3">
+                  <span>Original Phrase</span>
+                  <span>Unit</span>
+                  <span>Assignment</span>
+                  <span>Status</span>
+                  <span></span>
+                </div>
+                {corrections.map(c => (
+                  <div
+                    key={c.id}
+                    className="px-4 py-3 border-b border-border/40 last:border-0 grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-start hover:bg-secondary/20 transition-colors"
+                  >
+                    <div>
+                      <p className="font-mono text-xs text-foreground">"{c.raw_phrase}"</p>
+                      {c.original_summary && (
+                        <p className="text-[10px] font-mono text-red-400/70 mt-0.5">AI said: {c.original_summary}</p>
+                      )}
+                      {c.correct_summary && (
+                        <p className="text-[10px] font-mono text-green-400/70 mt-0.5">Should mean: {c.correct_summary}</p>
+                      )}
+                      <p className="text-[9px] font-mono text-muted-foreground/40 mt-1">
+                        {format(new Date(c.created_date), 'MMM d, HH:mm')}
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono text-cyan-400">{c.correct_unit || '—'}</span>
+                    <span className="text-xs font-mono text-yellow-400">{c.correct_assignment || '—'}</span>
+                    <span className="text-xs font-mono text-blue-400">{c.correct_status || '—'}</span>
+                    <button
+                      onClick={() => deleteCorrection.mutate(c.id)}
+                      className="text-muted-foreground/40 hover:text-red-400 transition-colors"
+                      title="Remove this correction"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
