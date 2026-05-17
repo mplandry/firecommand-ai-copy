@@ -28,6 +28,7 @@ export default function CommandBoard() {
   const [showClose, setShowClose] = useState(false);
   const [showRosterUpload, setShowRosterUpload] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
+  const [bottomSide, setBottomSide] = useState('division_a'); // Alpha is default front/address side
   const queryClient = useQueryClient();
 
   const { data: incident, isLoading: loadingIncident } = useQuery({
@@ -353,49 +354,87 @@ export default function CommandBoard() {
           </div>
 
           {/* ── Structure Diagram with Divisions on each side ── */}
-          <div className="flex flex-col items-center gap-2">
+          {(() => {
+            // The 4 sides. bottomSide is always rendered at bottom.
+            // Opposite side goes to top. The other two go left/right.
+            const sides = ['division_a', 'division_b', 'division_c', 'division_d'];
+            const idx = sides.indexOf(bottomSide);
+            const topSide    = sides[(idx + 2) % 4];
+            const leftSide   = sides[(idx + 1) % 4];
+            const rightSide  = sides[(idx + 3) % 4];
 
-            {/* Division C — top (Charlie side) */}
-            <div className="w-full max-w-xs">
-              <DivisionColumn assignment="division_c" units={units.filter(u => u.assignment === 'division_c')} onEditUnit={isReadOnly ? null : setEditingUnit} />
-            </div>
+            const sideLabel = { division_a: 'A', division_b: 'B', division_c: 'C', division_d: 'D' };
+            const sideColor = {
+              division_a: 'text-red-400',
+              division_b: 'text-blue-400',
+              division_c: 'text-green-400',
+              division_d: 'text-yellow-400',
+            };
 
-            {/* Middle row: B | Structure | D */}
-            <div className="w-full flex items-stretch gap-2">
-              {/* Division B — left (Bravo side) */}
-              <div className="flex-1">
-                <DivisionColumn assignment="division_b" units={units.filter(u => u.assignment === 'division_b')} onEditUnit={isReadOnly ? null : setEditingUnit} />
-              </div>
+            const SideBtn = ({ division, position }) => {
+              const isBottom = division === bottomSide;
+              const posClass = {
+                top:    'absolute top-1 left-1/2 -translate-x-1/2',
+                bottom: 'absolute bottom-1 left-1/2 -translate-x-1/2',
+                left:   'absolute left-1 top-1/2 -translate-y-1/2',
+                right:  'absolute right-1 top-1/2 -translate-y-1/2',
+              }[position];
+              return (
+                <button
+                  onClick={() => setBottomSide(division)}
+                  className={`${posClass} text-[9px] font-mono font-bold tracking-wider rounded px-1 transition-all
+                    ${isBottom
+                      ? `${sideColor[division]} bg-secondary/80 ring-1 ring-current/40`
+                      : `${sideColor[division]}/50 hover:${sideColor[division]} hover:bg-secondary/50`
+                    }`}
+                  title={`Set Division ${sideLabel[division]} as front (bottom)`}
+                >
+                  {sideLabel[division]}
+                </button>
+              );
+            };
 
-              {/* Structure box */}
-              <div className="flex-shrink-0 w-32 flex items-center justify-center">
-                <div className="w-full aspect-square rounded-xl border-2 border-border/60 bg-secondary/30 flex flex-col items-center justify-center gap-1 relative">
-                  {/* Building grid */}
-                  <div className="grid grid-cols-3 gap-0.5 opacity-30">
-                    {Array.from({length: 9}).map((_, i) => (
-                      <div key={i} className="w-5 h-5 rounded-sm bg-foreground/60" />
-                    ))}
+            return (
+              <div className="flex flex-col items-center gap-2">
+                {/* Top */}
+                <div className="w-full max-w-xs">
+                  <DivisionColumn assignment={topSide} units={units.filter(u => u.assignment === topSide)} onEditUnit={isReadOnly ? null : setEditingUnit} />
+                </div>
+
+                {/* Middle row */}
+                <div className="w-full flex items-stretch gap-2">
+                  <div className="flex-1">
+                    <DivisionColumn assignment={leftSide} units={units.filter(u => u.assignment === leftSide)} onEditUnit={isReadOnly ? null : setEditingUnit} />
                   </div>
-                  <span className="text-[9px] font-mono font-bold tracking-widest text-muted-foreground/50 mt-1 uppercase">Structure</span>
-                  {/* Side labels */}
-                  <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-mono text-green-400/60 font-bold tracking-wider">C</span>
-                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-mono text-red-400/60 font-bold tracking-wider">A</span>
-                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-mono text-blue-400/60 font-bold tracking-wider">B</span>
-                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] font-mono text-yellow-400/60 font-bold tracking-wider">D</span>
+
+                  {/* Structure box */}
+                  <div className="flex-shrink-0 w-32 flex items-center justify-center">
+                    <div className="w-full aspect-square rounded-xl border-2 border-border/60 bg-secondary/30 flex flex-col items-center justify-center gap-1 relative">
+                      <div className="grid grid-cols-3 gap-0.5 opacity-30">
+                        {Array.from({length: 9}).map((_, i) => (
+                          <div key={i} className="w-5 h-5 rounded-sm bg-foreground/60" />
+                        ))}
+                      </div>
+                      <span className="text-[9px] font-mono font-bold tracking-widest text-muted-foreground/50 mt-1 uppercase">Structure</span>
+                      <SideBtn division={topSide}   position="top" />
+                      <SideBtn division={bottomSide} position="bottom" />
+                      <SideBtn division={leftSide}   position="left" />
+                      <SideBtn division={rightSide}  position="right" />
+                    </div>
+                  </div>
+
+                  <div className="flex-1">
+                    <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} onEditUnit={isReadOnly ? null : setEditingUnit} />
+                  </div>
+                </div>
+
+                {/* Bottom (front/address side) */}
+                <div className="w-full max-w-xs">
+                  <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} onEditUnit={isReadOnly ? null : setEditingUnit} />
                 </div>
               </div>
-
-              {/* Division D — right (Delta side) */}
-              <div className="flex-1">
-                <DivisionColumn assignment="division_d" units={units.filter(u => u.assignment === 'division_d')} onEditUnit={isReadOnly ? null : setEditingUnit} />
-              </div>
-            </div>
-
-            {/* Division A — bottom (Alpha side) */}
-            <div className="w-full max-w-xs">
-              <DivisionColumn assignment="division_a" units={units.filter(u => u.assignment === 'division_a')} onEditUnit={isReadOnly ? null : setEditingUnit} />
-            </div>
-          </div>
+            );
+          })()}
 
           {/* ── Operational Groups ── */}
           <div className="grid grid-cols-2 gap-2">
