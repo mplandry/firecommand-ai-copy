@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getAutoAssignment } from '@/lib/statusAssignment';
 
 const assignments = [
   { value: 'unassigned', label: 'Unassigned' },
@@ -54,7 +55,10 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-mono">Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+              <Select value={form.status} onValueChange={(v) => {
+                const autoAssign = getAutoAssignment(v, form.assignment);
+                setForm({ ...form, status: v, ...(autoAssign ? { assignment: autoAssign } : {}) });
+              }}>
                 <SelectTrigger className="bg-secondary font-mono text-xs">
                   <SelectValue />
                 </SelectTrigger>

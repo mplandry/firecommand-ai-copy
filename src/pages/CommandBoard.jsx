@@ -19,6 +19,7 @@ import SidePanel from '@/components/command/SidePanel';
 import PARAlert from '@/components/command/PARAlert';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { enqueue, getCached, setCached, patchCachedUnit, addCachedUnit, addCachedRadioLog } from '@/lib/offlineQueue';
+import { getAutoAssignment } from '@/lib/statusAssignment';
 
 export default function CommandBoard() {
   const { incidentId } = useParams();
@@ -154,7 +155,14 @@ export default function CommandBoard() {
         const existingUnit = units.find(u => u.unit_name.toLowerCase() === action.unit_name?.toLowerCase());
         if (existingUnit && action.changes) {
           const updateData = {};
-          if (action.changes.status) updateData.status = action.changes.status;
+          if (action.changes.status) {
+            updateData.status = action.changes.status;
+            // Auto-move to the right zone if no explicit assignment in this transmission
+            if (!action.changes.assignment) {
+              const autoAssign = getAutoAssignment(action.changes.status, existingUnit.assignment);
+              if (autoAssign) updateData.assignment = autoAssign;
+            }
+          }
           if (action.changes.assignment) updateData.assignment = action.changes.assignment;
           if (action.changes.floor) updateData.floor = action.changes.floor;
           if (action.changes.set_air_time) updateData.air_time = new Date().toISOString();
