@@ -5,7 +5,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Mic } from 'lucide-react';
 
 const alarmLevels = [
   '1st_alarm', '2nd_alarm', '3rd_alarm', '4th_alarm', '5th_alarm', 'task_force', 'strike_team'
@@ -30,6 +30,7 @@ export default function DispatchLog() {
   const queryClient = useQueryClient();
   const [editingFields, setEditingFields] = useState({});
   const [newUnitId, setNewUnitId] = useState(null);
+  const [listening, setListening] = useState(null);
 
   const { data: incident } = useQuery({
     queryKey: ['incident', incidentId],
@@ -64,6 +65,36 @@ export default function DispatchLog() {
     },
   });
 
+  const handleMicInput = (level) => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition not supported');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setListening(level);
+    recognition.onend = () => setListening(null);
+    recognition.onerror = () => setListening(null);
+
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      transcript = transcript.trim();
+      if (transcript && event.isFinal) {
+        createUnit.mutate({ unit_name: transcript, unit_type: 'engine', alarm_level: level });
+      }
+    };
+
+    recognition.start();
+  };
+
   const unitsByAlarm = {};
   alarmLevels.forEach(level => {
     unitsByAlarm[level] = units.filter(u => u.alarm_level === level);
@@ -87,9 +118,21 @@ export default function DispatchLog() {
         <div className="space-y-6">
           {alarmLevels.map(level => (
             <div key={level} className="rounded-lg border border-border/60 bg-card/40 overflow-hidden">
-              <div className="bg-secondary/60 border-b border-border/60 px-4 py-3">
-                <h2 className="font-mono font-bold text-foreground text-lg">{alarmLabels[level]}</h2>
-                <p className="text-xs text-muted-foreground mt-1">{unitsByAlarm[level].length} units</p>
+              <div className="bg-secondary/60 border-b border-border/60 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <h2 className="font-mono font-bold text-foreground text-lg">{alarmLabels[level]}</h2>
+                  <p className="text-xs text-muted-foreground mt-1">{unitsByAlarm[level].length} units</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={listening === level ? 'default' : 'outline'}
+                  onClick={() => handleMicInput(level)}
+                  className="gap-1"
+                  disabled={listening !== null}
+                >
+                  <Mic className="w-4 h-4" />
+                  {listening === level ? 'Listening...' : 'Add via Voice'}
+                </Button>
               </div>
 
               <div className="p-4 space-y-3">
