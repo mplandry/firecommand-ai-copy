@@ -19,23 +19,33 @@ const unitTypeLabel = {
   hazmat: 'HZM', other: 'OTH',
 };
 
-export default function UnitCard({ unit, onEdit }) {
-  const [airElapsed, setAirElapsed] = useState(null);
-  const cfg = statusConfig[unit.status] || statusConfig.dispatched;
-  const isMayday = unit.status === 'mayday';
-
+function useElapsed(timestamp) {
+  const [elapsed, setElapsed] = useState(null);
   useEffect(() => {
-    if (!unit.air_time) return;
+    if (!timestamp) return;
     const tick = () => {
-      const diff = Date.now() - new Date(unit.air_time).getTime();
+      const diff = Date.now() - new Date(timestamp).getTime();
       const m = Math.floor(diff / 60000);
       const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-      setAirElapsed(`${m}:${s}`);
+      setElapsed(`${m}:${s}`);
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [unit.air_time]);
+  }, [timestamp]);
+  return elapsed;
+}
+
+export default function UnitCard({ unit, onEdit }) {
+  const airElapsed = useElapsed(unit.air_time);
+  const entryElapsed = useElapsed(unit.on_scene_time);
+  const cfg = statusConfig[unit.status] || statusConfig.dispatched;
+  const isMayday = unit.status === 'mayday';
+  const isDeployed = ['on_scene', 'working', 'par'].includes(unit.status) && unit.on_scene_time;
+
+  // Warn if on scene > 20 min
+  const entryMinutes = unit.on_scene_time ? (Date.now() - new Date(unit.on_scene_time).getTime()) / 60000 : 0;
+  const entryWarning = isDeployed && entryMinutes >= 20;
 
   return (
     <div
@@ -91,6 +101,23 @@ export default function UnitCard({ unit, onEdit }) {
             </span>
           )}
         </div>
+
+        {/* Entry timer — shown when unit is deployed on scene */}
+        {isDeployed && entryElapsed && (
+          <div className={`mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 border ${
+            entryWarning
+              ? 'bg-orange-500/15 border-orange-500/40'
+              : 'bg-secondary/60 border-border/40'
+          }`}>
+            <Clock className={`w-3.5 h-3.5 shrink-0 ${entryWarning ? 'text-orange-400' : 'text-muted-foreground'}`} />
+            <span className={`text-xs font-mono font-bold tracking-wider ${entryWarning ? 'text-orange-300' : 'text-muted-foreground'}`}>
+              ON SCENE
+            </span>
+            <span className={`text-xs font-mono font-bold ml-auto ${entryWarning ? 'text-orange-300' : 'text-foreground'}`}>
+              {entryElapsed}
+            </span>
+          </div>
+        )}
 
         {/* Personnel list */}
         {unit.personnel?.length > 0 && (
