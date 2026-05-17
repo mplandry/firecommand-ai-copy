@@ -147,7 +147,7 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setForm({ ...form, air_time: new Date().toISOString() })}
+              onClick={() => onSave({ ...form, air_time: new Date().toISOString() })}
               className="text-xs"
             >
               Mark On Air
@@ -155,7 +155,7 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setForm({ ...form, last_par_time: new Date().toISOString(), status: 'par' })}
+              onClick={() => onSave({ ...form, last_par_time: new Date().toISOString(), status: 'par' })}
               className="text-xs"
             >
               PAR Complete
