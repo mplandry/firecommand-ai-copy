@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload, Camera, Loader2, CheckCircle2, AlertTriangle, Trash2, Users, Plus, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-const UNIT_TYPES = ['engine', 'truck', 'rescue', 'squad', 'battalion', 'medic', 'tanker', 'brush', 'hazmat', 'other'];
+const UNIT_TYPES = ['engine', 'truck', 'rescue', 'squad', 'deputy', 'medic', 'tanker', 'brush', 'hazmat', 'other'];
 const ASSIGNMENTS = [
   'unassigned', 'staging', 'division_a', 'division_b', 'division_c', 'division_d',
   'roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'exposure',
@@ -97,8 +97,8 @@ export default function RosterUploadDialog({ open, onClose, existingUnits, onImp
       prompt: `You are a fire department roster parser. Analyze these ${fileUrls.length} daily roster sheet image(s) and extract ALL units/apparatus and their personnel assignments across all pages/sheets.
 
 For each unit found, extract:
-- unit_name: the unit designator (e.g. "Engine 1", "Truck 3", "Rescue 2", "Battalion 1", "Medic 4")
-- unit_type: one of engine/truck/rescue/squad/battalion/medic/tanker/brush/hazmat/other
+- unit_name: the unit designator (e.g. "Engine 1", "Truck 3", "Rescue 2", "C2", "Medic 4")
+- unit_type: one of engine/truck/rescue/squad/deputy/medic/tanker/brush/hazmat/other
 - officer: the officer/captain/lieutenant name if visible
 - personnel: array of crew member names listed under that unit
 - personnel_count: total count of personnel on that unit
@@ -116,7 +116,7 @@ Return ONLY the structured JSON with the units array.`,
               type: 'object',
               properties: {
                 unit_name: { type: 'string' },
-                unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','battalion','medic','tanker','brush','hazmat','other'] },
+                unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'] },
                 officer: { type: 'string' },
                 personnel: { type: 'array', items: { type: 'string' } },
                 personnel_count: { type: 'number' },
