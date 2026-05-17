@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Camera, Loader2, CheckCircle2, AlertTriangle, Trash2, Users } from 'lucide-react';
+import { Upload, Camera, Loader2, CheckCircle2, AlertTriangle, Trash2, Users, Plus, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const UNIT_TYPES = ['engine', 'truck', 'rescue', 'squad', 'battalion', 'medic', 'tanker', 'brush', 'hazmat', 'other'];
@@ -59,36 +59,42 @@ function EditableUnitRow({ unit, onChange, onRemove }) {
 }
 
 export default function RosterUploadDialog({ open, onClose, existingUnits, onImportUnits }) {
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [images, setImages] = useState([]); // [{ file, preview }]
   const [isParsing, setIsParsing] = useState(false);
   const [parsedUnits, setParsedUnits] = useState(null);
   const [parseError, setParseError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileSelect = (file) => {
-    if (!file || !file.type.startsWith('image/')) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+  const addFiles = (files) => {
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const newEntries = imageFiles.map(file => ({ file, preview: URL.createObjectURL(file) }));
+    setImages(prev => [...prev, ...newEntries]);
     setParsedUnits(null);
     setParseError('');
   };
 
+  const removeImage = (idx) => {
+    setImages(prev => prev.filter((_, i) => i !== idx));
+    setParsedUnits(null);
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
-    handleFileSelect(e.dataTransfer.files[0]);
+    addFiles(e.dataTransfer.files);
   };
 
   const handleParse = async () => {
-    if (!imageFile) return;
+    if (images.length === 0) return;
     setIsParsing(true);
     setParseError('');
 
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
+    // Upload all images in parallel
+    const uploads = await Promise.all(images.map(img => base44.integrations.Core.UploadFile({ file: img.file })));
+    const fileUrls = uploads.map(u => u.file_url);
 
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a fire department roster parser. Analyze this daily roster sheet image and extract all units/apparatus and their personnel assignments.
+      prompt: `You are a fire department roster parser. Analyze these ${fileUrls.length} daily roster sheet image(s) and extract ALL units/apparatus and their personnel assignments across all pages/sheets.
 
 For each unit found, extract:
 - unit_name: the unit designator (e.g. "Engine 1", "Truck 3", "Rescue 2", "Battalion 1", "Medic 4")
@@ -97,10 +103,10 @@ For each unit found, extract:
 - personnel: array of crew member names listed under that unit
 - personnel_count: total count of personnel on that unit
 
-If no assignment is shown on the roster, default to "staging".
+Deduplicate units that appear on multiple pages (use the most complete record). If no assignment is shown, default to "staging".
 
-Return ONLY the structured JSON with the units array. If you cannot identify any units, return an empty array.`,
-      file_urls: [file_url],
+Return ONLY the structured JSON with the units array.`,
+      file_urls: fileUrls,
       response_json_schema: {
         type: 'object',
         properties: {
@@ -124,7 +130,7 @@ Return ONLY the structured JSON with the units array. If you cannot identify any
     });
 
     if (!result?.units || result.units.length === 0) {
-      setParseError('No units found in the image. Try a clearer photo of the roster sheet.');
+      setParseError('No units found in the images. Try clearer photos of the roster sheet.');
       setIsParsing(false);
       return;
     }
@@ -153,19 +159,14 @@ Return ONLY the structured JSON with the units array. If you cannot identify any
   };
 
   const handleClose = () => {
-    setImageFile(null);
-    setImagePreview(null);
+    setImages([]);
     setParsedUnits(null);
     setParseError('');
     onClose();
   };
 
-  const updateUnit = (idx, updated) => {
-    setParsedUnits(prev => prev.map((u, i) => i === idx ? updated : u));
-  };
-  const removeUnit = (idx) => {
-    setParsedUnits(prev => prev.filter((_, i) => i !== idx));
-  };
+  const updateUnit = (idx, updated) => setParsedUnits(prev => prev.map((u, i) => i === idx ? updated : u));
+  const removeUnit = (idx) => setParsedUnits(prev => prev.filter((_, i) => i !== idx));
 
   const newCount = parsedUnits?.filter(u => u._isNew).length || 0;
   const updateCount = parsedUnits ? parsedUnits.length - newCount : 0;
@@ -179,105 +180,113 @@ Return ONLY the structured JSON with the units array. If you cannot identify any
           </DialogTitle>
         </DialogHeader>
 
-        {/* Upload Zone */}
-        {!imagePreview ? (
-          <div
-            className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-            onDrop={handleDrop}
-            onDragOver={e => e.preventDefault()}
-          >
-            <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="font-mono text-sm text-foreground font-semibold">Drop roster photo or click to browse</p>
-            <p className="font-mono text-xs text-muted-foreground mt-1">Supports JPG, PNG, HEIC — take a photo of the printed sheet</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={e => handleFileSelect(e.target.files[0])}
-            />
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {/* Image Preview */}
-            <div className="relative rounded-lg overflow-hidden border border-border">
-              <img src={imagePreview} alt="Roster" className="w-full max-h-48 object-cover object-top" />
-              <button
-                onClick={() => { setImageFile(null); setImagePreview(null); setParsedUnits(null); }}
-                className="absolute top-2 right-2 bg-black/60 rounded-full p-1 text-white hover:bg-black/80"
+        {/* Drop Zone */}
+        <div
+          className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+          onClick={() => fileInputRef.current?.click()}
+          onDrop={handleDrop}
+          onDragOver={e => e.preventDefault()}
+        >
+          <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="font-mono text-sm text-foreground font-semibold">Drop roster photos or click to browse</p>
+          <p className="font-mono text-xs text-muted-foreground mt-1">Multiple pages supported — add as many photos as needed</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple
+            className="hidden"
+            onChange={e => addFiles(e.target.files)}
+          />
+        </div>
+
+        {/* Image Previews */}
+        {images.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                {images.length} photo{images.length !== 1 ? 's' : ''} queued
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground gap-1 h-7"
+                onClick={() => fileInputRef.current?.click()}
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Parse button */}
-            {!parsedUnits && !isParsing && (
-              <Button onClick={handleParse} className="w-full gap-2" disabled={isParsing}>
-                <Camera className="w-4 h-4" /> Extract Units from Roster
+                <Plus className="w-3 h-3" /> Add more
               </Button>
-            )}
-
-            {isParsing && (
-              <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground font-mono text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" /> Reading roster sheet with AI...
-              </div>
-            )}
-
-            {parseError && (
-              <div className="flex items-center gap-2 bg-red-900/20 border border-red-700/40 rounded-lg px-3 py-2 text-xs font-mono text-red-400">
-                <AlertTriangle className="w-4 h-4 shrink-0" /> {parseError}
-              </div>
-            )}
-
-            {/* Parsed Units Review */}
-            {parsedUnits && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                    Review Extracted Units
-                  </p>
-                  <div className="flex gap-2 text-[10px] font-mono">
-                    {newCount > 0 && <span className="text-green-400">+{newCount} new</span>}
-                    {updateCount > 0 && <span className="text-yellow-400">~{updateCount} existing</span>}
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {images.map((img, idx) => (
+                <div key={idx} className="relative rounded-lg overflow-hidden border border-border aspect-[3/4]">
+                  <img src={img.preview} alt={`Roster ${idx + 1}`} className="w-full h-full object-cover object-top" />
+                  <button
+                    onClick={() => removeImage(idx)}
+                    className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 text-white hover:bg-black/90"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[9px] font-mono text-center py-0.5 text-white">
+                    Page {idx + 1}
                   </div>
                 </div>
+              ))}
+            </div>
 
-                {/* Column headers */}
-                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-1.5 mb-1 px-0">
-                  {['Unit', 'Type', 'Assignment', 'PAX', ''].map((h, i) => (
-                    <span key={i} className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">{h}</span>
-                  ))}
-                </div>
+            {!parsedUnits && !isParsing && (
+              <Button onClick={handleParse} className="w-full gap-2">
+                <Camera className="w-4 h-4" /> Extract Units from {images.length} Photo{images.length !== 1 ? 's' : ''}
+              </Button>
+            )}
+          </div>
+        )}
 
-                <div className="max-h-64 overflow-y-auto">
-                  {parsedUnits.map((unit, idx) => (
-                    <div key={idx}>
-                      <EditableUnitRow
-                        unit={unit}
-                        onChange={(updated) => updateUnit(idx, updated)}
-                        onRemove={() => removeUnit(idx)}
-                      />
-                      {unit.officer && (
-                        <p className="text-[10px] font-mono text-cyan-400 pl-1 mb-1">
-                          Officer: {unit.officer}
-                          {unit.personnel?.length > 0 && ` · Crew: ${unit.personnel.join(', ')}`}
-                        </p>
-                      )}
-                      {!unit.officer && unit.personnel?.length > 0 && (
-                        <p className="text-[10px] font-mono text-muted-foreground pl-1 mb-1">
-                          Crew: {unit.personnel.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+        {isParsing && (
+          <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground font-mono text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" /> Reading {images.length} roster photo{images.length !== 1 ? 's' : ''} with AI...
+          </div>
+        )}
 
-                {parsedUnits.length === 0 && (
-                  <p className="text-xs font-mono text-muted-foreground text-center py-4">All units removed.</p>
-                )}
+        {parseError && (
+          <div className="flex items-center gap-2 bg-red-900/20 border border-red-700/40 rounded-lg px-3 py-2 text-xs font-mono text-red-400">
+            <AlertTriangle className="w-4 h-4 shrink-0" /> {parseError}
+          </div>
+        )}
+
+        {/* Parsed Units Review */}
+        {parsedUnits && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Review Extracted Units</p>
+              <div className="flex gap-2 text-[10px] font-mono">
+                {newCount > 0 && <span className="text-green-400">+{newCount} new</span>}
+                {updateCount > 0 && <span className="text-yellow-400">~{updateCount} existing</span>}
               </div>
+            </div>
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-1.5 mb-1">
+              {['Unit', 'Type', 'Assignment', 'PAX', ''].map((h, i) => (
+                <span key={i} className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">{h}</span>
+              ))}
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+              {parsedUnits.map((unit, idx) => (
+                <div key={idx}>
+                  <EditableUnitRow unit={unit} onChange={(u) => updateUnit(idx, u)} onRemove={() => removeUnit(idx)} />
+                  {unit.officer && (
+                    <p className="text-[10px] font-mono text-cyan-400 pl-1 mb-1">
+                      Officer: {unit.officer}{unit.personnel?.length > 0 && ` · Crew: ${unit.personnel.join(', ')}`}
+                    </p>
+                  )}
+                  {!unit.officer && unit.personnel?.length > 0 && (
+                    <p className="text-[10px] font-mono text-muted-foreground pl-1 mb-1">Crew: {unit.personnel.join(', ')}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {parsedUnits.length === 0 && (
+              <p className="text-xs font-mono text-muted-foreground text-center py-4">All units removed.</p>
             )}
           </div>
         )}
