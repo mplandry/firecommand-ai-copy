@@ -40,7 +40,7 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.maxAlternatives = 1;
 
     // Fire department terminology hints for better recognition
