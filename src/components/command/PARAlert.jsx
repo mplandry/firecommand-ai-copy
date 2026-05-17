@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, CheckCircle, Bell, Timer, PauseCircle, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PARChecklistDialog from './PARChecklistDialog';
 
 const PAR_INTERVAL_MINUTES = 20;
 const PAR_WARNING_MINUTES = 3;
 const TOTAL_SECONDS = PAR_INTERVAL_MINUTES * 60;
 const WARNING_SECONDS = PAR_WARNING_MINUTES * 60;
 
-export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly }) {
+export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly, units = [] }) {
   const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
   const [overdue, setOverdue] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [stopped, setStopped] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
   const [notifGranted, setNotifGranted] = useState(false);
   const lastResetRef = useRef(null);
   const notifFiredRef = useRef(false);
@@ -68,6 +70,10 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
   }, [overdue, notifGranted]);
 
   const handleInitiatePAR = () => {
+    setShowChecklist(true);
+  };
+
+  const handleConfirmPAR = () => {
     setSecondsLeft(TOTAL_SECONDS);
     setOverdue(false);
     setDismissed(false);
@@ -82,9 +88,20 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
   const progress = secondsLeft / TOTAL_SECONDS;
   const circumference = 2 * Math.PI * 10;
 
+  // ── Checklist Dialog (rendered regardless of banner state) ──
+  const checklistDialog = (
+    <PARChecklistDialog
+      open={showChecklist}
+      onClose={() => setShowChecklist(false)}
+      units={units}
+      onConfirmPAR={handleConfirmPAR}
+    />
+  );
+
   // ── Overdue banner ──
   if (overdue && !dismissed) {
     return (
+      <>
       <div className="flex items-center gap-3 px-4 py-2.5 bg-red-950/60 border-b-2 border-red-500/70 animate-pulse-red">
         <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
         <div className="flex-1 min-w-0">
@@ -116,11 +133,14 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
           </Button>
         </div>
       </div>
+      {checklistDialog}
+    </>
     );
   }
 
   // ── Warning / normal countdown strip ──
   return (
+    <>
     <div className={`flex items-center gap-3 px-4 py-1.5 border-b border-border/50 transition-colors ${
       isWarning ? 'bg-yellow-950/30 border-yellow-700/40' : 'bg-muted/30'
     }`}>
@@ -178,5 +198,7 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
         )}
       </div>
     </div>
+    {checklistDialog}
+    </>
   );
 }

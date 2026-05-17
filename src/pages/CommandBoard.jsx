@@ -386,7 +386,7 @@ export default function CommandBoard() {
 
       {/* ── PAR Alert ── */}
       {!isReadOnly && (
-        <PARAlert lastRadioLogTime={radioLogs[0]?.created_date} onRequestPAR={handleRequestAllPAR} isReadOnly={isReadOnly} />
+        <PARAlert lastRadioLogTime={radioLogs[0]?.created_date} onRequestPAR={handleRequestAllPAR} isReadOnly={isReadOnly} units={units} />
       )}
 
       {/* ── Main Content ── */}
