@@ -238,7 +238,28 @@ export default function CommandBoard() {
     if (!destination) return;
     const unit = units.find(u => u.id === draggableId);
     if (!unit || unit.assignment === destination.droppableId) return;
-    const updateData = { assignment: destination.droppableId };
+
+    const newAssignment = destination.droppableId;
+    const now = new Date().toISOString();
+    const updateData = { assignment: newAssignment };
+
+    // Auto-status when dragged onto active tactical zones
+    const workingZones = ['division_a', 'division_b', 'division_c', 'division_d', 'roof', 'interior', 'ventilation', 'search', 'water_supply', 'medical', 'exposure'];
+    const onSceneZones = ['staging'];
+
+    if (workingZones.includes(newAssignment)) {
+      updateData.status = 'working';
+      if (!unit.on_scene_time) updateData.on_scene_time = now;
+    } else if (onSceneZones.includes(newAssignment) && ['dispatched', 'responding'].includes(unit.status)) {
+      updateData.status = 'on_scene';
+      if (!unit.on_scene_time) updateData.on_scene_time = now;
+    } else if (newAssignment === 'rehab') {
+      updateData.status = 'rehab';
+    } else if (newAssignment === 'rit') {
+      updateData.status = 'working';
+      if (!unit.on_scene_time) updateData.on_scene_time = now;
+    }
+
     if (!navigator.onLine) {
       enqueue({ type: 'unit_update', id: unit.id, data: updateData });
       patchCachedUnit(incidentId, unit.id, updateData);
