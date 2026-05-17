@@ -142,7 +142,9 @@ export default function DispatchLog() {
                   unitsByAlarm[level].map(unit => (
                     <div key={unit.id} className={`flex items-center gap-2 p-2 rounded-lg border ${newUnitId === unit.id ? 'bg-primary/10 border-primary/40' : 'bg-secondary/40 border-border/40 hover:border-border/60'} group`}>
                       <Input
-                        ref={newUnitId === unit.id ? (ref) => ref?.focus() : null}
+                        ref={newUnitId === unit.id ? (ref) => {
+                          if (ref) setTimeout(() => ref.focus(), 0);
+                        } : null}
                         value={editingFields[`${unit.id}_name`] !== undefined ? editingFields[`${unit.id}_name`] : unit.unit_name}
                         onChange={(e) => setEditingFields({ ...editingFields, [`${unit.id}_name`]: e.target.value })}
                         onFocus={(e) => e.target.select()}
