@@ -15,8 +15,8 @@ const statusConfig = {
 
 const unitTypeLabel = {
   engine: 'ENG', truck: 'TRK', rescue: 'RSC', squad: 'SQD',
-  deputy: 'DEP', medic: 'MED', tanker: 'TNK', brush: 'BRS',
-  hazmat: 'HZM', other: 'OTH',
+  deputy: 'CHF', medic: 'MED', tanker: 'TNK', brush: 'BRS',
+  hazmat: 'HZM', battalion: 'CHF', other: 'OTH',
 };
 
 function useElapsed(timestamp) {

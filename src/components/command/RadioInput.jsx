@@ -191,7 +191,7 @@ Respond with this exact JSON structure:
   "new_units": [
     {
       "unit_name": "name",
-      "unit_type": "engine|truck|rescue|squad|battalion|medic|tanker|brush|hazmat|other",
+      "unit_type": "engine|truck|rescue|squad|deputy|medic|tanker|brush|hazmat|other",
       "status": "status",
       "assignment": "assignment or unassigned"
     }

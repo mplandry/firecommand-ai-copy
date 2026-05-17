@@ -50,7 +50,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
                   <SelectItem value="truck">Truck/Ladder</SelectItem>
                   <SelectItem value="rescue">Rescue</SelectItem>
                   <SelectItem value="squad">Squad</SelectItem>
-                  <SelectItem value="battalion">Battalion Chief</SelectItem>
+                  <SelectItem value="deputy">Deputy / Chief</SelectItem>
                   <SelectItem value="medic">Medic</SelectItem>
                   <SelectItem value="tanker">Tanker</SelectItem>
                   <SelectItem value="brush">Brush</SelectItem>
