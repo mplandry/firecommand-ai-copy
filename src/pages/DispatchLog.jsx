@@ -5,7 +5,8 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Mic } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Mic, Radio, Send, Loader2, AlertTriangle } from 'lucide-react';
+import RadioInput from '@/components/command/RadioInput';
 
 const alarmLevels = [
   '1st_alarm', '2nd_alarm', '3rd_alarm', '4th_alarm', '5th_alarm', 'task_force', 'strike_team'
@@ -66,6 +67,44 @@ export default function DispatchLog() {
     },
   });
 
+  const handleRadioTransmission = async (message, parsed) => {
+    // Create new units from radio transmission
+    if (parsed.new_units?.length > 0) {
+      for (const newUnit of parsed.new_units) {
+        const exists = units.find(u => u.unit_name.toLowerCase() === newUnit.unit_name?.toLowerCase());
+        if (!exists) {
+          createUnit.mutate({
+            unit_name: newUnit.unit_name,
+            unit_type: newUnit.unit_type || 'engine',
+            alarm_level: '1st_alarm',
+            status: newUnit.status || 'dispatched',
+            assignment: newUnit.assignment || 'unassigned',
+            ...(newUnit.notes ? { notes: newUnit.notes } : {}),
+          });
+        }
+      }
+    }
+
+    // Update existing units from radio transmission
+    if (parsed.actions?.length > 0) {
+      for (const action of parsed.actions) {
+        const existingUnit = units.find(u => u.unit_name.toLowerCase() === action.unit_name?.toLowerCase());
+        if (existingUnit && action.changes) {
+          const updateData = {};
+          if (action.changes.status) updateData.status = action.changes.status;
+          if (action.changes.assignment) updateData.assignment = action.changes.assignment;
+          if (action.changes.floor) updateData.floor = action.changes.floor;
+          if (action.changes.personnel_count) updateData.personnel_count = action.changes.personnel_count;
+          if (action.changes.officer) updateData.officer = action.changes.officer;
+          if (action.changes.set_air_time) updateData.air_time = new Date().toISOString();
+          if (Object.keys(updateData).length > 0) {
+            updateUnit.mutate({ id: existingUnit.id, data: updateData });
+          }
+        }
+      }
+    }
+  };
+
   const handleMicInput = (level) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -117,6 +156,13 @@ export default function DispatchLog() {
         </div>
 
         <div className="space-y-6">
+          <div className="bg-card/40 rounded-lg border border-border/60 p-4">
+            <div className="mb-2">
+              <h2 className="font-mono font-bold text-foreground text-sm mb-2">Radio Input</h2>
+              <RadioInput incidentId={incidentId} units={units} onTransmission={handleRadioTransmission} />
+            </div>
+          </div>
+
           {alarmLevels.map(level => (
             <div key={level} className="rounded-lg border border-border/60 bg-card/40 overflow-hidden">
               <div className="bg-secondary/60 border-b border-border/60 px-4 py-3 flex items-center justify-between">
