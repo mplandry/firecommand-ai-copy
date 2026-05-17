@@ -131,16 +131,16 @@ export default function UnitCard({ unit, onEdit }) {
         </div>
 
         {/* Active timer — always shown for working, rehab, on scene */}
-        {(isWorking || isRehab || isOnScene) && activeElapsed && (
-          <div className={`mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 border ${
-            rehabWarning
-              ? 'bg-violet-500/20 border-violet-500/50'
-              : entryWarning
-              ? 'bg-orange-500/15 border-orange-500/40'
-              : isRehab
-              ? 'bg-violet-500/10 border-violet-500/30'
-              : 'bg-secondary/60 border-border/40'
-          }`}>
+         {(isWorking || isRehab || isOnScene) && activeElapsed && (
+           <div className={`mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 border ${
+             rehabWarning
+               ? 'bg-violet-500/20 border-violet-500/50'
+               : entryWarning
+               ? 'bg-orange-500/15 border-orange-500/40 animate-pulse-red'
+               : isRehab
+               ? 'bg-violet-500/10 border-violet-500/30'
+               : 'bg-secondary/60 border-border/40'
+           }`}>
             <Clock className={`w-3.5 h-3.5 shrink-0 ${
               rehabWarning ? 'text-violet-300' : entryWarning ? 'text-orange-400' : isRehab ? 'text-violet-400' : 'text-muted-foreground'
             }`} />
