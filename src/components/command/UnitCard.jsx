@@ -41,11 +41,21 @@ export default function UnitCard({ unit, onEdit }) {
   const entryElapsed = useElapsed(unit.on_scene_time);
   const cfg = statusConfig[unit.status] || statusConfig.dispatched;
   const isMayday = unit.status === 'mayday';
-  const isDeployed = ['on_scene', 'working', 'par'].includes(unit.status) && unit.on_scene_time;
 
-  // Warn if on scene > 20 min
-  const entryMinutes = unit.on_scene_time ? (Date.now() - new Date(unit.on_scene_time).getTime()) / 60000 : 0;
-  const entryWarning = isDeployed && entryMinutes >= 20;
+  const isWorking = unit.status === 'working' || unit.status === 'par';
+  const isRehab = unit.status === 'rehab';
+  const isOnScene = unit.status === 'on_scene';
+
+  // Timer anchor: prefer on_scene_time, fall back to updated_date
+  const timerAnchor = unit.on_scene_time || unit.updated_date;
+  const activeElapsed = useElapsed(
+    (isWorking || isRehab || isOnScene) ? timerAnchor : null
+  );
+
+  // Warn if working > 20 min
+  const activeMinutes = timerAnchor ? (Date.now() - new Date(timerAnchor).getTime()) / 60000 : 0;
+  const entryWarning = isWorking && activeMinutes >= 20;
+  const rehabWarning = isRehab && activeMinutes >= 15;
 
   return (
     <div
@@ -118,19 +128,29 @@ export default function UnitCard({ unit, onEdit }) {
           )}
         </div>
 
-        {/* Entry timer — shown when unit is deployed on scene */}
-        {isDeployed && entryElapsed && (
+        {/* Active timer — always shown for working, rehab, on scene */}
+        {(isWorking || isRehab || isOnScene) && activeElapsed && (
           <div className={`mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 border ${
-            entryWarning
+            rehabWarning
+              ? 'bg-violet-500/20 border-violet-500/50'
+              : entryWarning
               ? 'bg-orange-500/15 border-orange-500/40'
+              : isRehab
+              ? 'bg-violet-500/10 border-violet-500/30'
               : 'bg-secondary/60 border-border/40'
           }`}>
-            <Clock className={`w-3.5 h-3.5 shrink-0 ${entryWarning ? 'text-orange-400' : 'text-muted-foreground'}`} />
-            <span className={`text-xs font-mono font-bold tracking-wider ${entryWarning ? 'text-orange-300' : 'text-muted-foreground'}`}>
-              ON SCENE
+            <Clock className={`w-3.5 h-3.5 shrink-0 ${
+              rehabWarning ? 'text-violet-300' : entryWarning ? 'text-orange-400' : isRehab ? 'text-violet-400' : 'text-muted-foreground'
+            }`} />
+            <span className={`text-xs font-mono font-bold tracking-wider ${
+              rehabWarning ? 'text-violet-300' : entryWarning ? 'text-orange-300' : isRehab ? 'text-violet-400' : 'text-muted-foreground'
+            }`}>
+              {isRehab ? 'REHAB' : isOnScene ? 'ON SCENE' : 'WORKING'}
             </span>
-            <span className={`text-xs font-mono font-bold ml-auto ${entryWarning ? 'text-orange-300' : 'text-foreground'}`}>
-              {entryElapsed}
+            <span className={`text-xs font-mono font-bold ml-auto ${
+              rehabWarning ? 'text-violet-200' : entryWarning ? 'text-orange-300' : 'text-foreground'
+            }`}>
+              {activeElapsed}
             </span>
           </div>
         )}
