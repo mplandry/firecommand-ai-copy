@@ -130,6 +130,11 @@ export default function CommandBoard() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['radioLogs', incidentId] }),
   });
 
+  const updateIncident = useMutation({
+    mutationFn: (data) => base44.entities.Incident.update(incidentId, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['incident', incidentId] }),
+  });
+
   const closeIncident = useMutation({
     mutationFn: ({ notes }) => base44.entities.Incident.update(incidentId, { status: 'cleared', notes }),
     onSuccess: () => {
@@ -324,7 +329,7 @@ export default function CommandBoard() {
         </Link>
 
         <div className="flex-1 min-w-0">
-          <IncidentHeader incident={incident} />
+          <IncidentHeader incident={incident} onAlarmChange={(alarm) => updateIncident.mutate({ alarm_level: alarm })} />
         </div>
 
         {/* Action buttons */}

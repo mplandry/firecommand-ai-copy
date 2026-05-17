@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Radio, MapPin, Shield, Flame } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const statusConfig = {
   active:        { label: 'ACTIVE',         bg: 'bg-red-600',    pulse: true },
@@ -18,7 +19,17 @@ const alarmColors = {
   strike_team:   'border-pink-500/40 text-pink-400',
 };
 
-export default function IncidentHeader({ incident }) {
+const alarmLevels = [
+  { value: '1st_alarm', label: '1ST ALARM' },
+  { value: '2nd_alarm', label: '2ND ALARM' },
+  { value: '3rd_alarm', label: '3RD ALARM' },
+  { value: '4th_alarm', label: '4TH ALARM' },
+  { value: '5th_alarm', label: '5TH ALARM' },
+  { value: 'task_force', label: 'TASK FORCE' },
+  { value: 'strike_team', label: 'STRIKE TEAM' },
+];
+
+export default function IncidentHeader({ incident, onAlarmChange }) {
   const [elapsed, setElapsed] = useState('00:00:00');
   const cfg = statusConfig[incident?.status] || statusConfig.active;
 
@@ -54,9 +65,16 @@ export default function IncidentHeader({ incident }) {
           {cfg.pulse && <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping shrink-0" />}
           <span className="text-[11px] font-mono font-bold tracking-wider text-white">{cfg.label}</span>
         </div>
-        <div className={`border rounded-md px-2 py-1 text-[10px] font-mono font-bold tracking-widest ${alarmClass}`}>
-          {incident.alarm_level?.replace('_', ' ').toUpperCase() || '1ST ALARM'}
-        </div>
+        <Select value={incident.alarm_level || '1st_alarm'} onValueChange={onAlarmChange}>
+          <SelectTrigger className={`border rounded-md px-2 py-1 text-[10px] font-mono font-bold tracking-widest ${alarmClass} h-auto bg-transparent hover:bg-secondary/40`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="font-mono text-xs">
+            {alarmLevels.map(a => (
+              <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Address */}
