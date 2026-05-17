@@ -132,6 +132,7 @@ MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a
 - "Arlington" / "Arl" → prefix "ARL" (e.g. "Arlington Engine 2" or "Arl Engine 2" → unit_name: "ARL Engine 2", unit_type: engine)
 - Apply this same pattern to any other town/city name spoken — abbreviate to first 3 uppercase letters as prefix
 - Always add notes: "Mutual Aid — [full town name]" on the new unit
+- CRITICAL: If a town name is spoken with a unit, it is ALWAYS a mutual aid unit with the prefix. NEVER match "Arlington Engine 2" to an existing "Engine 2" — they are different units. Always create a NEW unit with the prefixed name (e.g. "ARL Engine 2").
 
 CRITICAL UNIT NAME MATCHING RULES:
 - Always match spoken/voice variants to the closest existing unit name above
