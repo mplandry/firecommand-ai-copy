@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { useTheme } from '@/lib/ThemeContext';
 import IncidentHeader from '@/components/command/IncidentHeader';
 import RosterUploadDialog from '@/components/command/RosterUploadDialog';
@@ -34,6 +34,7 @@ export default function CommandBoard() {
   const [editingUnit, setEditingUnit] = useState(null);
   const [showClose, setShowClose] = useState(false);
   const [showRosterUpload, setShowRosterUpload] = useState(false);
+  const [showSidePanel, setShowSidePanel] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: incident, isLoading: loadingIncident } = useQuery({
@@ -264,10 +265,10 @@ export default function CommandBoard() {
     <div className="h-screen bg-background flex flex-col overflow-hidden">
 
       {/* ── Top Command Bar ── */}
-      <header className="shrink-0 bg-card/90 backdrop-blur border-b border-border/60 px-4 py-2.5 flex items-center gap-3">
+      <header className="shrink-0 bg-card/90 backdrop-blur border-b border-border/60 px-3 py-2 flex items-center gap-2">
         <Link to="/">
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground shrink-0 h-8 w-8">
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground shrink-0 h-10 w-10">
+            <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
 
@@ -276,38 +277,48 @@ export default function CommandBoard() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-10 w-10 text-muted-foreground hover:text-foreground"
             title={theme === 'night' ? 'Switch to Day mode' : 'Switch to Night mode'}
           >
-            {theme === 'night' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {theme === 'night' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </Button>
           <ConnectionStatus isOnline={isOnline} pendingCount={pendingCount} replaying={replaying} />
           <Link to={`/incident/${incidentId}/accountability`}>
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8">
-              <ShieldCheck className="w-3.5 h-3.5" /> Accountability
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground" title="Accountability">
+              <ShieldCheck className="w-5 h-5" />
             </Button>
           </Link>
           <Link to={`/incident/${incidentId}/kiosk`}>
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8">
-              <Monitor className="w-3.5 h-3.5" /> Kiosk
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground" title="Kiosk">
+              <Monitor className="w-5 h-5" />
             </Button>
           </Link>
           {!isReadOnly && (
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8" onClick={() => setShowRosterUpload(true)}>
-              <ScanLine className="w-3.5 h-3.5" /> Roster
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground" title="Roster Upload" onClick={() => setShowRosterUpload(true)}>
+              <ScanLine className="w-5 h-5" />
             </Button>
           )}
           <ExportIncidentPDF incident={incident} units={units} radioLogs={radioLogs} department={department} />
           {!isReadOnly && (
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-red-400/70 hover:text-red-400 hover:bg-red-400/10 h-8" onClick={() => setShowClose(true)}>
-              <Archive className="w-3.5 h-3.5" /> Close
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-red-400/70 hover:text-red-400 hover:bg-red-400/10" title="Close Incident" onClick={() => setShowClose(true)}>
+              <Archive className="w-5 h-5" />
             </Button>
           )}
+          {/* Side panel toggle (tablet) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSidePanel(p => !p)}
+            className="h-10 w-10 text-muted-foreground hover:text-foreground"
+            title={showSidePanel ? 'Hide panel' : 'Show panel'}
+          >
+            {showSidePanel ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
+          </Button>
         </div>
       </header>
 
@@ -320,7 +331,7 @@ export default function CommandBoard() {
 
       {/* ── Radio Input Bar ── */}
       {!isReadOnly && (
-        <div className="shrink-0 px-4 py-2.5 bg-secondary/40 border-b border-border/50">
+        <div className="shrink-0 px-3 py-2.5 bg-secondary/40 border-b border-border/50">
           <RadioInput incidentId={incidentId} units={units} onTransmission={handleRadioTransmission} />
         </div>
       )}
@@ -331,10 +342,10 @@ export default function CommandBoard() {
       )}
 
       {/* ── Main Content ── */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
 
         {/* Tactical Board */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <div className="w-1 h-4 bg-primary rounded-full" />
@@ -342,14 +353,14 @@ export default function CommandBoard() {
               <span className="text-[10px] font-mono text-muted-foreground/50 bg-secondary px-2 py-0.5 rounded-full">{units.length} units</span>
             </div>
             {!isReadOnly && (
-              <Button size="sm" onClick={() => setShowAddUnit(true)} className="gap-1.5 text-xs h-7 px-3">
-                <Plus className="w-3.5 h-3.5" /> Add Unit
+              <Button size="default" onClick={() => setShowAddUnit(true)} className="gap-1.5 text-sm h-10 px-4">
+                <Plus className="w-4 h-4" /> Add Unit
               </Button>
             )}
           </div>
 
           {BOARD_SECTIONS.map((row, i) => (
-            <div key={i} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div key={i} className="grid grid-cols-2 lg:grid-cols-4 gap-2">
               {row.map(assignment => (
                 <DivisionColumn
                   key={assignment}
@@ -362,8 +373,13 @@ export default function CommandBoard() {
           ))}
         </div>
 
-        {/* Side Panel */}
-        <div className="w-full lg:w-[460px] xl:w-[500px] shrink-0 border-l border-border/50 flex flex-col overflow-hidden bg-card/40">
+        {/* Side Panel — slide-in overlay on tablet */}
+        <div className={`
+          absolute inset-y-0 right-0 z-20 w-[85vw] max-w-[480px]
+          border-l border-border/50 flex flex-col overflow-hidden bg-card
+          transition-transform duration-300 ease-in-out shadow-2xl
+          ${showSidePanel ? 'translate-x-0' : 'translate-x-full'}
+        `}>
           <SidePanel
             units={units}
             radioLogs={radioLogs}
@@ -373,6 +389,14 @@ export default function CommandBoard() {
             onMarkUnitPAR={(unit) => updateUnit.mutate({ id: unit.id, data: { status: 'par', last_par_time: new Date().toISOString() } })}
           />
         </div>
+
+        {/* Backdrop when side panel is open */}
+        {showSidePanel && (
+          <div
+            className="absolute inset-0 z-10 bg-black/40"
+            onClick={() => setShowSidePanel(false)}
+          />
+        )}
       </div>
 
       {!isReadOnly && (

@@ -51,14 +51,14 @@ export default function UnitCard({ unit, onEdit }) {
       {/* Status bar accent */}
       <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cfg.bar} rounded-l-lg`} />
 
-      <div className="pl-3 pr-3 py-2.5">
+      <div className="pl-3 pr-3 py-3">
         {/* Top row */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <span className={`text-[9px] font-mono font-bold tracking-widest px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.text} border border-current/20 shrink-0`}>
               {unitTypeLabel[unit.unit_type] || 'OTH'}
             </span>
-            <span className="font-mono font-bold text-sm text-foreground truncate">
+            <span className="font-mono font-bold text-base text-foreground truncate">
               {unit.unit_name}
             </span>
           </div>
@@ -66,44 +66,44 @@ export default function UnitCard({ unit, onEdit }) {
             <span className={`text-[10px] font-mono font-semibold tracking-wider ${cfg.text}`}>
               {cfg.label}
             </span>
-            <ChevronRight className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
           </div>
         </div>
 
         {/* Meta row */}
-        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+        <div className="flex items-center gap-3 mt-2 flex-wrap">
           {unit.officer && (
-            <span className="text-[11px] text-muted-foreground font-mono truncate">{unit.officer}</span>
+            <span className="text-xs text-muted-foreground font-mono truncate">{unit.officer}</span>
           )}
           {unit.personnel_count > 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground font-mono">
-              <Users className="w-3 h-3" />{unit.personnel_count}
+            <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+              <Users className="w-3.5 h-3.5" />{unit.personnel_count}
             </span>
           )}
           {unit.floor && (
-            <span className="flex items-center gap-1 text-[11px] text-cyan-400 font-mono font-semibold">
+            <span className="flex items-center gap-1 text-xs text-cyan-400 font-mono font-semibold">
               ▲ {unit.floor}
             </span>
           )}
           {unit.air_time && airElapsed && (
-            <span className="flex items-center gap-1 text-[11px] text-amber-400 font-mono">
-              <Wind className="w-3 h-3" />{airElapsed}
+            <span className="flex items-center gap-1 text-xs text-amber-400 font-mono">
+              <Wind className="w-3.5 h-3.5" />{airElapsed}
             </span>
           )}
         </div>
 
         {/* Personnel list */}
         {unit.personnel?.length > 0 && (
-          <div className="mt-1.5 text-[10px] font-mono text-muted-foreground/60 truncate">
+          <div className="mt-1.5 text-[11px] font-mono text-muted-foreground/60 truncate">
             {unit.personnel.join(' · ')}
           </div>
         )}
 
         {/* MAYDAY alert */}
         {isMayday && (
-          <div className="mt-2 flex items-center gap-1.5 bg-red-600/20 border border-red-500/40 rounded px-2 py-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-            <span className="text-red-300 text-[11px] font-bold tracking-wider">MAYDAY — MAYDAY — MAYDAY</span>
+          <div className="mt-2 flex items-center gap-1.5 bg-red-600/20 border border-red-500/40 rounded px-2 py-1.5">
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-red-300 text-xs font-bold tracking-wider">MAYDAY — MAYDAY — MAYDAY</span>
           </div>
         )}
       </div>
