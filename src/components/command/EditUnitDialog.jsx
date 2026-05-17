@@ -6,6 +6,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getAutoAssignment } from '@/lib/statusAssignment';
 
+const alarmLevels = [
+  { value: '1st_alarm', label: '1st Alarm' },
+  { value: '2nd_alarm', label: '2nd Alarm' },
+  { value: '3rd_alarm', label: '3rd Alarm' },
+  { value: '4th_alarm', label: '4th Alarm' },
+  { value: '5th_alarm', label: '5th Alarm' },
+  { value: 'task_force', label: 'Task Force' },
+  { value: 'strike_team', label: 'Strike Team' },
+];
+
 const assignments = [
   { value: 'unassigned', label: 'Unassigned' },
   { value: 'staging', label: 'Staging' },
@@ -55,11 +65,24 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
           <div>
             <Label className="text-xs font-mono">Unit Name</Label>
             <Input
-              value={form.unit_name || ''}
-              onChange={(e) => setForm({ ...form, unit_name: e.target.value })}
-              className="bg-secondary font-mono text-sm"
-            />
-          </div>
+                value={form.unit_name || ''}
+                onChange={(e) => setForm({ ...form, unit_name: e.target.value })}
+                className="bg-secondary font-mono text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-mono">Alarm Level</Label>
+              <Select value={form.alarm_level || '1st_alarm'} onValueChange={(v) => setForm({ ...form, alarm_level: v })}>
+                <SelectTrigger className="bg-secondary font-mono text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {alarmLevels.map(a => (
+                    <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-mono">Status</Label>
