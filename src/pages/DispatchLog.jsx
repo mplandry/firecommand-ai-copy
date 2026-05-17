@@ -62,6 +62,7 @@ export default function DispatchLog() {
     onSuccess: (newUnit) => {
       setNewUnitId(newUnit.id);
       queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
+      queryClient.refetchQueries({ queryKey: ['units', incidentId] });
     },
   });
 
