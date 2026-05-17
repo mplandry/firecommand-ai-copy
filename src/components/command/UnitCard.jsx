@@ -80,6 +80,13 @@ export default function UnitCard({ unit, onEdit }) {
           </div>
         </div>
 
+        {/* Mutual aid town badge */}
+        {unit.notes?.startsWith('Mutual Aid') && (
+          <div className="mt-1.5 text-[10px] font-mono font-bold tracking-wider text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded px-2 py-0.5 inline-block">
+            {unit.notes}
+          </div>
+        )}
+
         {/* Meta row */}
         <div className="flex items-center gap-3 mt-2 flex-wrap">
           {unit.officer && (
