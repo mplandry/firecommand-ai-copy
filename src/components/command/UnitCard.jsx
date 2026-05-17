@@ -130,6 +130,13 @@ export default function UnitCard({ unit, onEdit }) {
           )}
         </div>
 
+        {/* Notes display */}
+        {unit.notes && !unit.notes.startsWith('Mutual Aid') && (
+          <div className="mt-1.5 text-xs text-muted-foreground font-mono bg-secondary/40 rounded px-2 py-1 border border-border/40">
+            {unit.notes}
+          </div>
+        )}
+
         {/* Active timer — always shown for working, rehab, on scene */}
          {(isWorking || isRehab || isOnScene) && activeElapsed && (
            <div className={`mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 border ${
