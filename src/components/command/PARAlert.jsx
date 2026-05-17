@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, CheckCircle, Bell, BellOff, Timer } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Bell, Timer, PauseCircle, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const PAR_INTERVAL_MINUTES = 20;
@@ -11,6 +11,7 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
   const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
   const [overdue, setOverdue] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [stopped, setStopped] = useState(false);
   const [notifGranted, setNotifGranted] = useState(false);
   const lastResetRef = useRef(null);
   const notifFiredRef = useRef(false);
@@ -41,6 +42,7 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
 
   // Countdown tick
   useEffect(() => {
+    if (stopped) return;
     const id = setInterval(() => {
       setSecondsLeft(s => {
         if (s <= 1) {
@@ -51,7 +53,7 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
       });
     }, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [stopped]);
 
   // Fire browser notification when overdue
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
     setSecondsLeft(TOTAL_SECONDS);
     setOverdue(false);
     setDismissed(false);
+    setStopped(false);
     notifFiredRef.current = false;
     onRequestPAR?.();
   };
@@ -103,12 +106,14 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
               <CheckCircle className="w-3.5 h-3.5" /> Initiate PAR
             </Button>
           )}
-          <button
-            onClick={() => setDismissed(true)}
-            className="text-red-400/60 hover:text-red-300 text-lg leading-none px-1"
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-3 text-xs font-mono gap-1.5 border-red-500/40 text-red-300 hover:bg-red-950/40"
+            onClick={() => { setStopped(true); setDismissed(true); }}
           >
-            ✕
-          </button>
+            <PauseCircle className="w-3.5 h-3.5" /> Stop Timer
+          </Button>
         </div>
       </div>
     );
@@ -140,7 +145,7 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
         {mins}:{secs}
       </span>
       <span className="text-[10px] font-mono text-muted-foreground/60">
-        {isWarning ? '⚠ PAR check due soon' : 'until next PAR check'}
+        {stopped ? '⏸ PAR timer stopped' : isWarning ? '⚠ PAR check due soon' : 'until next PAR check'}
       </span>
 
       <div className="ml-auto flex items-center gap-2">
@@ -154,7 +159,15 @@ export default function PARAlert({ lastRadioLogTime, onRequestPAR, isReadOnly })
             <Bell className="w-3 h-3" />
           </button>
         )}
-        {!isReadOnly && (
+        {stopped ? (
+          <button
+            onClick={() => setStopped(false)}
+            title="Resume PAR timer"
+            className="text-xs font-mono text-muted-foreground/60 hover:text-primary transition-colors flex items-center gap-1"
+          >
+            <PlayCircle className="w-3.5 h-3.5" /> Resume
+          </button>
+        ) : !isReadOnly && (
           <button
             onClick={handleInitiatePAR}
             title="Initiate PAR & reset timer"
