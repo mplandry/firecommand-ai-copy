@@ -155,8 +155,12 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
           </div>
         </div>
         <DialogFooter className="flex justify-between">
-          <Button variant="destructive" size="sm" onClick={() => onDelete(unit.id)}>
-            Remove Unit
+          <Button variant="destructive" size="sm" onClick={() => {
+            setForm({ ...form, assignment: 'staging' });
+            onSave({ ...form, assignment: 'staging' });
+            onClose();
+          }}>
+            ✕ Move to Staging
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
