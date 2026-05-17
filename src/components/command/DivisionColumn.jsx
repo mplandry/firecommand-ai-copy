@@ -22,9 +22,11 @@ const divisionConfig = {
 
 export default function DivisionColumn({ assignment, units, onEditUnit }) {
   const cfg = divisionConfig[assignment] || divisionConfig.unassigned;
+  const isEmpty = units.length === 0;
+  const isRITEmpty = assignment === 'rit' && isEmpty;
 
   return (
-    <div className={`flex flex-col bg-card/80 border border-border/60 rounded-xl overflow-hidden border-t-2 ${cfg.accent} backdrop-blur-sm`}>
+    <div className={`flex flex-col bg-card/80 border border-border/60 rounded-xl overflow-hidden border-t-2 ${cfg.accent} backdrop-blur-sm ${isRITEmpty ? 'animate-pulse-red' : ''}`}>
       {/* Header */}
       <div className="px-3 py-2.5 bg-secondary/30 border-b border-border/40 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
