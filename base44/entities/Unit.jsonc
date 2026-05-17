@@ -26,6 +26,19 @@
       ],
       "default": "engine"
     },
+    "alarm_level": {
+      "type": "string",
+      "enum": [
+        "1st_alarm",
+        "2nd_alarm",
+        "3rd_alarm",
+        "4th_alarm",
+        "5th_alarm",
+        "task_force",
+        "strike_team"
+      ],
+      "description": "Alarm level that dispatched this unit"
+    },
     "assignment": {
       "type": "string",
       "enum": [

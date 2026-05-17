@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen, Radio } from 'lucide-react';
 import { DragDropContext } from '@hello-pangea/dnd';
 import { useTheme } from '@/lib/ThemeContext';
 import IncidentHeader from '@/components/command/IncidentHeader';
@@ -342,6 +342,11 @@ export default function CommandBoard() {
           <Link to={`/incident/${incidentId}/accountability`}>
             <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground" title="Accountability">
               <ShieldCheck className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link to={`/incident/${incidentId}/dispatch`}>
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground" title="Dispatch Log">
+              <Radio className="w-5 h-5" />
             </Button>
           </Link>
           <Link to={`/incident/${incidentId}/kiosk`}>
