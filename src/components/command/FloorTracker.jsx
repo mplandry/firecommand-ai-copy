@@ -11,7 +11,7 @@ const FLOOR_ORDER = [
 
 const unitTypeIcons = {
   engine: '🚒', truck: '🪜', rescue: '🚑', squad: '🔧',
-  battalion: '⭐', medic: '🏥', tanker: '💧', brush: '🌿',
+  deputy: '⭐', medic: '🏥', tanker: '💧', brush: '🌿',
   hazmat: '☣️', other: '🚐',
 };
 
