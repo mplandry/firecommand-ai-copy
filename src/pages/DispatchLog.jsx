@@ -145,6 +145,7 @@ export default function DispatchLog() {
                         ref={newUnitId === unit.id ? (ref) => ref?.focus() : null}
                         value={editingFields[`${unit.id}_name`] !== undefined ? editingFields[`${unit.id}_name`] : unit.unit_name}
                         onChange={(e) => setEditingFields({ ...editingFields, [`${unit.id}_name`]: e.target.value })}
+                        onFocus={(e) => e.target.select()}
                         onBlur={() => {
                           if (editingFields[`${unit.id}_name`] && editingFields[`${unit.id}_name`] !== unit.unit_name) {
                             updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
@@ -153,6 +154,12 @@ export default function DispatchLog() {
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Escape') setNewUnitId(null);
+                          if (e.key === 'Enter') {
+                            if (editingFields[`${unit.id}_name`] && editingFields[`${unit.id}_name`] !== unit.unit_name) {
+                              updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
+                            }
+                            setNewUnitId(null);
+                          }
                         }}
                         className="bg-background font-mono text-sm flex-1 h-8"
                         placeholder="Unit name"
