@@ -24,7 +24,7 @@ const statusLabels = {
 };
 
 const alarmLabels = {
-  '1st_alarm': '1st Alarm',
+  '1st_alarm': 'Working Fire',
   '2nd_alarm': '2nd Alarm',
   '3rd_alarm': '3rd Alarm',
   '4th_alarm': '4th Alarm',

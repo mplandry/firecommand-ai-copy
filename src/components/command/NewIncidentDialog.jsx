@@ -235,7 +235,7 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1st_alarm">1st Alarm</SelectItem>
+                    <SelectItem value="1st_alarm">Working Fire</SelectItem>
                     <SelectItem value="2nd_alarm">2nd Alarm</SelectItem>
                     <SelectItem value="3rd_alarm">3rd Alarm</SelectItem>
                     <SelectItem value="4th_alarm">4th Alarm</SelectItem>
