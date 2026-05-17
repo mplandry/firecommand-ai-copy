@@ -371,6 +371,13 @@ export default function CommandBoard() {
               division_d: 'text-yellow-400',
             };
 
+            const divisionStaticClasses = {
+              division_a: { active: 'text-red-400 bg-secondary/80 ring-1 ring-red-400/40', inactive: 'text-red-400/50 hover:text-red-400 hover:bg-secondary/50' },
+              division_b: { active: 'text-blue-400 bg-secondary/80 ring-1 ring-blue-400/40', inactive: 'text-blue-400/50 hover:text-blue-400 hover:bg-secondary/50' },
+              division_c: { active: 'text-green-400 bg-secondary/80 ring-1 ring-green-400/40', inactive: 'text-green-400/50 hover:text-green-400 hover:bg-secondary/50' },
+              division_d: { active: 'text-yellow-400 bg-secondary/80 ring-1 ring-yellow-400/40', inactive: 'text-yellow-400/50 hover:text-yellow-400 hover:bg-secondary/50' },
+            };
+
             const SideBtn = ({ division, position }) => {
               const isBottom = division === bottomSide;
               const posClass = {
@@ -379,14 +386,12 @@ export default function CommandBoard() {
                 left:   'absolute left-1 top-1/2 -translate-y-1/2',
                 right:  'absolute right-1 top-1/2 -translate-y-1/2',
               }[position];
+              const cls = divisionStaticClasses[division];
               return (
                 <button
                   onClick={() => setBottomSide(division)}
-                  className={`${posClass} text-[9px] font-mono font-bold tracking-wider rounded px-1 transition-all
-                    ${isBottom
-                      ? `${sideColor[division]} bg-secondary/80 ring-1 ring-current/40`
-                      : `${sideColor[division]}/50 hover:${sideColor[division]} hover:bg-secondary/50`
-                    }`}
+                  className={`${posClass} text-[11px] font-mono font-bold tracking-wider rounded px-1.5 py-0.5 transition-all min-w-[20px] text-center
+                    ${isBottom ? cls.active : cls.inactive}`}
                   title={`Set Division ${sideLabel[division]} as front (bottom)`}
                 >
                   {sideLabel[division]}
