@@ -190,11 +190,11 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
         </div>
         <DialogFooter className="flex justify-between">
           <Button variant="destructive" size="sm" onClick={() => {
-            const updated = { ...form, assignment: 'staging', status: 'available', rehab_time: null };
+            const updated = { ...form, assignment: 'unassigned', status: 'available', rehab_time: null };
             onSave(updated);
             onClose();
           }}>
-            ✕ Move to Staging
+            ✕ Clear Assignment
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
