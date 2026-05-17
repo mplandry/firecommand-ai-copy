@@ -355,9 +355,9 @@ export default function CommandBoard() {
           {/* ── Structure Diagram with Divisions on each side ── */}
           <div className="flex flex-col items-center gap-2">
 
-            {/* Division A — top (Alpha side) */}
+            {/* Division C — top (Charlie side) */}
             <div className="w-full max-w-xs">
-              <DivisionColumn assignment="division_a" units={units.filter(u => u.assignment === 'division_a')} onEditUnit={isReadOnly ? null : setEditingUnit} />
+              <DivisionColumn assignment="division_c" units={units.filter(u => u.assignment === 'division_c')} onEditUnit={isReadOnly ? null : setEditingUnit} />
             </div>
 
             {/* Middle row: B | Structure | D */}
@@ -378,8 +378,8 @@ export default function CommandBoard() {
                   </div>
                   <span className="text-[9px] font-mono font-bold tracking-widest text-muted-foreground/50 mt-1 uppercase">Structure</span>
                   {/* Side labels */}
-                  <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-mono text-red-400/60 font-bold tracking-wider">A</span>
-                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-mono text-green-400/60 font-bold tracking-wider">C</span>
+                  <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-mono text-green-400/60 font-bold tracking-wider">C</span>
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-mono text-red-400/60 font-bold tracking-wider">A</span>
                   <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-mono text-blue-400/60 font-bold tracking-wider">B</span>
                   <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] font-mono text-yellow-400/60 font-bold tracking-wider">D</span>
                 </div>
@@ -391,9 +391,9 @@ export default function CommandBoard() {
               </div>
             </div>
 
-            {/* Division C — bottom (Charlie side) */}
+            {/* Division A — bottom (Alpha side) */}
             <div className="w-full max-w-xs">
-              <DivisionColumn assignment="division_c" units={units.filter(u => u.assignment === 'division_c')} onEditUnit={isReadOnly ? null : setEditingUnit} />
+              <DivisionColumn assignment="division_a" units={units.filter(u => u.assignment === 'division_a')} onEditUnit={isReadOnly ? null : setEditingUnit} />
             </div>
           </div>
 
