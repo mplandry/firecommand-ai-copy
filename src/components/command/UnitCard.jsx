@@ -15,7 +15,7 @@ const statusConfig = {
 
 const unitTypeLabel = {
   engine: 'ENG', truck: 'TRK', rescue: 'RSC', squad: 'SQD',
-  deputy: 'CHF', medic: 'MED', tanker: 'TNK', brush: 'BRS',
+  deputy: 'DEP', medic: 'MED', tanker: 'TNK', brush: 'BRS',
   hazmat: 'HZM', other: 'OTH',
 };
 
