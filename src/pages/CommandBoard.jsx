@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { DragDropContext } from '@hello-pangea/dnd';
 import { useTheme } from '@/lib/ThemeContext';
 import IncidentHeader from '@/components/command/IncidentHeader';
 import RosterUploadDialog from '@/components/command/RosterUploadDialog';
@@ -224,6 +225,22 @@ export default function CommandBoard() {
     queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
   };
 
+  const handleDragEnd = async (result) => {
+    const { draggableId, destination } = result;
+    if (!destination) return;
+    const unit = units.find(u => u.id === draggableId);
+    if (!unit || unit.assignment === destination.droppableId) return;
+    const updateData = { assignment: destination.droppableId };
+    if (!navigator.onLine) {
+      enqueue({ type: 'unit_update', id: unit.id, data: updateData });
+      patchCachedUnit(incidentId, unit.id, updateData);
+      updatePending();
+    } else {
+      await base44.entities.Unit.update(unit.id, updateData);
+    }
+    queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
+  };
+
   const handleRequestAllPAR = () => {
     const workingUnits = units.filter(u => ['on_scene', 'working', 'par'].includes(u.status));
     const parData = { last_par_time: new Date().toISOString(), status: 'par' };
@@ -337,6 +354,7 @@ export default function CommandBoard() {
       )}
 
       {/* ── Main Content ── */}
+      <DragDropContext onDragEnd={handleDragEnd}>
       <div className="flex-1 flex overflow-hidden relative">
 
         {/* Tactical Board */}
@@ -480,6 +498,7 @@ export default function CommandBoard() {
           />
         )}
       </div>
+      </DragDropContext>
 
       {!isReadOnly && (
         <>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Droppable, Draggable } from '@hello-pangea/dnd';
 import UnitCard from './UnitCard';
 
 const divisionConfig = {
@@ -40,18 +41,40 @@ export default function DivisionColumn({ assignment, units, onEditUnit }) {
         )}
       </div>
 
-      {/* Units */}
-      <div className="p-2 space-y-1.5 min-h-[90px] flex-1">
-        {units.length === 0 ? (
-          <div className="h-full flex items-center justify-center py-6">
-            <span className="text-[10px] font-mono text-muted-foreground/30 tracking-wider">CLEAR</span>
+      {/* Units — Droppable zone */}
+      <Droppable droppableId={assignment}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={`p-2 space-y-1.5 min-h-[90px] flex-1 transition-colors duration-150 ${
+              snapshot.isDraggingOver ? 'bg-primary/5 ring-1 ring-inset ring-primary/20' : ''
+            }`}
+          >
+            {units.length === 0 && !snapshot.isDraggingOver ? (
+              <div className="h-full flex items-center justify-center py-6">
+                <span className="text-[10px] font-mono text-muted-foreground/30 tracking-wider">CLEAR</span>
+              </div>
+            ) : (
+              units.map((unit, index) => (
+                <Draggable key={unit.id} draggableId={unit.id} index={index} isDragDisabled={!onEditUnit}>
+                  {(dragProvided, dragSnapshot) => (
+                    <div
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      {...dragProvided.dragHandleProps}
+                      className={`transition-opacity duration-150 ${dragSnapshot.isDragging ? 'opacity-80 shadow-2xl' : ''}`}
+                    >
+                      <UnitCard unit={unit} onEdit={onEditUnit} />
+                    </div>
+                  )}
+                </Draggable>
+              ))
+            )}
+            {provided.placeholder}
           </div>
-        ) : (
-          units.map(unit => (
-            <UnitCard key={unit.id} unit={unit} onEdit={onEditUnit} />
-          ))
         )}
-      </div>
+      </Droppable>
     </div>
   );
 }
