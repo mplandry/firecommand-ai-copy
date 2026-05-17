@@ -6,9 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const defaultPersonnel = {
-  engine: 4, truck: 3, rescue: 4, squad: 4,
+  engine: 3, truck: 3, rescue: 3, squad: 3,
   deputy: 1, medic: 2, tanker: 3, brush: 3,
-  hazmat: 4, other: 3,
+  hazmat: 3, other: 3,
 };
 
 export default function AddUnitDialog({ open, onClose, onCreate }) {
@@ -18,14 +18,14 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
     status: 'dispatched',
     assignment: 'unassigned',
     floor: '',
-    personnel_count: 4,
+    personnel_count: 3,
     officer: '',
   });
 
   const handleCreate = () => {
     if (!form.unit_name.trim()) return;
     onCreate(form);
-    setForm({ unit_name: '', unit_type: 'engine', status: 'dispatched', assignment: 'unassigned', floor: '', personnel_count: 4, officer: '' });
+    setForm({ unit_name: '', unit_type: 'engine', status: 'dispatched', assignment: 'unassigned', floor: '', personnel_count: 3, officer: '' });
   };
 
   return (
