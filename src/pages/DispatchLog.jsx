@@ -28,7 +28,7 @@ const unitTypes = [
 export default function DispatchLog() {
   const { incidentId } = useParams();
   const queryClient = useQueryClient();
-  const [editingId, setEditingId] = useState(null);
+  const [editingFields, setEditingFields] = useState({});
 
   const { data: incident } = useQuery({
     queryKey: ['incident', incidentId],
@@ -47,7 +47,6 @@ export default function DispatchLog() {
     mutationFn: ({ id, data }) => base44.entities.Unit.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
-      setEditingId(null);
     },
   });
 
@@ -94,57 +93,50 @@ export default function DispatchLog() {
                   <p className="text-sm text-muted-foreground italic">No units dispatched at this level</p>
                 ) : (
                   unitsByAlarm[level].map(unit => (
-                    <div key={unit.id} className="flex items-center gap-3 p-3 bg-secondary/40 rounded-lg border border-border/40">
-                      {editingId === unit.id ? (
-                        <>
-                          <Input
-                            value={unit.unit_name}
-                            onChange={(e) => {
-                              const updated = { ...unit, unit_name: e.target.value };
-                              queryClient.setQueryData(['units', incidentId], 
-                                units.map(u => u.id === unit.id ? updated : u)
-                              );
-                            }}
-                            className="bg-background font-mono text-sm flex-1"
-                          />
-                          <Select value={unit.unit_type} onValueChange={(v) => {
-                            const updated = { ...unit, unit_type: v };
-                            queryClient.setQueryData(['units', incidentId],
-                              units.map(u => u.id === unit.id ? updated : u)
-                            );
-                          }}>
-                            <SelectTrigger className="w-32 bg-background font-mono text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {unitTypes.map(t => (
-                                <SelectItem key={t} value={t}>{t}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button size="sm" onClick={() => updateUnit.mutate({ id: unit.id, data: unit })}>Save</Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-mono font-bold text-foreground">{unit.unit_name}</p>
-                            <p className="text-xs text-muted-foreground capitalize">{unit.unit_type}</p>
-                          </div>
-                          <span className={`text-xs font-mono px-2 py-1 rounded-full ${
-                            unit.status === 'on_scene' ? 'bg-green-500/20 text-green-400' :
-                            unit.status === 'mayday' ? 'bg-red-500/20 text-red-400' :
-                            unit.status === 'rehab' ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-blue-500/20 text-blue-400'
-                          }`}>
-                            {unit.status}
-                          </span>
-                          <Button size="sm" variant="outline" onClick={() => setEditingId(unit.id)}>Edit</Button>
-                          <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-500" onClick={() => deleteUnit.mutate(unit.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
+                    <div key={unit.id} className="flex items-center gap-2 p-2 bg-secondary/40 rounded-lg border border-border/40 hover:border-border/60 group">
+                      <Input
+                        value={editingFields[`${unit.id}_name`] !== undefined ? editingFields[`${unit.id}_name`] : unit.unit_name}
+                        onChange={(e) => setEditingFields({ ...editingFields, [`${unit.id}_name`]: e.target.value })}
+                        onBlur={() => {
+                          if (editingFields[`${unit.id}_name`] && editingFields[`${unit.id}_name`] !== unit.unit_name) {
+                            updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
+                          }
+                        }}
+                        className="bg-background font-mono text-sm flex-1 h-8"
+                        placeholder="Unit name"
+                      />
+                      <Select 
+                        value={editingFields[`${unit.id}_type`] !== undefined ? editingFields[`${unit.id}_type`] : unit.unit_type}
+                        onValueChange={(v) => {
+                          setEditingFields({ ...editingFields, [`${unit.id}_type`]: v });
+                          updateUnit.mutate({ id: unit.id, data: { unit_type: v } });
+                        }}
+                      >
+                        <SelectTrigger className="w-28 bg-background font-mono text-xs h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unitTypes.map(t => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className={`text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap ${
+                        unit.status === 'on_scene' ? 'bg-green-500/20 text-green-400' :
+                        unit.status === 'mayday' ? 'bg-red-500/20 text-red-400' :
+                        unit.status === 'rehab' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        {unit.status}
+                      </span>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => deleteUnit.mutate(unit.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   ))
                 )}
