@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Mic, Square } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function RadioTrainingTab() {
@@ -17,6 +17,8 @@ export default function RadioTrainingTab() {
     correct_status: '',
     correct_summary: '',
   });
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
 
   const { data: corrections = [], isLoading } = useQuery({
     queryKey: ['terminology'],
@@ -36,6 +38,40 @@ export default function RadioTrainingTab() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['terminology'] }),
   });
 
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('');
+        setForm(f => ({ ...f, raw_phrase: transcript }));
+        setIsListening(false);
+      };
+      recognitionRef.current.onerror = () => {
+        setIsListening(false);
+      };
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      setForm(f => ({ ...f, raw_phrase: '' }));
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.raw_phrase.trim()) return;
@@ -53,13 +89,24 @@ export default function RadioTrainingTab() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <Label className="text-xs font-mono">What was said (misinterpretation)</Label>
-            <Input
-              value={form.raw_phrase}
-              onChange={(e) => setForm({ ...form, raw_phrase: e.target.value })}
-              placeholder="e.g. latitude, roof six, charlie bravo"
-              className="bg-secondary font-mono text-sm"
-              autoFocus
-            />
+            <div className="flex gap-2">
+              <Input
+                value={form.raw_phrase}
+                onChange={(e) => setForm({ ...form, raw_phrase: e.target.value })}
+                placeholder="e.g. latitude, roof six, charlie bravo"
+                className="bg-secondary font-mono text-sm flex-1"
+                autoFocus
+              />
+              <Button
+                type="button"
+                variant={isListening ? 'destructive' : 'outline'}
+                size="icon"
+                onClick={toggleListening}
+                title={isListening ? 'Stop listening' : 'Start listening'}
+              >
+                {isListening ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
