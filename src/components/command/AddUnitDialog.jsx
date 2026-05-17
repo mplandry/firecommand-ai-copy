@@ -34,7 +34,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
             <Input
               value={form.unit_name}
               onChange={(e) => setForm({ ...form, unit_name: e.target.value })}
-              placeholder="Engine 2"
+              placeholder="e.g. Engine 2, ARL Ladder 1"
               className="bg-secondary font-mono"
             />
           </div>
