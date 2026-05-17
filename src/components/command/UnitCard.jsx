@@ -24,7 +24,7 @@ function useElapsed(timestamp) {
   useEffect(() => {
     if (!timestamp) return;
     const tick = () => {
-      const diff = Date.now() - new Date(timestamp).getTime();
+      const diff = Math.max(0, Date.now() - new Date(timestamp).getTime());
       const m = Math.floor(diff / 60000);
       const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
       setElapsed(`${m}:${s}`);
@@ -55,7 +55,7 @@ export default function UnitCard({ unit, onEdit }) {
     (isWorking || isRehab || isOnScene) ? timerAnchor : null
   );
 
-  const activeMinutes = timerAnchor ? (Date.now() - new Date(timerAnchor).getTime()) / 60000 : 0;
+  const activeMinutes = timerAnchor ? Math.max(0, (Date.now() - new Date(timerAnchor).getTime()) / 60000) : 0;
   const entryWarning = isWorking && activeMinutes >= 20;
   const rehabWarning = isRehab && activeMinutes >= 15;
 
