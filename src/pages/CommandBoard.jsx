@@ -157,6 +157,12 @@ export default function CommandBoard() {
           const updateData = {};
           if (action.changes.status) {
             updateData.status = action.changes.status;
+            if (action.changes.status === 'rehab' && existingUnit.status !== 'rehab') {
+              updateData.rehab_time = new Date().toISOString();
+            }
+            if ((action.changes.status === 'on_scene' || action.changes.status === 'working') && !existingUnit.on_scene_time) {
+              updateData.on_scene_time = new Date().toISOString();
+            }
             // Auto-move to the right zone if no explicit assignment in this transmission
             if (!action.changes.assignment) {
               const autoAssign = getAutoAssignment(action.changes.status, existingUnit.assignment);
@@ -255,6 +261,7 @@ export default function CommandBoard() {
       if (!unit.on_scene_time) updateData.on_scene_time = now;
     } else if (newAssignment === 'rehab') {
       updateData.status = 'rehab';
+      updateData.rehab_time = now;
     } else if (newAssignment === 'rit') {
       updateData.status = 'working';
       if (!unit.on_scene_time) updateData.on_scene_time = now;

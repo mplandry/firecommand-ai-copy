@@ -46,13 +46,15 @@ export default function UnitCard({ unit, onEdit }) {
   const isRehab = unit.status === 'rehab';
   const isOnScene = unit.status === 'on_scene';
 
-  // Timer anchor: prefer on_scene_time, fall back to updated_date
-  const timerAnchor = unit.on_scene_time || unit.updated_date;
+  // Use rehab_time for rehab timer, on_scene_time (or updated_date) for working/on_scene
+  const workingAnchor = unit.on_scene_time || unit.updated_date;
+  const rehabAnchor = unit.rehab_time || unit.updated_date;
+  const timerAnchor = isRehab ? rehabAnchor : workingAnchor;
+
   const activeElapsed = useElapsed(
     (isWorking || isRehab || isOnScene) ? timerAnchor : null
   );
 
-  // Warn if working > 20 min
   const activeMinutes = timerAnchor ? (Date.now() - new Date(timerAnchor).getTime()) / 60000 : 0;
   const entryWarning = isWorking && activeMinutes >= 20;
   const rehabWarning = isRehab && activeMinutes >= 15;

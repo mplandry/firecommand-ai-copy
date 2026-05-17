@@ -57,7 +57,11 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
               <Label className="text-xs font-mono">Status</Label>
               <Select value={form.status} onValueChange={(v) => {
                 const autoAssign = getAutoAssignment(v, form.assignment);
-                setForm({ ...form, status: v, ...(autoAssign ? { assignment: autoAssign } : {}) });
+                const extra = {};
+                if (autoAssign) extra.assignment = autoAssign;
+                if (v === 'rehab' && form.status !== 'rehab') extra.rehab_time = new Date().toISOString();
+                if ((v === 'on_scene' || v === 'working') && !form.on_scene_time) extra.on_scene_time = new Date().toISOString();
+                setForm({ ...form, status: v, ...extra });
               }}>
                 <SelectTrigger className="bg-secondary font-mono text-xs">
                   <SelectValue />

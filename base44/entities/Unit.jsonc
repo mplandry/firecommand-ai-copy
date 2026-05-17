@@ -86,6 +86,11 @@
       "format": "date-time",
       "description": "Time unit arrived on scene"
     },
+    "rehab_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time unit entered rehab"
+    },
     "last_par_time": {
       "type": "string",
       "format": "date-time",
