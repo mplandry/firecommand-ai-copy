@@ -21,7 +21,7 @@ const STATUS_META = {
 
 const UNIT_ICONS = {
   engine:'🚒', truck:'🪜', rescue:'🚑', squad:'🔧',
-  battalion:'⭐', medic:'🏥', tanker:'💧', brush:'🌿', hazmat:'☣️', other:'🚐',
+  deputy:'⭐', medic:'🏥', tanker:'💧', brush:'🌿', hazmat:'☣️', other:'🚐',
 };
 
 const FLOOR_ORDER = ['Roof', '8th Floor','7th Floor','6th Floor','5th Floor',
