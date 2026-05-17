@@ -42,7 +42,7 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     recognition.interimResults = true;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
-    recognition.timeout = 60000; // 60 second timeout for longer transmissions
+    recognition.timeout = 180000; // 180 second timeout to capture full dispatch lists
 
     // Fire department terminology hints for better recognition
     const fireTerms = [
