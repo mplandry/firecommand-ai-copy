@@ -63,7 +63,7 @@ export default function UnitCard({ unit, onEdit }) {
     <div
       onClick={() => onEdit?.(unit)}
       className={`
-        relative rounded-lg cursor-pointer select-none overflow-hidden
+        relative rounded-lg cursor-grab active:cursor-grabbing select-none overflow-hidden
         border border-border/60 hover:border-border transition-all duration-150
         hover:shadow-lg hover:shadow-black/20 group
         ${cfg.bg}
