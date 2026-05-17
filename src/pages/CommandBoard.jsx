@@ -265,6 +265,9 @@ export default function CommandBoard() {
     } else if (newAssignment === 'rit') {
       updateData.status = 'working';
       if (!unit.on_scene_time) updateData.on_scene_time = now;
+    } else if (newAssignment === 'staging') {
+      updateData.status = 'available';
+      updateData.rehab_time = null;
     }
 
     if (!navigator.onLine) {
