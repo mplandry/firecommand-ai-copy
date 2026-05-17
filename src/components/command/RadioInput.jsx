@@ -129,6 +129,7 @@ MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a
 - "Cambridge" → prefix "CAM" (e.g. "Cambridge Engine 3" → unit_name: "CAM Engine 3", unit_type: engine)
 - "Belmont" → prefix "BEL" (e.g. "Belmont Truck 1" → unit_name: "BEL Truck 1", unit_type: truck)
 - "Lexington" / "Lex" → prefix "LEX" (e.g. "Lexington Rescue 2" or "Lex Rescue 2" → unit_name: "LEX Rescue 2", unit_type: rescue)
+- "Arlington" / "Arl" → prefix "ARL" (e.g. "Arlington Engine 2" or "Arl Engine 2" → unit_name: "ARL Engine 2", unit_type: engine)
 - Apply this same pattern to any other town/city name spoken — abbreviate to first 3 uppercase letters as prefix
 - Always add notes: "Mutual Aid — [full town name]" on the new unit
 
