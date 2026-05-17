@@ -17,7 +17,7 @@ const EXEMPT_UNITS = ['c2','c3','c4'];
 const isExempt = (unitName) => EXEMPT_UNITS.includes((unitName || '').trim().toLowerCase());
 const UNIT_ICONS = {
   engine:'', truck:'', rescue:'', squad:'',
-  battalion:'', medic:'', tanker:'', brush:'', hazmat:'', other:'',
+  deputy:'', medic:'', tanker:'', brush:'', hazmat:'', other:'',
 };
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
@@ -360,7 +360,7 @@ CRITICAL RULES:
 
 For each unit extract:
 - unit_name: apparatus name only (e.g. "Engine 1", "Ladder 2", "C2", "Tower 1")
-- unit_type: engine/truck/rescue/squad/battalion/medic/tanker/brush/hazmat/other
+- unit_type: engine/truck/rescue/squad/deputy/medic/tanker/brush/hazmat/other
 - officer: officer name string (e.g. "Damon Ferranti") - just the name, no position code
 - personnel: array of ALL crew member strings (everyone EXCEPT the officer). Include every single person listed under the unit — do NOT skip anyone. Format: "Name|PositionCode" or just "Name" if no position visible.
 - personnel_count: total headcount including officer

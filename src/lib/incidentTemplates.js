@@ -17,7 +17,7 @@ export const INCIDENT_TEMPLATES = [
       { unit_name: 'Engine 2', unit_type: 'engine', assignment: 'interior',   floor: '1st Floor', status: 'working',  personnel_count: 4 },
       { unit_name: 'Truck 1',  unit_type: 'truck',  assignment: 'division_a', floor: 'Roof',      status: 'on_scene', personnel_count: 4 },
       { unit_name: 'Rescue 1', unit_type: 'rescue', assignment: 'division_b', floor: null,        status: 'on_scene', personnel_count: 4 },
-      { unit_name: 'Battalion 1', unit_type: 'battalion', assignment: 'staging', floor: null,     status: 'on_scene', personnel_count: 1 },
+      { unit_name: 'C2', unit_type: 'deputy', assignment: 'staging', floor: null, status: 'on_scene', personnel_count: 1 },
     ],
   },
   {
@@ -34,8 +34,8 @@ export const INCIDENT_TEMPLATES = [
       { unit_name: 'Truck 1',   unit_type: 'truck',     assignment: 'interior',      floor: 'Floor Above',  status: 'working',  personnel_count: 4 },
       { unit_name: 'Rescue 1',  unit_type: 'rescue',    assignment: 'rit',           floor: null,           status: 'on_scene', personnel_count: 4 },
       { unit_name: 'Medic 1',   unit_type: 'medic',     assignment: 'medical',       floor: 'Lobby',        status: 'on_scene', personnel_count: 2 },
-      { unit_name: 'Battalion 1', unit_type: 'battalion', assignment: 'division_a',  floor: 'Lobby',        status: 'on_scene', personnel_count: 1 },
-      { unit_name: 'Battalion 2', unit_type: 'battalion', assignment: 'interior',    floor: 'Fire Floor',   status: 'on_scene', personnel_count: 1 },
+      { unit_name: 'C2', unit_type: 'deputy', assignment: 'division_a', floor: 'Lobby',      status: 'on_scene', personnel_count: 1 },
+      { unit_name: 'C3', unit_type: 'deputy', assignment: 'interior',   floor: 'Fire Floor', status: 'on_scene', personnel_count: 1 },
     ],
   },
   {
@@ -51,7 +51,7 @@ export const INCIDENT_TEMPLATES = [
       { unit_name: 'Engine 3', unit_type: 'engine',   assignment: 'water_supply', floor: null,      status: 'on_scene', personnel_count: 4 },
       { unit_name: 'Truck 1',  unit_type: 'truck',    assignment: 'division_b', floor: 'Roof',      status: 'on_scene', personnel_count: 4 },
       { unit_name: 'Rescue 1', unit_type: 'rescue',   assignment: 'rit',        floor: null,        status: 'on_scene', personnel_count: 4 },
-      { unit_name: 'Battalion 1', unit_type: 'battalion', assignment: 'staging',floor: null,        status: 'on_scene', personnel_count: 1 },
+      { unit_name: 'C2', unit_type: 'deputy', assignment: 'staging', floor: null, status: 'on_scene', personnel_count: 1 },
     ],
   },
   {
@@ -68,7 +68,7 @@ export const INCIDENT_TEMPLATES = [
       { unit_name: 'Truck 1',   unit_type: 'truck',    assignment: 'ventilation',  floor: 'Roof',        status: 'working',  personnel_count: 4 },
       { unit_name: 'Rescue 1',  unit_type: 'rescue',   assignment: 'rit',          floor: null,          status: 'on_scene', personnel_count: 4 },
       { unit_name: 'Medic 1',   unit_type: 'medic',    assignment: 'medical',      floor: null,          status: 'on_scene', personnel_count: 2 },
-      { unit_name: 'Battalion 1', unit_type: 'battalion', assignment: 'division_a',floor: '1st Floor',   status: 'on_scene', personnel_count: 1 },
+      { unit_name: 'C2', unit_type: 'deputy', assignment: 'division_a', floor: '1st Floor', status: 'on_scene', personnel_count: 1 },
     ],
   },
   {
@@ -84,7 +84,7 @@ export const INCIDENT_TEMPLATES = [
       { unit_name: 'Brush 1',   unit_type: 'brush',  assignment: 'division_c', floor: null, status: 'working',  personnel_count: 3 },
       { unit_name: 'Brush 2',   unit_type: 'brush',  assignment: 'division_d', floor: null, status: 'working',  personnel_count: 3 },
       { unit_name: 'Tanker 1',  unit_type: 'tanker', assignment: 'water_supply', floor: null, status: 'on_scene', personnel_count: 2 },
-      { unit_name: 'Battalion 1', unit_type: 'battalion', assignment: 'staging', floor: null, status: 'on_scene', personnel_count: 1 },
+      { unit_name: 'C2', unit_type: 'deputy', assignment: 'staging', floor: null, status: 'on_scene', personnel_count: 1 },
     ],
   },
   {
@@ -99,7 +99,7 @@ export const INCIDENT_TEMPLATES = [
       { unit_name: 'Engine 1', unit_type: 'engine', assignment: 'exposure',      floor: null, status: 'on_scene', personnel_count: 4 },
       { unit_name: 'Medic 1',  unit_type: 'medic',  assignment: 'medical',       floor: null, status: 'on_scene', personnel_count: 2 },
       { unit_name: 'Rescue 1', unit_type: 'rescue', assignment: 'rit',           floor: null, status: 'on_scene', personnel_count: 4 },
-      { unit_name: 'Battalion 1', unit_type: 'battalion', assignment: 'staging', floor: null, status: 'on_scene', personnel_count: 1 },
+      { unit_name: 'C2', unit_type: 'deputy', assignment: 'staging', floor: null, status: 'on_scene', personnel_count: 1 },
     ],
   },
   {
@@ -110,7 +110,7 @@ export const INCIDENT_TEMPLATES = [
     incident_type: 'structure_fire',
     alarm_level: '1st_alarm',
     units: [
-      { unit_name: 'C2',          unit_type: 'battalion', assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 1 },
+      { unit_name: 'C2',          unit_type: 'deputy',    assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 1 },
       { unit_name: 'Engine 1',    unit_type: 'engine',    assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 4 },
       { unit_name: 'Engine 2',    unit_type: 'engine',    assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 4 },
       { unit_name: 'Engine 3',    unit_type: 'engine',    assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 4 },
@@ -143,7 +143,7 @@ export const INCIDENT_TEMPLATES = [
       { unit_name: 'Medic 1',   unit_type: 'medic',  assignment: 'medical',    floor: null, status: 'on_scene', personnel_count: 2 },
       { unit_name: 'Medic 2',   unit_type: 'medic',  assignment: 'medical',    floor: null, status: 'on_scene', personnel_count: 2 },
       { unit_name: 'Medic 3',   unit_type: 'medic',  assignment: 'medical',    floor: null, status: 'on_scene', personnel_count: 2 },
-      { unit_name: 'Battalion 1', unit_type: 'battalion', assignment: 'staging', floor: null, status: 'on_scene', personnel_count: 1 },
+      { unit_name: 'C2', unit_type: 'deputy', assignment: 'staging', floor: null, status: 'on_scene', personnel_count: 1 },
     ],
   },
 ];
