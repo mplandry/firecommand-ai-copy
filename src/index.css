@@ -5,7 +5,9 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* ── NIGHT MODE (default / dark) ── */
+  :root,
+  .theme-night {
     --font-mono: 'JetBrains Mono', monospace;
     --font-sans: 'Inter', sans-serif;
 
@@ -42,6 +44,43 @@
     --sidebar-accent-foreground: 210 20% 85%;
     --sidebar-border: 220 16% 18%;
     --sidebar-ring: 210 100% 56%;
+  }
+
+  /* ── DAY MODE ── */
+  .theme-day {
+    --background: 210 20% 96%;
+    --foreground: 220 25% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 12%;
+    --primary: 210 100% 44%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 18% 90%;
+    --secondary-foreground: 220 20% 25%;
+    --muted: 210 16% 92%;
+    --muted-foreground: 215 12% 45%;
+    --accent: 34 90% 46%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 18% 82%;
+    --input: 210 18% 82%;
+    --ring: 210 100% 44%;
+    --chart-1: 142 60% 38%;
+    --chart-2: 34 90% 46%;
+    --chart-3: 0 72% 48%;
+    --chart-4: 210 100% 44%;
+    --chart-5: 280 55% 52%;
+    --radius: 0.5rem;
+    --sidebar-background: 210 20% 94%;
+    --sidebar-foreground: 220 20% 20%;
+    --sidebar-primary: 210 100% 44%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 18% 88%;
+    --sidebar-accent-foreground: 220 20% 20%;
+    --sidebar-border: 210 18% 80%;
+    --sidebar-ring: 210 100% 44%;
   }
 
   .dark {

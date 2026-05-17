@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun } from 'lucide-react';
+import { useTheme } from '@/lib/ThemeContext';
 import IncidentHeader from '@/components/command/IncidentHeader';
 import RosterUploadDialog from '@/components/command/RosterUploadDialog';
 import DivisionColumn from '@/components/command/DivisionColumn';
@@ -27,6 +28,7 @@ const BOARD_SECTIONS = [
 
 export default function CommandBoard() {
   const { incidentId } = useParams();
+  const { theme, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
@@ -275,6 +277,15 @@ export default function CommandBoard() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            title={theme === 'night' ? 'Switch to Day mode' : 'Switch to Night mode'}
+          >
+            {theme === 'night' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
           <ConnectionStatus isOnline={isOnline} pendingCount={pendingCount} replaying={replaying} />
           <Link to={`/incident/${incidentId}/accountability`}>
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8">
