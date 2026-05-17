@@ -125,6 +125,13 @@ ${units.map(u => `  - "${u.unit_name}" (type: ${u.unit_type})`).join('\n')}
 RADIO TRANSMISSION TO PARSE:
 "${finalMessage}"
 
+MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a unit):
+- "Cambridge" → prefix "CAM" (e.g. "Cambridge Engine 3" → unit_name: "CAM Engine 3", unit_type: engine)
+- "Belmont" → prefix "BEL" (e.g. "Belmont Truck 1" → unit_name: "BEL Truck 1", unit_type: truck)
+- "Lexington" / "Lex" → prefix "LEX" (e.g. "Lexington Rescue 2" or "Lex Rescue 2" → unit_name: "LEX Rescue 2", unit_type: rescue)
+- Apply this same pattern to any other town/city name spoken — abbreviate to first 3 uppercase letters as prefix
+- Always add notes: "Mutual Aid — [full town name]" on the new unit
+
 CRITICAL UNIT NAME MATCHING RULES:
 - Always match spoken/voice variants to the closest existing unit name above
 - "Tower one" → "Tower 1", "engine three" → "Engine 3", "truck two" → "Truck 2"
@@ -190,10 +197,11 @@ Respond with this exact JSON structure:
   ],
   "new_units": [
     {
-      "unit_name": "name",
+      "unit_name": "name (with town prefix if mutual aid, e.g. CAM Engine 3)",
       "unit_type": "engine|truck|rescue|squad|deputy|medic|tanker|brush|hazmat|other",
       "status": "status",
-      "assignment": "assignment or unassigned"
+      "assignment": "assignment or unassigned",
+      "notes": "Mutual Aid — [full town name] if applicable, else null"
     }
   ],
   "summary": "one sentence summary of what happened"
@@ -232,7 +240,8 @@ Respond with this exact JSON structure:
                 unit_name: { type: 'string' },
                 unit_type: { type: 'string' },
                 status: { type: 'string' },
-                assignment: { type: 'string' }
+                assignment: { type: 'string' },
+                notes: { type: 'string' }
               }
             }
           },

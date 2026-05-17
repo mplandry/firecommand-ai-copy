@@ -185,6 +185,7 @@ export default function CommandBoard() {
             unit_type: newUnit.unit_type || 'engine',
             status: newUnit.status || 'dispatched',
             assignment: newUnit.assignment || 'unassigned',
+            ...(newUnit.notes ? { notes: newUnit.notes } : {}),
           };
           if (!navigator.onLine) {
             const tempUnit = { ...newUnitPayload, id: `offline_${Date.now()}`, created_date: new Date().toISOString() };
