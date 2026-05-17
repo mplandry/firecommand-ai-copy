@@ -259,116 +259,100 @@ export default function CommandBoard() {
   const isReadOnly = incident.status === 'cleared';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Board Header */}
-      <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-3">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+
+      {/* ── Top Command Bar ── */}
+      <header className="shrink-0 bg-card/90 backdrop-blur border-b border-border/60 px-4 py-2.5 flex items-center gap-3">
         <Link to="/">
-          <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground text-xs">
-            <ArrowLeft className="w-3.5 h-3.5" /> Dashboard
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground shrink-0 h-8 w-8">
+            <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>
-        <div className="flex-1">
+
+        <div className="flex-1 min-w-0">
           <IncidentHeader incident={incident} />
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <ConnectionStatus isOnline={isOnline} pendingCount={pendingCount} replaying={replaying} />
           <Link to={`/incident/${incidentId}/accountability`}>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8">
               <ShieldCheck className="w-3.5 h-3.5" /> Accountability
             </Button>
           </Link>
           <Link to={`/incident/${incidentId}/kiosk`}>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8">
               <Monitor className="w-3.5 h-3.5" /> Kiosk
             </Button>
           </Link>
           {!isReadOnly && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-xs text-muted-foreground"
-                onClick={() => setShowRosterUpload(true)}
-              >
-                <ScanLine className="w-3.5 h-3.5" /> Roster
-              </Button>
-            )}
-          <ExportIncidentPDF
-            incident={incident}
-            units={units}
-            radioLogs={radioLogs}
-            department={department}
-          />
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8" onClick={() => setShowRosterUpload(true)}>
+              <ScanLine className="w-3.5 h-3.5" /> Roster
+            </Button>
+          )}
+          <ExportIncidentPDF incident={incident} units={units} radioLogs={radioLogs} department={department} />
           {!isReadOnly && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs text-muted-foreground"
-              onClick={() => setShowClose(true)}
-            >
-              <Archive className="w-3.5 h-3.5" /> Close Incident
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-red-400/70 hover:text-red-400 hover:bg-red-400/10 h-8" onClick={() => setShowClose(true)}>
+              <Archive className="w-3.5 h-3.5" /> Close
             </Button>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Cleared Banner */}
+      {/* ── Cleared Banner ── */}
       {isReadOnly && (
-        <div className="bg-green-900/30 border-b border-green-700/40 px-4 py-2 text-center text-xs font-mono text-green-400">
-          This incident is CLOSED — view only
+        <div className="shrink-0 bg-emerald-900/20 border-b border-emerald-700/30 px-4 py-1.5 text-center text-xs font-mono text-emerald-400 tracking-wider">
+          ● INCIDENT CLOSED — READ ONLY
         </div>
       )}
 
-      {/* Radio Input Bar */}
+      {/* ── Radio Input Bar ── */}
       {!isReadOnly && (
-        <div className="px-4 py-3 bg-muted border-b border-border">
-          <RadioInput
-            incidentId={incidentId}
-            units={units}
-            onTransmission={handleRadioTransmission}
-          />
+        <div className="shrink-0 px-4 py-2.5 bg-secondary/40 border-b border-border/50">
+          <RadioInput incidentId={incidentId} units={units} onTransmission={handleRadioTransmission} />
         </div>
       )}
 
-      {/* PAR Alert Bar */}
+      {/* ── PAR Alert ── */}
       {!isReadOnly && (
-        <PARAlert
-          lastRadioLogTime={radioLogs[0]?.created_date}
-          onRequestPAR={handleRequestAllPAR}
-          isReadOnly={isReadOnly}
-        />
+        <PARAlert lastRadioLogTime={radioLogs[0]?.created_date} onRequestPAR={handleRequestAllPAR} isReadOnly={isReadOnly} />
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold font-mono tracking-wider text-muted-foreground uppercase">
-              Tactical Board
-            </h2>
+      {/* ── Main Content ── */}
+      <div className="flex-1 flex overflow-hidden">
+
+        {/* Tactical Board */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 bg-primary rounded-full" />
+              <span className="text-xs font-mono font-bold tracking-widest text-muted-foreground uppercase">Tactical Board</span>
+              <span className="text-[10px] font-mono text-muted-foreground/50 bg-secondary px-2 py-0.5 rounded-full">{units.length} units</span>
+            </div>
             {!isReadOnly && (
-              <Button size="sm" variant="outline" onClick={() => setShowAddUnit(true)} className="gap-1 text-xs">
+              <Button size="sm" onClick={() => setShowAddUnit(true)} className="gap-1.5 text-xs h-7 px-3">
                 <Plus className="w-3.5 h-3.5" /> Add Unit
               </Button>
             )}
           </div>
 
-          <div className="space-y-4">
-            {BOARD_SECTIONS.map((row, i) => (
-              <div key={i} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {row.map(assignment => (
-                  <DivisionColumn
-                    key={assignment}
-                    assignment={assignment}
-                    units={units.filter(u => u.assignment === assignment)}
-                    onEditUnit={isReadOnly ? null : setEditingUnit}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
+          {BOARD_SECTIONS.map((row, i) => (
+            <div key={i} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              {row.map(assignment => (
+                <DivisionColumn
+                  key={assignment}
+                  assignment={assignment}
+                  units={units.filter(u => u.assignment === assignment)}
+                  onEditUnit={isReadOnly ? null : setEditingUnit}
+                />
+              ))}
+            </div>
+          ))}
         </div>
 
-        <div className="w-full lg:w-[480px] xl:w-[520px] border-t lg:border-t-0 lg:border-l border-border flex flex-col overflow-hidden">
+        {/* Side Panel */}
+        <div className="w-full lg:w-[460px] xl:w-[500px] shrink-0 border-l border-border/50 flex flex-col overflow-hidden bg-card/40">
           <SidePanel
             units={units}
             radioLogs={radioLogs}

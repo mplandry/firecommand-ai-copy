@@ -250,34 +250,48 @@ Respond with this exact JSON structure:
   return (
     <div className="flex flex-col gap-1.5">
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
+
         {/* MAYDAY toggle */}
         <Button
           type="button"
-          variant={isMayday ? 'destructive' : 'outline'}
+          variant={isMayday ? 'destructive' : 'ghost'}
           size="sm"
           onClick={() => setIsMayday(!isMayday)}
-          className="shrink-0"
+          className={`shrink-0 h-9 px-3 font-mono text-xs font-bold tracking-wider ${!isMayday ? 'text-muted-foreground border border-border/50 hover:border-red-500/50 hover:text-red-400' : 'animate-pulse'}`}
           title="Toggle MAYDAY"
         >
-          <AlertTriangle className="w-4 h-4" />
+          <AlertTriangle className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline ml-1">MAYDAY</span>
         </Button>
 
         {/* Text input */}
         <div className="relative flex-1">
-          <Radio className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          {isListening ? (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 bg-green-400 rounded-full animate-ping" />
+          ) : (
+            <Radio className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+          )}
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={
               isListening
-                ? '🎙 Listening... speak now'
+                ? 'Listening — speak your command...'
                 : isMayday
-                ? 'MAYDAY — Enter transmission...'
-                : "Enter radio transmission... (e.g., 'Engine 2 on scene, Division A')"
+                ? 'MAYDAY — describe the emergency...'
+                : "Radio transmission or voice command  (e.g. 'Engine 2 to Division A working')"
             }
-            className={`pl-10 font-mono text-sm bg-secondary border-border ${isMayday ? 'border-red-500/50 text-red-300 placeholder:text-red-400/50' : ''} ${isListening ? 'border-green-500/60 animate-pulse' : ''}`}
+            className={`pl-9 font-mono text-sm h-9 transition-all
+              ${isMayday ? 'bg-red-950/40 border-red-500/50 text-red-200 placeholder:text-red-400/40' : 'bg-secondary/60 border-border/60'}
+              ${isListening ? 'border-green-500/60 bg-green-950/20' : ''}
+            `}
             disabled={isProcessing}
           />
+          {isProcessing && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+            </div>
+          )}
         </div>
 
         {/* Mic button */}
@@ -285,29 +299,33 @@ Respond with this exact JSON structure:
           <Button
             type="button"
             size="sm"
-            variant={isListening ? 'default' : 'outline'}
-            className={`shrink-0 ${isListening ? 'bg-green-600 hover:bg-green-700 text-white border-green-500' : ''}`}
+            variant="ghost"
+            className={`shrink-0 h-9 w-9 transition-all border
+              ${isListening
+                ? 'bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30'
+                : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
             onClick={isListening ? stopListening : startListening}
             disabled={isProcessing}
-            title={isListening ? 'Stop listening' : 'Start voice input'}
+            title={isListening ? 'Stop listening' : 'Voice input'}
           >
             {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </Button>
         )}
 
         {/* Send button */}
-        <Button type="submit" disabled={isProcessing || !message.trim()} size="sm" className="shrink-0">
-          {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        <Button
+          type="submit"
+          disabled={isProcessing || !message.trim()}
+          size="sm"
+          className="shrink-0 h-9 w-9 p-0"
+        >
+          <Send className="w-4 h-4" />
         </Button>
       </form>
 
       {listenError && (
-        <p className="text-xs text-red-400 font-mono pl-1">{listenError}</p>
-      )}
-      {!hasSpeech && (
-        <p className="text-xs text-muted-foreground/50 font-mono pl-1">
-          Voice input requires Chrome or Edge browser.
-        </p>
+        <p className="text-[11px] text-red-400 font-mono pl-1">{listenError}</p>
       )}
     </div>
   );
