@@ -64,6 +64,7 @@ function ParBadge({ unit }) {
 
 // Slide 1: Tactical Board — all units grouped by assignment
 function TacticalSlide({ units, incident }) {
+  const [expandedUnit, setExpandedUnit] = useState(null);
   const grouped = {};
   units.forEach(u => {
     const key = u.assignment || 'unassigned';
@@ -86,16 +87,34 @@ function TacticalSlide({ units, incident }) {
               <div className="flex flex-col gap-2 overflow-y-auto flex-1">
                 {us.map(unit => {
                   const sc = STATUS_COLORS[unit.status] || STATUS_COLORS.dispatched;
+                  const isExpanded = expandedUnit === unit.id;
+                  const crew = unit.personnel || [];
                   return (
-                    <div key={unit.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${sc.bg} ${sc.border}`}>
-                      <span className="text-xl">{UNIT_ICONS[unit.unit_type] || '🚐'}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-mono font-bold text-white text-base leading-tight truncate">{unit.unit_name}</p>
-                        {unit.officer && <p className="text-[11px] text-gray-400 truncate">{unit.officer}</p>}
+                    <div
+                      key={unit.id}
+                      className={`rounded-lg border px-3 py-2 cursor-pointer transition-all ${sc.bg} ${sc.border} ${isExpanded ? 'ring-1 ring-white/20' : ''}`}
+                      onClick={() => setExpandedUnit(isExpanded ? null : unit.id)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{UNIT_ICONS[unit.unit_type] || '🚐'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-mono font-bold text-white text-base leading-tight truncate">{unit.unit_name}</p>
+                          {unit.officer && <p className="text-[11px] text-gray-400 truncate">{unit.officer}</p>}
+                        </div>
+                        <span className={`text-[10px] font-mono font-bold uppercase ${sc.text}`}>
+                          {unit.status?.replace(/_/g, ' ')}
+                        </span>
                       </div>
-                      <span className={`text-[10px] font-mono font-bold uppercase ${sc.text}`}>
-                        {unit.status?.replace(/_/g, ' ')}
-                      </span>
+                      {isExpanded && crew.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-white/10 flex flex-col gap-0.5">
+                          {crew.map((name, i) => (
+                            <p key={i} className="text-[11px] font-mono text-gray-300 truncate">• {name.split('|')[0]}</p>
+                          ))}
+                        </div>
+                      )}
+                      {isExpanded && crew.length === 0 && !unit.officer && (
+                        <p className="mt-2 pt-2 border-t border-white/10 text-[11px] font-mono text-gray-500 italic">No personnel listed</p>
+                      )}
                     </div>
                   );
                 })}
@@ -115,6 +134,7 @@ function TacticalSlide({ units, incident }) {
 
 // Slide 2: PAR Status
 function PARSlide({ units, incident }) {
+  const [expandedUnit, setExpandedUnit] = useState(null);
   const accountable = units.filter(u => ['on_scene', 'working', 'par'].includes(u.status));
   const mayday = units.filter(u => u.status === 'mayday');
 
@@ -135,9 +155,15 @@ function PARSlide({ units, incident }) {
       <div className="flex-1 grid grid-cols-3 gap-4 overflow-hidden">
         {accountable.map(unit => {
           const sc = STATUS_COLORS[unit.status] || STATUS_COLORS.dispatched;
-          const personnel = unit.personnel?.length || unit.personnel_count || 0;
+          const crew = unit.personnel || [];
+          const personnel = crew.length || unit.personnel_count || 0;
+          const isExpanded = expandedUnit === unit.id;
           return (
-            <div key={unit.id} className={`flex flex-col gap-2 rounded-xl border-2 p-5 ${sc.bg} ${sc.border}`}>
+            <div
+              key={unit.id}
+              className={`flex flex-col gap-2 rounded-xl border-2 p-5 cursor-pointer transition-all ${sc.bg} ${sc.border} ${isExpanded ? 'ring-1 ring-white/20' : ''}`}
+              onClick={() => setExpandedUnit(isExpanded ? null : unit.id)}
+            >
               <div className="flex items-center gap-3">
                 <span className="text-4xl">{UNIT_ICONS[unit.unit_type] || '🚐'}</span>
                 <div>
@@ -161,6 +187,19 @@ function PARSlide({ units, incident }) {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-400 font-mono">Floor</span>
                   <span className="text-sm font-mono text-cyan-300 font-bold">{unit.floor}</span>
+                </div>
+              )}
+              {isExpanded && (
+                <div className="border-t border-white/10 pt-2 mt-1 flex flex-col gap-0.5">
+                  {unit.officer && (
+                    <p className="text-[12px] font-mono text-orange-300 truncate">★ {unit.officer.split('|')[0]}</p>
+                  )}
+                  {crew.map((name, i) => (
+                    <p key={i} className="text-[12px] font-mono text-gray-300 truncate">• {name.split('|')[0]}</p>
+                  ))}
+                  {!unit.officer && crew.length === 0 && (
+                    <p className="text-[11px] font-mono text-gray-500 italic">No personnel listed</p>
+                  )}
                 </div>
               )}
             </div>
