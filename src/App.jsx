@@ -16,6 +16,7 @@ import TemplateManager from './pages/TemplateManager';
 import IncidentPanel from './pages/IncidentPanel';
 import KioskDisplay from './pages/KioskDisplay';
 import DispatchLog from './pages/DispatchLog';
+import IncidentContacts from './pages/IncidentContacts';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -54,6 +55,7 @@ const AuthenticatedApp = () => {
       <Route path="/incident/:incidentId/panel" element={<IncidentPanel />} />
       <Route path="/incident/:incidentId/kiosk" element={<KioskDisplay />} />
       <Route path="/incident/:incidentId/dispatch" element={<DispatchLog />} />
+      <Route path="/incident/:incidentId/contacts" element={<IncidentContacts />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

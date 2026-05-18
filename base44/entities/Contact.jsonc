@@ -1,0 +1,37 @@
+{
+  "name": "Contact",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Contact full name"
+    },
+    "role": {
+      "type": "string",
+      "description": "Role or title (e.g. Utility Liaison, Red Cross, PIO)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email address"
+    },
+    "agency": {
+      "type": "string",
+      "description": "Agency or organization name"
+    },
+    "incident_id": {
+      "type": "string",
+      "description": "Incident ID if incident-specific. Empty/null = global contact."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
