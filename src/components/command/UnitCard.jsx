@@ -25,9 +25,10 @@ function useElapsed(timestamp) {
     if (!timestamp) return;
     const tick = () => {
       const diff = Math.max(0, Date.now() - new Date(timestamp).getTime());
-      const m = Math.floor(diff / 60000);
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
       const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-      setElapsed(`${m}:${s}`);
+      setElapsed(h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`);
     };
     tick();
     const id = setInterval(tick, 1000);
