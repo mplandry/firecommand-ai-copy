@@ -5,7 +5,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Mic, Radio, Send, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Mic, Radio, Send, Loader2, AlertTriangle, GripVertical } from 'lucide-react';
 import RadioInput from '@/components/command/RadioInput';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -208,7 +208,6 @@ export default function DispatchLog() {
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              {...provided.dragHandleProps}
                               className={`flex items-center gap-2 p-2 rounded-lg border group transition-shadow ${
                                 snapshot.isDragging
                                   ? 'shadow-lg ring-1 ring-primary/40 bg-card border-primary/40'
@@ -217,6 +216,9 @@ export default function DispatchLog() {
                                   : 'bg-secondary/40 border-border/40 hover:border-border/60'
                               }`}
                             >
+                              <div {...provided.dragHandleProps} className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing shrink-0">
+                                <GripVertical className="w-4 h-4" />
+                              </div>
                               <Input
                                 ref={newUnitId === unit.id ? (ref) => {
                                   if (ref) setTimeout(() => ref.focus(), 0);
