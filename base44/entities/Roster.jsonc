@@ -39,6 +39,10 @@
       "type": "string",
       "description": "Officer / Company Officer name"
     },
+    "officer_rank": {
+      "type": "string",
+      "description": "Officer rank (e.g. Captain, Lieutenant, Chief)"
+    },
     "personnel": {
       "type": "array",
       "items": {

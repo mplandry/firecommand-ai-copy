@@ -83,6 +83,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
 
   // Form state
   const [officerStr, setOfficerStr] = useState(entry.officer || '');
+  const [officerRank, setOfficerRank] = useState(entry.officer_rank || '');
   const [unitName, setUnitName] = useState(entry.unit_name || '');
   const [unitType, setUnitType] = useState(entry.unit_type || 'engine');
   const [crew, setCrew] = useState(entry.personnel || []);
@@ -99,6 +100,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
       unit_name: unitName,
       unit_type: unitType,
       officer: officerStr,
+      officer_rank: officerRank,
       personnel: crew.filter(p => decodePerson(p).name),
       personnel_count: 1 + crew.filter(p => decodePerson(p).name).length,
       notes,
@@ -109,6 +111,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
   const cancel = () => {
     if (isNew) { onDelete(); return; }
     setOfficerStr(entry.officer || '');
+    setOfficerRank(entry.officer_rank || '');
     setUnitName(entry.unit_name || '');
     setUnitType(entry.unit_type || 'engine');
     setCrew(entry.personnel || []);
@@ -159,11 +162,11 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
             <div className={`flex items-center gap-3 px-4 py-2.5 ${officerIsOOG ? 'bg-red-950/20' : 'bg-cyan-950/20'}`}>
               <div className="w-20 shrink-0 flex items-center gap-1.5">
                 <span className={`text-[9px] font-mono font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${officerIsOOG ? 'text-red-400 bg-red-900/40 border border-red-700/30' : 'text-cyan-500 bg-cyan-900/40 border border-cyan-700/30'}`}>
-                  {entry.unit_type === 'deputy' ? 'Deputy'
+                  {entry.officer_rank || (entry.unit_type === 'deputy' ? 'Deputy'
                     : /\bcapt(ain)?\b/i.test(officerName) ? 'Capt'
                     : /\blt\.?\b|lieutenant/i.test(officerName) ? 'Lt'
                     : officerIsOOG ? 'OOG'
-                    : 'Officer'}
+                    : 'Officer')}
                 </span>
                 {officerPos && (
                   <span className={`text-[9px] font-mono ${officerIsOOG ? 'text-red-600/70' : 'text-cyan-600/70'}`}>{officerPos}</span>
@@ -252,18 +255,27 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
         </div>
 
         {/* Officer */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[9px] font-mono text-cyan-500 uppercase tracking-wider font-bold">Officer</label>
-            <span className="text-[9px] font-mono text-muted-foreground">Name · Position (e.g. E100)</span>
-          </div>
-          <PersonRow
-            value={officerStr}
-            onChange={setOfficerStr}
-            placeholder="Captain Smith"
-            posPlaceholder="E100"
-          />
-        </div>
+         <div>
+           <div className="flex items-center justify-between mb-1.5">
+             <label className="text-[9px] font-mono text-cyan-500 uppercase tracking-wider font-bold">Officer</label>
+             <span className="text-[9px] font-mono text-muted-foreground">Name · Position (e.g. E100)</span>
+           </div>
+           <PersonRow
+             value={officerStr}
+             onChange={setOfficerStr}
+             placeholder="Captain Smith"
+             posPlaceholder="E100"
+           />
+           <div className="mt-2">
+             <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Rank</label>
+             <input
+               className="w-full bg-secondary border border-border rounded px-2 py-1.5 text-sm font-mono text-foreground"
+               value={officerRank}
+               onChange={e => setOfficerRank(e.target.value)}
+               placeholder="e.g. Captain, Lieutenant, Chief"
+             />
+           </div>
+         </div>
 
         {/* Crew */}
         <div>
@@ -685,7 +697,7 @@ export default function RosterManager() {
             <Button
               size="sm"
               onClick={() => {
-                setTempNewEntry({ unit_name: '', unit_type: 'engine', officer: '|E100', personnel: ['|101', '|102'], personnel_count: null, notes: '' });
+              setTempNewEntry({ unit_name: '', unit_type: 'engine', officer: '|E100', officer_rank: '', personnel: ['|101', '|102'], personnel_count: null, notes: '' });
               }}
               className="gap-1.5 text-xs"
               disabled={!!tempNewEntry}
