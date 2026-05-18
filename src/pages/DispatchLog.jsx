@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Plus, Trash2, Mic, Radio, Send, Loader2, AlertTriangle } from 'lucide-react';
 import RadioInput from '@/components/command/RadioInput';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const alarmLevels = [
   '1st_alarm', '2nd_alarm', '3rd_alarm', '4th_alarm', '5th_alarm', 'task_force', 'strike_team'
@@ -140,6 +141,13 @@ export default function DispatchLog() {
     unitsByAlarm[level] = units.filter(u => u.alarm_level === level);
   });
 
+  const handleDragEnd = (result) => {
+    const { destination, source, draggableId } = result;
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId) return;
+    updateUnit.mutate({ id: draggableId, data: { alarm_level: destination.droppableId } });
+  };
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-5xl mx-auto">
@@ -163,105 +171,130 @@ export default function DispatchLog() {
             </div>
           </div>
 
-          {alarmLevels.map(level => (
-            <div key={level} className="rounded-lg border border-border/60 bg-card/40 overflow-hidden">
-              <div className="bg-secondary/60 border-b border-border/60 px-4 py-3 flex items-center justify-between">
-                <div>
-                  <h2 className="font-mono font-bold text-foreground text-lg">{alarmLabels[level]}</h2>
-                  <p className="text-xs text-muted-foreground mt-1">{unitsByAlarm[level].length} units</p>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            {alarmLevels.map(level => (
+              <div key={level} className="rounded-lg border border-border/60 bg-card/40 overflow-hidden">
+                <div className="bg-secondary/60 border-b border-border/60 px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-mono font-bold text-foreground text-lg">{alarmLabels[level]}</h2>
+                    <p className="text-xs text-muted-foreground mt-1">{unitsByAlarm[level].length} units</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={listening === level ? 'default' : 'outline'}
+                    onClick={() => handleMicInput(level)}
+                    className="gap-1"
+                    disabled={listening !== null}
+                  >
+                    <Mic className="w-4 h-4" />
+                    {listening === level ? 'Listening...' : 'Add via Voice'}
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  variant={listening === level ? 'default' : 'outline'}
-                  onClick={() => handleMicInput(level)}
-                  className="gap-1"
-                  disabled={listening !== null}
-                >
-                  <Mic className="w-4 h-4" />
-                  {listening === level ? 'Listening...' : 'Add via Voice'}
-                </Button>
-              </div>
 
-              <div className="p-4 space-y-3">
-                {unitsByAlarm[level].length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">No units dispatched at this level</p>
-                ) : (
-                  unitsByAlarm[level].map(unit => (
-                    <div key={unit.id} className={`flex items-center gap-2 p-2 rounded-lg border ${newUnitId === unit.id ? 'bg-primary/10 border-primary/40' : 'bg-secondary/40 border-border/40 hover:border-border/60'} group`}>
-                      <Input
-                        ref={newUnitId === unit.id ? (ref) => {
-                          if (ref) setTimeout(() => ref.focus(), 0);
-                        } : null}
-                        value={editingFields[`${unit.id}_name`] !== undefined ? editingFields[`${unit.id}_name`] : unit.unit_name}
-                        onChange={(e) => setEditingFields({ ...editingFields, [`${unit.id}_name`]: e.target.value })}
-                        onFocus={(e) => e.target.select()}
-                        onBlur={() => {
-                          if (editingFields[`${unit.id}_name`] && editingFields[`${unit.id}_name`] !== unit.unit_name) {
-                            updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
-                          }
-                          setNewUnitId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') setNewUnitId(null);
-                          if (e.key === 'Enter') {
-                            if (editingFields[`${unit.id}_name`] && editingFields[`${unit.id}_name`] !== unit.unit_name) {
-                              updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
-                            }
-                            setNewUnitId(null);
-                          }
-                        }}
-                        className="bg-background font-mono text-sm flex-1 h-8"
-                        placeholder="Unit name"
-                      />
-                      <Select 
-                        value={editingFields[`${unit.id}_type`] !== undefined ? editingFields[`${unit.id}_type`] : unit.unit_type}
-                        onValueChange={(v) => {
-                          setEditingFields({ ...editingFields, [`${unit.id}_type`]: v });
-                          updateUnit.mutate({ id: unit.id, data: { unit_type: v } });
-                        }}
+                <Droppable droppableId={level}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`p-4 space-y-3 min-h-[60px] transition-colors ${snapshot.isDraggingOver ? 'bg-primary/5 border-primary/20' : ''}`}
+                    >
+                      {unitsByAlarm[level].length === 0 && !snapshot.isDraggingOver && (
+                        <p className="text-sm text-muted-foreground italic">No units dispatched at this level</p>
+                      )}
+
+                      {unitsByAlarm[level].map((unit, index) => (
+                        <Draggable key={unit.id} draggableId={unit.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`flex items-center gap-2 p-2 rounded-lg border group transition-shadow ${
+                                snapshot.isDragging
+                                  ? 'shadow-lg ring-1 ring-primary/40 bg-card border-primary/40'
+                                  : newUnitId === unit.id
+                                  ? 'bg-primary/10 border-primary/40'
+                                  : 'bg-secondary/40 border-border/40 hover:border-border/60'
+                              }`}
+                            >
+                              <Input
+                                ref={newUnitId === unit.id ? (ref) => {
+                                  if (ref) setTimeout(() => ref.focus(), 0);
+                                } : null}
+                                value={editingFields[`${unit.id}_name`] !== undefined ? editingFields[`${unit.id}_name`] : unit.unit_name}
+                                onChange={(e) => setEditingFields({ ...editingFields, [`${unit.id}_name`]: e.target.value })}
+                                onFocus={(e) => e.target.select()}
+                                onBlur={() => {
+                                  if (editingFields[`${unit.id}_name`] !== undefined && editingFields[`${unit.id}_name`] !== unit.unit_name) {
+                                    updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
+                                  }
+                                  setNewUnitId(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') setNewUnitId(null);
+                                  if (e.key === 'Enter') {
+                                    if (editingFields[`${unit.id}_name`] !== undefined && editingFields[`${unit.id}_name`] !== unit.unit_name) {
+                                      updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
+                                    }
+                                    setNewUnitId(null);
+                                  }
+                                }}
+                                className="bg-background font-mono text-sm flex-1 h-8"
+                                placeholder="Unit name"
+                              />
+                              <Select
+                                value={editingFields[`${unit.id}_type`] !== undefined ? editingFields[`${unit.id}_type`] : unit.unit_type}
+                                onValueChange={(v) => {
+                                  setEditingFields({ ...editingFields, [`${unit.id}_type`]: v });
+                                  updateUnit.mutate({ id: unit.id, data: { unit_type: v } });
+                                }}
+                              >
+                                <SelectTrigger className="w-28 bg-background font-mono text-xs h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {unitTypes.map(t => (
+                                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <span className={`text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap ${
+                                unit.status === 'on_scene' ? 'bg-green-500/20 text-green-400' :
+                                unit.status === 'mayday' ? 'bg-red-500/20 text-red-400' :
+                                unit.status === 'rehab' ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-blue-500/20 text-blue-400'
+                              }`}>
+                                {unit.status}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => deleteUnit.mutate(unit.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+
+                      {provided.placeholder}
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs"
+                        onClick={() => createUnit.mutate({ unit_name: '', unit_type: 'engine', alarm_level: level })}
                       >
-                        <SelectTrigger className="w-28 bg-background font-mono text-xs h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {unitTypes.map(t => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span className={`text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap ${
-                        unit.status === 'on_scene' ? 'bg-green-500/20 text-green-400' :
-                        unit.status === 'mayday' ? 'bg-red-500/20 text-red-400' :
-                        unit.status === 'rehab' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-blue-500/20 text-blue-400'
-                      }`}>
-                        {unit.status}
-                      </span>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => deleteUnit.mutate(unit.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
+                        <Plus className="w-3 h-3 mr-1" /> Add Unit to {alarmLabels[level]}
                       </Button>
                     </div>
-                  ))
-                )}
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full text-xs"
-                  onClick={() => {
-                    createUnit.mutate({ unit_name: '', unit_type: 'engine', alarm_level: level });
-                  }}
-                >
-                  <Plus className="w-3 h-3 mr-1" /> Add Unit to {alarmLabels[level]}
-                </Button>
+                  )}
+                </Droppable>
               </div>
-            </div>
-          ))}
+            ))}
+          </DragDropContext>
         </div>
       </div>
     </div>
