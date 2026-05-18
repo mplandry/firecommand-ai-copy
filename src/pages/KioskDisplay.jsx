@@ -1,8 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNowStrict } from 'date-fns';
+
+// Detect current shift based on time (day = 06:00–18:00, night otherwise)
+function getCurrentShift() {
+  const h = new Date().getHours();
+  return h >= 6 && h < 18 ? 'day' : 'night';
+}
 import { Flame, Clock, ChevronLeft, ChevronRight, Pause, Play, X, AlertTriangle, Wind, Users, Layers } from 'lucide-react';
 
 // ── constants ────────────────────────────────────────────────────────────────
@@ -354,12 +360,37 @@ export default function KioskDisplay() {
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const { data: units = [] } = useQuery({
+  const { data: rawUnits = [] } = useQuery({
     queryKey: ['kiosk-units', incidentId],
     queryFn: () => base44.entities.Unit.filter({ incident_id: incidentId }),
     enabled: !!incidentId,
     refetchInterval: 10000,
   });
+
+  const { data: rosterEntries = [] } = useQuery({
+    queryKey: ['kiosk-roster', format(new Date(), 'yyyy-MM-dd'), getCurrentShift()],
+    queryFn: () => base44.entities.Roster.filter({
+      shift_date: format(new Date(), 'yyyy-MM-dd'),
+      shift: getCurrentShift(),
+    }, 'unit_name', 100),
+    refetchInterval: 30000,
+  });
+
+  // Merge roster personnel into units by matching unit name
+  const units = useMemo(() => {
+    return rawUnits.map(unit => {
+      const rosterMatch = rosterEntries.find(
+        r => r.unit_name?.toLowerCase().trim() === unit.unit_name?.toLowerCase().trim()
+      );
+      if (!rosterMatch) return unit;
+      return {
+        ...unit,
+        officer: rosterMatch.officer || unit.officer,
+        personnel: rosterMatch.personnel?.length ? rosterMatch.personnel : unit.personnel,
+        personnel_count: rosterMatch.personnel_count || unit.personnel_count,
+      };
+    });
+  }, [rawUnits, rosterEntries]);
 
   const { data: incident } = useQuery({
     queryKey: ['incident', incidentId],
