@@ -253,7 +253,9 @@ export default function DispatchLog() {
                   size="sm"
                   variant="outline"
                   className="w-full text-xs"
-                  onClick={() => createUnit.mutate({ unit_name: 'New Unit', unit_type: 'engine', alarm_level: level })}
+                  onClick={() => {
+                    createUnit.mutate({ unit_name: '', unit_type: 'engine', alarm_level: level });
+                  }}
                 >
                   <Plus className="w-3 h-3 mr-1" /> Add Unit to {alarmLabels[level]}
                 </Button>
