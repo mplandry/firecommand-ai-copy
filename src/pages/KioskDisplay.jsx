@@ -105,7 +105,7 @@ function TacticalSlide({ units, incident }) {
                         <span className="text-xl">{UNIT_ICONS[unit.unit_type] || '🚐'}</span>
                         <div className="flex-1 min-w-0">
                           <p className="font-mono font-bold text-white text-base leading-tight truncate">{unit.unit_name}</p>
-                          {unit.officer && <p className="text-[11px] text-gray-400 truncate">{unit.officer}</p>}
+                          {unit.officer && <p className="text-[11px] text-gray-400 truncate">{unit.officer_rank ? `${unit.officer_rank} ` : ''}{unit.officer.split('|')[0]}</p>}
                         </div>
                         <span className={`text-[10px] font-mono font-bold uppercase ${sc.text}`}>
                           {unit.status?.replace(/_/g, ' ')}
@@ -198,7 +198,9 @@ function PARSlide({ units, incident }) {
               {isExpanded && (
                 <div className="border-t border-white/10 pt-2 mt-1 flex flex-col gap-0.5">
                   {unit.officer && (
-                    <p className="text-[12px] font-mono text-orange-300 truncate">★ {unit.officer.split('|')[0]}</p>
+                    <p className="text-[12px] font-mono text-orange-300 truncate">
+                      ★ {unit.officer_rank ? `${unit.officer_rank} ` : ''}{unit.officer.split('|')[0]}
+                    </p>
                   )}
                   {crew.map((name, i) => (
                     <p key={i} className="text-[12px] font-mono text-gray-300 truncate">• {name.split('|')[0]}</p>
