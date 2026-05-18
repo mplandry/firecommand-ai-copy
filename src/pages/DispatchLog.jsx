@@ -224,20 +224,36 @@ export default function DispatchLog() {
                                   if (ref) setTimeout(() => ref.focus(), 0);
                                 } : null}
                                 value={editingFields[`${unit.id}_name`] !== undefined ? editingFields[`${unit.id}_name`] : unit.unit_name}
-                                onChange={(e) => setEditingFields({ ...editingFields, [`${unit.id}_name`]: e.target.value })}
+                                onChange={(e) => {
+                                  const name = e.target.value;
+                                  const lower = name.toLowerCase();
+                                  let detectedType = editingFields[`${unit.id}_type`] ?? unit.unit_type;
+                                  if (/\b(truck|ladder|truck|lad|tiller)\b/.test(lower)) detectedType = 'truck';
+                                  else if (/\b(engine|eng|pumper)\b/.test(lower)) detectedType = 'engine';
+                                  else if (/\b(rescue|resc|res)\b/.test(lower)) detectedType = 'rescue';
+                                  else if (/\b(medic|med|ems|amb)\b/.test(lower)) detectedType = 'medic';
+                                  else if (/\b(squad|sqd)\b/.test(lower)) detectedType = 'squad';
+                                  else if (/\b(tanker|tank|tnk)\b/.test(lower)) detectedType = 'tanker';
+                                  else if (/\b(hazmat|haz)\b/.test(lower)) detectedType = 'hazmat';
+                                  else if (/\b(brush|brsh|wildland)\b/.test(lower)) detectedType = 'brush';
+                                  else if (/\b(deputy|dep|chief|bat)\b/.test(lower)) detectedType = 'deputy';
+                                  setEditingFields({ ...editingFields, [`${unit.id}_name`]: name, [`${unit.id}_type`]: detectedType });
+                                }}
                                 onFocus={(e) => e.target.select()}
                                 onBlur={() => {
-                                  if (editingFields[`${unit.id}_name`] !== undefined && editingFields[`${unit.id}_name`] !== unit.unit_name) {
-                                    updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
-                                  }
+                                  const updates = {};
+                                  if (editingFields[`${unit.id}_name`] !== undefined && editingFields[`${unit.id}_name`] !== unit.unit_name) updates.unit_name = editingFields[`${unit.id}_name`];
+                                  if (editingFields[`${unit.id}_type`] !== undefined && editingFields[`${unit.id}_type`] !== unit.unit_type) updates.unit_type = editingFields[`${unit.id}_type`];
+                                  if (Object.keys(updates).length > 0) updateUnit.mutate({ id: unit.id, data: updates });
                                   setNewUnitId(null);
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Escape') setNewUnitId(null);
                                   if (e.key === 'Enter') {
-                                    if (editingFields[`${unit.id}_name`] !== undefined && editingFields[`${unit.id}_name`] !== unit.unit_name) {
-                                      updateUnit.mutate({ id: unit.id, data: { unit_name: editingFields[`${unit.id}_name`] } });
-                                    }
+                                    const updates = {};
+                                    if (editingFields[`${unit.id}_name`] !== undefined && editingFields[`${unit.id}_name`] !== unit.unit_name) updates.unit_name = editingFields[`${unit.id}_name`];
+                                    if (editingFields[`${unit.id}_type`] !== undefined && editingFields[`${unit.id}_type`] !== unit.unit_type) updates.unit_type = editingFields[`${unit.id}_type`];
+                                    if (Object.keys(updates).length > 0) updateUnit.mutate({ id: unit.id, data: updates });
                                     setNewUnitId(null);
                                   }
                                 }}
