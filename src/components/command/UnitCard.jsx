@@ -46,13 +46,13 @@ export default function UnitCard({ unit, onEdit }) {
   const isRehab = unit.status === 'rehab';
   const isOnScene = unit.status === 'on_scene';
 
-  // Use rehab_time for rehab timer, on_scene_time (or updated_date) for working/on_scene
+  // Use rehab_time for rehab timer, on_scene_time (or updated_date) for working/on_scene/mayday
   const workingAnchor = unit.on_scene_time || unit.updated_date;
   const rehabAnchor = unit.rehab_time || unit.updated_date;
   const timerAnchor = isRehab ? rehabAnchor : workingAnchor;
 
   const activeElapsed = useElapsed(
-    (isWorking || isRehab || isOnScene) ? timerAnchor : null
+    (isWorking || isRehab || isOnScene || isMayday) ? timerAnchor : null
   );
 
   const activeMinutes = timerAnchor ? Math.max(0, (Date.now() - new Date(timerAnchor).getTime()) / 60000) : 0;
@@ -137,10 +137,12 @@ export default function UnitCard({ unit, onEdit }) {
           </div>
         )}
 
-        {/* Active timer — always shown for working, rehab, on scene */}
-         {(isWorking || isRehab || isOnScene) && activeElapsed && (
+        {/* Active timer — always shown for working, rehab, on scene, mayday */}
+         {(isWorking || isRehab || isOnScene || isMayday) && activeElapsed && (
            <div className={`mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 border ${
-             rehabWarning
+             isMayday
+               ? 'bg-red-600/20 border-red-500/40'
+               : rehabWarning
                ? 'bg-violet-500/20 border-violet-500/50'
                : entryWarning
                ? 'bg-orange-500/15 border-orange-500/40 animate-pulse-red'
@@ -152,9 +154,9 @@ export default function UnitCard({ unit, onEdit }) {
               rehabWarning ? 'text-violet-300' : entryWarning ? 'text-orange-400' : isRehab ? 'text-violet-400' : 'text-muted-foreground'
             }`} />
             <span className={`text-xs font-mono font-bold tracking-wider ${
-              rehabWarning ? 'text-violet-300' : entryWarning ? 'text-orange-300' : isRehab ? 'text-violet-400' : 'text-muted-foreground'
+             isMayday ? 'text-red-400' : rehabWarning ? 'text-violet-300' : entryWarning ? 'text-orange-300' : isRehab ? 'text-violet-400' : 'text-muted-foreground'
             }`}>
-              {isRehab ? 'REHAB' : isOnScene ? 'ON SCENE' : 'WORKING'}
+             {isMayday ? 'MAYDAY ELAPSED' : isRehab ? 'REHAB' : isOnScene ? 'ON SCENE' : 'WORKING'}
             </span>
             <span className={`text-xs font-mono font-bold ml-auto ${
               rehabWarning ? 'text-violet-200' : entryWarning ? 'text-orange-300' : 'text-foreground'
