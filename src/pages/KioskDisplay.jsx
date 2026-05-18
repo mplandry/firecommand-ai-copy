@@ -140,7 +140,6 @@ function TacticalSlide({ units, incident }) {
 
 // Slide 2: PAR Status
 function PARSlide({ units, incident }) {
-  const [expandedUnit, setExpandedUnit] = useState(null);
   const accountable = units.filter(u => ['on_scene', 'working', 'par'].includes(u.status));
   const mayday = units.filter(u => u.status === 'mayday');
 
@@ -158,17 +157,14 @@ function PARSlide({ units, incident }) {
         </div>
       )}
 
-      <div className="flex-1 grid grid-cols-3 gap-4 overflow-hidden">
+      <div className="flex-1 grid grid-cols-3 gap-4 overflow-y-auto">
         {accountable.map(unit => {
           const sc = STATUS_COLORS[unit.status] || STATUS_COLORS.dispatched;
           const crew = unit.personnel || [];
-          const personnel = crew.length || unit.personnel_count || 0;
-          const isExpanded = expandedUnit === unit.id;
           return (
             <div
               key={unit.id}
-              className={`flex flex-col gap-2 rounded-xl border-2 p-5 cursor-pointer transition-all ${sc.bg} ${sc.border} ${isExpanded ? 'ring-1 ring-white/20' : ''}`}
-              onClick={() => setExpandedUnit(isExpanded ? null : unit.id)}
+              className={`flex flex-col gap-2 rounded-xl border-2 p-5 ${sc.bg} ${sc.border}`}
             >
               <div className="flex items-center gap-3">
                 <span className="text-4xl">{UNIT_ICONS[unit.unit_type] || '🚐'}</span>
@@ -179,37 +175,30 @@ function PARSlide({ units, incident }) {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-1 border-t border-white/10 pt-2">
+              <div className="flex items-center justify-between border-t border-white/10 pt-2">
                 <span className="text-sm text-gray-400 font-mono">Last PAR</span>
                 <ParBadge unit={unit} />
               </div>
-              {personnel > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400 font-mono">Personnel</span>
-                  <span className="text-sm font-mono text-white font-bold">{personnel} FF</span>
-                </div>
-              )}
               {unit.floor && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-400 font-mono">Floor</span>
                   <span className="text-sm font-mono text-cyan-300 font-bold">{unit.floor}</span>
                 </div>
               )}
-              {isExpanded && (
-                <div className="border-t border-white/10 pt-2 mt-1 flex flex-col gap-0.5">
-                  {unit.officer && (
-                    <p className="text-[12px] font-mono text-orange-300 truncate">
-                      ★ {unit.officer_rank ? `${unit.officer_rank} ` : ''}{unit.officer.split('|')[0]}
-                    </p>
-                  )}
-                  {crew.map((name, i) => (
-                    <p key={i} className="text-[12px] font-mono text-gray-300 truncate">• {name.split('|')[0]}</p>
-                  ))}
-                  {!unit.officer && crew.length === 0 && (
-                    <p className="text-[11px] font-mono text-gray-500 italic">No personnel listed</p>
-                  )}
-                </div>
-              )}
+              {/* Personnel — always visible */}
+              <div className="border-t border-white/10 pt-2 flex flex-col gap-0.5">
+                {unit.officer && (
+                  <p className="text-[12px] font-mono text-orange-300 truncate">
+                    ★ {unit.officer_rank ? `${unit.officer_rank} ` : ''}{unit.officer.split('|')[0]}
+                  </p>
+                )}
+                {crew.map((name, i) => (
+                  <p key={i} className="text-[12px] font-mono text-gray-300 truncate">• {name.split('|')[0]}</p>
+                ))}
+                {!unit.officer && crew.length === 0 && (
+                  <p className="text-[11px] font-mono text-gray-500 italic">No personnel listed</p>
+                )}
+              </div>
             </div>
           );
         })}
