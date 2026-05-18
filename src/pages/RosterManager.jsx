@@ -187,7 +187,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
               : isOT
               ? 'text-amber-900 bg-amber-100 border border-amber-300'
               : 'text-muted-foreground bg-secondary/60 border border-border/50';
-            const nameClass = isOOG ? 'text-red-300' : isOT ? 'text-amber-900' : 'text-foreground';
+            const nameClass = isOOG ? 'text-red-200' : isOT ? 'text-amber-900' : 'text-foreground';
             const posClass = isOOG ? 'text-red-600' : isOT ? 'text-amber-700' : 'text-muted-foreground/60';
             return (
               <div key={i} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors ${rowBg}`}>
