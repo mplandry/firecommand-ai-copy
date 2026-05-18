@@ -161,7 +161,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
           {entry.officer ? (
             <div className={`flex items-center gap-3 px-4 py-2.5 ${officerIsOOG ? 'bg-red-950/20' : 'bg-cyan-950/20'}`}>
               <div className="w-20 shrink-0 flex items-center gap-1.5">
-                <span className={`text-[9px] font-mono font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${officerIsOOG ? 'text-red-400 bg-red-900/40 border border-red-700/30' : 'text-cyan-500 bg-cyan-900/40 border border-cyan-700/30'}`}>
+                <span className={`text-[9px] font-mono font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${officerIsOOG ? 'text-red-400 bg-red-900/40 border border-red-700/30' : 'text-orange-900 bg-orange-100 border border-orange-300'}`}>
                   {entry.officer_rank || (entry.unit_type === 'deputy' ? 'Deputy'
                     : /\bcapt(ain)?\b/i.test(officerName) ? 'Capt'
                     : /\blt\.?\b|lieutenant/i.test(officerName) ? 'Lt'
@@ -169,10 +169,10 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
                     : 'Officer')}
                 </span>
                 {officerPos && (
-                  <span className={`text-[9px] font-mono ${officerIsOOG ? 'text-red-600/70' : 'text-cyan-600/70'}`}>{officerPos}</span>
+                  <span className={`text-[9px] font-mono ${officerIsOOG ? 'text-red-600/70' : 'text-orange-700/70'}`}>{officerPos}</span>
                 )}
               </div>
-              <span className={`text-sm font-mono font-semibold ${officerIsOOG ? 'text-red-300' : 'text-cyan-300'}`}>{officerName || entry.officer}</span>
+              <span className={`text-sm font-mono font-semibold ${officerIsOOG ? 'text-red-300' : 'text-orange-900'}`}>{officerName || entry.officer}</span>
             </div>
           ) : (
             <div className="px-4 py-2.5 text-xs font-mono text-muted-foreground/40 italic">No officer assigned</div>
