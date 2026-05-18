@@ -181,14 +181,14 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
           {/* Crew rows */}
           {entry.personnel?.length > 0 ? entry.personnel.map((p, i) => {
             const { name, position, isOT, isOOG } = decodePerson(p);
-            const rowBg = isOOG ? 'bg-red-950/20' : isOT ? 'bg-green-950/20' : '';
+            const rowBg = isOOG ? 'bg-red-950/20' : isOT ? 'bg-amber-950/20' : '';
             const badgeClass = isOOG
               ? 'text-red-400 bg-red-900/40 border border-red-700/40'
               : isOT
-              ? 'text-green-400 bg-green-900/40 border border-green-700/40'
+              ? 'text-amber-900 bg-amber-100 border border-amber-300'
               : 'text-muted-foreground bg-secondary/60 border border-border/50';
-            const nameClass = isOOG ? 'text-red-300' : isOT ? 'text-green-300' : 'text-foreground';
-            const posClass = isOOG ? 'text-red-600' : isOT ? 'text-green-600' : 'text-muted-foreground/60';
+            const nameClass = isOOG ? 'text-red-300' : isOT ? 'text-amber-900' : 'text-foreground';
+            const posClass = isOOG ? 'text-red-600' : isOT ? 'text-amber-700' : 'text-muted-foreground/60';
             return (
               <div key={i} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/10 transition-colors ${rowBg}`}>
                 <div className="w-20 shrink-0 flex items-center gap-1.5">
@@ -198,7 +198,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
                   {position && (
                     <span className={`text-[9px] font-mono ${posClass}`}>{position}</span>
                   )}
-                  {isOT && !isOOG && <span className="text-[9px] font-mono font-bold text-green-400 bg-green-900/40 border border-green-700/40 rounded px-1 py-0.5">OT</span>}
+                  {isOT && !isOOG && <span className="text-[9px] font-mono font-bold text-amber-900 bg-amber-100 border border-amber-300 rounded px-1 py-0.5">OT</span>}
                 </div>
                 <span className={`text-sm font-mono ${nameClass}`}>{name || p}</span>
               </div>
