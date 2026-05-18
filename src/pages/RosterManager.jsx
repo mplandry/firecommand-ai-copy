@@ -140,9 +140,9 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className={`border rounded-lg px-2.5 py-1 text-center ${understaffed ? 'bg-red-900/30 border-red-700/40' : 'bg-green-900/30 border-green-700/30'}`}>
-              <div className={`text-sm font-mono font-black ${understaffed ? 'text-red-400' : 'text-green-400'}`}>{displayPAX || '—'}</div>
-              <div className={`text-[9px] font-mono uppercase ${understaffed ? 'text-red-600' : 'text-green-600'}`}>total</div>
+            <div className={`border rounded-lg px-2.5 py-1 text-center ${understaffed ? 'bg-red-900/30 border-red-700/40' : 'bg-secondary border-border'}`}>
+              <div className={`text-sm font-mono font-black ${understaffed ? 'text-red-400' : 'text-foreground'}`}>{displayPAX || '—'}</div>
+              <div className={`text-[9px] font-mono uppercase ${understaffed ? 'text-red-600' : 'text-muted-foreground'}`}>total</div>
             </div>
             <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => setEditing(true)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors rounded hover:bg-secondary/60">
@@ -655,7 +655,7 @@ export default function RosterManager() {
             {entries.length > 0 && (
               <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
                 <span><span className="text-foreground font-bold">{entries.length}</span> units</span>
-                <span><span className="text-green-400 font-bold">{totalPersonnel}</span> FF</span>
+                <span><span className="text-foreground font-bold">{totalPersonnel}</span> FF</span>
               </div>
             )}
 
@@ -772,9 +772,9 @@ export default function RosterManager() {
               </div>
             </div>
           ) : entries.length > 0 ? (
-            <div className="flex items-center gap-2 bg-green-950/30 border border-green-700/30 rounded-lg px-4 py-2.5">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <p className="text-xs font-mono text-green-400 font-semibold">Roster complete — all units staffed</p>
+            <div className="flex items-center gap-2 bg-secondary/60 border border-border rounded-lg px-4 py-2.5">
+              <div className="w-2 h-2 rounded-full bg-foreground/40" />
+              <p className="text-xs font-mono text-foreground font-semibold">Roster complete — all units staffed</p>
             </div>
           ) : null;
         })()}
