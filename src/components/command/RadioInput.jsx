@@ -4,32 +4,212 @@ import { Input } from '@/components/ui/input';
 import { Radio, Send, Loader2, AlertTriangle, Mic, MicOff } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-// Web Speech API — works in Chrome/Edge, limited in Firefox/Safari
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-// Town name → prefix mapping (full name and short abbreviation both recognized)
 const TOWN_MAP = [
-  { pattern: /\b(waltham|wal)\b/gi,   prefix: 'WAL', full: 'Waltham' },
-  { pattern: /\b(watertown|wat)\b/gi, prefix: 'WAT', full: 'Watertown' },
-  { pattern: /\b(belmont|bel)\b/gi,   prefix: 'BEL', full: 'Belmont' },
-  { pattern: /\b(cambridge|cam)\b/gi, prefix: 'CAM', full: 'Cambridge' },
-  { pattern: /\b(wellesley|wel)\b/gi, prefix: 'WEL', full: 'Wellesley' },
-  { pattern: /\b(newton|new)\b/gi,    prefix: 'NEW', full: 'Newton' },
-  { pattern: /\b(lincoln|lin)\b/gi,   prefix: 'LIN', full: 'Lincoln' },
-  { pattern: /\b(lexington|lex)\b/gi, prefix: 'LEX', full: 'Lexington' },
-  { pattern: /\b(arlington|arl)\b/gi, prefix: 'ARL', full: 'Arlington' },
-
-  { pattern: /\b(armstrong)\b/gi,     prefix: 'ARM', full: 'Armstrong' },
+  { pattern: /\b(waltham|wal)\b/gi,   prefix: 'WAL' },
+  { pattern: /\b(watertown|wat)\b/gi, prefix: 'WAT' },
+  { pattern: /\b(belmont|bel)\b/gi,   prefix: 'BEL' },
+  { pattern: /\b(cambridge|cam)\b/gi, prefix: 'CAM' },
+  { pattern: /\b(wellesley|wel)\b/gi, prefix: 'WEL' },
+  { pattern: /\b(newton|new)\b/gi,    prefix: 'NEW' },
+  { pattern: /\b(lincoln|lin)\b/gi,   prefix: 'LIN' },
+  { pattern: /\b(lexington|lex)\b/gi, prefix: 'LEX' },
+  { pattern: /\b(arlington|arl)\b/gi, prefix: 'ARL' },
+  { pattern: /\b(armstrong)\b/gi,     prefix: 'ARM' },
 ];
 
-function normalizeTownAbbreviations(text) {
+// Fix common speech-to-text mishears for fire radio context
+const SPEECH_FIXES = [
+  // Phonetic number corrections
+  [/\bniner\b/gi, '9'],
+  [/\btree\b/gi, '3'],
+  [/\bfower\b/gi, '4'],
+  // Unit shorthand expansion
+  [/\bE(\d)\b/g, 'Engine $1'],
+  [/\bT(\d)\b/g, 'Truck $1'],
+  [/\bR(\d)\b/g, 'Rescue $1'],
+  [/\bL(\d)\b/g, 'Truck $1'],        // Ladder → Truck
+  [/\bladder\b/gi, 'Truck'],          // "ladder" misheard
+  // ICS phonetic alphabet → Division labels
+  [/\balpha\s+(?:side|division)?\b/gi, 'Division A'],
+  [/\bbravo\s+(?:side|division)?\b/gi, 'Division B'],
+  [/\bcharlie\s+(?:side|division)?\b/gi, 'Division C'],
+  [/\bdelta\s+(?:side|division)?\b/gi, 'Division D'],
+  // Common status mishears
+  [/\bmay\s+day\b/gi, 'MAYDAY'],
+  [/\bon\s+seen\b/gi, 'on scene'],
+  [/\bon\s+the\s+seen\b/gi, 'on scene'],
+  [/\bworking\s+fire\b/gi, 'working fire'],
+  [/\ben\s+route\b/gi, 'en route'],
+  [/\brap(?:id)?\s*intervention\b/gi, 'RIT'],
+  [/\bwater\s+supply\b/gi, 'water supply'],
+  [/\bvent(?:ilation)?\b/gi, 'ventilation'],
+  [/\brehab(?:ilitation)?\b/gi, 'rehab'],
+  [/\bstag(?:ing)?\b/gi, 'staging'],
+];
+
+function normalizeSpeech(text) {
   let result = text;
+  SPEECH_FIXES.forEach(([pattern, replacement]) => {
+    result = result.replace(pattern, replacement);
+  });
   TOWN_MAP.forEach(({ pattern, prefix }) => {
-    // Replace "Watertown Engine 2" or "Wat Engine 2" → "WAT Engine 2"
-    // Only replace when followed by a unit type word or number (i.e. it's a unit, not standalone)
     result = result.replace(pattern, prefix);
   });
   return result;
+}
+
+// For typing in the text box — only town normalization, no aggressive word replacement
+function normalizeTyped(text) {
+  let result = text;
+  TOWN_MAP.forEach(({ pattern, prefix }) => {
+    result = result.replace(pattern, prefix);
+  });
+  return result;
+}
+
+const RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    from_unit: { type: 'string' },
+    to_unit: { type: 'string' },
+    priority: { type: 'string', enum: ['routine', 'urgent', 'emergency', 'mayday'] },
+    actions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          unit_name: { type: 'string' },
+          changes: {
+            type: 'object',
+            properties: {
+              status: { type: 'string' },
+              assignment: { type: 'string' },
+              set_air_time: { type: 'boolean' },
+              personnel_count: { type: 'number' },
+              officer: { type: 'string' },
+              floor: { type: 'string' }
+            }
+          }
+        }
+      }
+    },
+    new_units: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          unit_name: { type: 'string' },
+          unit_type: { type: 'string' },
+          status: { type: 'string' },
+          assignment: { type: 'string' },
+          notes: { type: 'string' }
+        }
+      }
+    },
+    upgrade_alarm: { type: 'string' },
+    summary: { type: 'string' }
+  }
+};
+
+function buildPrompt(correctionExamples, transmission, units) {
+  return `You are an expert fire department radio traffic parser for an Incident Command System (ICS) tactical board.
+${correctionExamples}
+CURRENT UNITS ON SCENE (match against these exactly — use fuzzy matching for spoken/spelled variants):
+${units.map(u => `  - "${u.unit_name}" (type: ${u.unit_type}${u.alarm_level ? `, alarm_level: ${u.alarm_level}` : ''})`).join('\n')}
+
+RADIO TRANSMISSION TO PARSE:
+"${transmission}"
+
+SPEECH-TO-TEXT CONTEXT: This transmission may have come from voice recognition. Common mishears to account for:
+- "seen" or "the seen" → "scene" (on scene)
+- "fower" → 4, "niner" → 9, "tree" → 3
+- "may day" → MAYDAY
+- "alpha/bravo/charlie/delta" → Division A/B/C/D
+- "ladder" → Truck, "E1" → Engine 1, "T2" → Truck 2
+- Number words: one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10
+- "en route" may sound like "and route" or "inroute"
+- "working" may sound like "working fire" context clue
+
+MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a unit):
+- "Watertown" / "Wat" → prefix "WAT" (e.g. "Watertown Engine 2" → unit_name: "WAT Engine 2", unit_type: engine)
+- "Belmont" / "Bel" → prefix "BEL"
+- "Cambridge" / "Cam" → prefix "CAM"
+- "Wellesley" / "Wel" → prefix "WEL"
+- "Newton" / "New" → prefix "NEW"
+- "Lincoln" / "Lin" → prefix "LIN"
+- "Lexington" / "Lex" → prefix "LEX"
+- "Arlington" / "Arl" → prefix "ARL"
+- "Armstrong" → prefix "ARM" — private BLS/ALS ambulance company. "ARM BLS", "ARM Medic", "ARM FS2"
+- Apply this same pattern to any other town/city name spoken — abbreviate to first 3 uppercase letters as prefix
+- Always add notes: "Mutual Aid — [full town name]" on the new unit
+- CRITICAL: Town-prefixed units are ALWAYS new mutual aid units — never match "ARL Engine 2" to existing "Engine 2"
+
+WALTHAM HOME DEPARTMENT RULES — CRITICAL:
+- Waltham is the HOME department. Units WITHOUT a town prefix are Waltham units (may also appear as "WAL Engine 1" etc.)
+- Units WITH a non-WAL town prefix are MUTUAL AID units.
+- When creating/identifying Waltham units, always use "WAL" prefix format: "WAL Engine 1", "WAL Truck 1", etc.
+- If a unit exists without WAL prefix (e.g. "Engine 1"), treat it as the same as "WAL Engine 1"
+
+ALARM UPGRADE RULES — CRITICAL:
+- "strike a 2nd alarm" / "transmit a 2nd alarm" / "go to 2nd alarm" / "request 2nd alarm" → set upgrade_alarm: "2nd_alarm"
+- "strike a 3rd alarm" / "go to 3rd alarm" / "request 3rd alarm" → set upgrade_alarm: "3rd_alarm"
+- "4th alarm" → upgrade_alarm: "4th_alarm" | "5th alarm" → upgrade_alarm: "5th_alarm"
+- Only upgrade, never downgrade. Valid values: "2nd_alarm", "3rd_alarm", "4th_alarm", "5th_alarm", "task_force", "strike_team"
+
+BULK STATUS UPDATE RULES — CRITICAL:
+- "all 1st alarm companies on scene" / "all first alarm on scene" → on_scene for ALL units with alarm_level: 1st_alarm OR no town prefix. One action per unit.
+- "all 1st alarm companies working" → working for every unit with alarm_level: 1st_alarm OR no town prefix
+- "all 2nd alarm on scene" → on_scene for ALL units with alarm_level: 2nd_alarm. One action per unit.
+- "all units on scene" / "everyone on scene" → update ALL units to on_scene
+- ALWAYS emit one action entry per matching unit — never a single generic action
+
+CRITICAL UNIT NAME MATCHING RULES:
+- Always match spoken variants to the closest existing unit name
+- "E-4" / "E4" → "Engine 4"; "T-1" / "T1" → "Truck 1"; "R-2" / "R2" → "Rescue 2"
+- Only create a NEW unit (in new_units) if there is clearly NO match in the current units list
+
+ASSIGNMENT MAPPING:
+- "Division A" / "Alpha side" / "A side" → division_a
+- "Division B" / "Bravo side" / "B side" → division_b
+- "Division C" / "Charlie side" / "C side" → division_c
+- "Division D" / "Delta side" / "D side" → division_d
+- "interior" / "going interior" → interior
+- "roof" / "going to the roof" → roof
+- "RIT" / "rapid intervention" → rit
+- "rehab" → rehab (also set status: rehab)
+- "staging" → staging | "ventilation" / "vent" → ventilation
+- "water supply" / "on hydrant" / "catching a plug" → water_supply
+- "search" / "primary search" → search
+- "medical group" / "treatment" / "triage" → medical
+- "exposure" → exposure
+
+STATUS MAPPING:
+- "on scene" / "on location" / "arriving" / "pulling up" / "on the box" / "just arrived" / "at the address" / "at scene" → on_scene
+- ARRIVAL DETECTION: Any phrase where a unit reports physically arriving should set status to on_scene
+- "working" / "working fire" / "we have a worker" / "fire showing" → working
+- "on air" / "going on air" / "masking up" / "bottles on" → set_air_time: true, status: working
+- "PAR" / "PAR complete" / "all accounted for" → par
+- "MAYDAY" → mayday (HIGHEST PRIORITY)
+- "available" / "in service" / "back in service" → available
+- "out of service" / "OOS" → out_of_service
+- "responding" / "en route" → responding
+
+FLOOR MAPPING:
+- "first floor" / "1st floor" → "1st Floor" | "second floor" → "2nd Floor" | "third floor" → "3rd Floor"
+- "fourth floor" → "4th Floor" | "fifth floor" → "5th Floor" | "basement" → "Basement" | "lobby" → "Lobby"
+
+Respond with this exact JSON structure:
+{
+  "from_unit": "exact unit name from list or null",
+  "to_unit": "exact unit name from list or null",
+  "priority": "routine|urgent|emergency|mayday",
+  "actions": [{ "unit_name": "exact name", "changes": { "status": null, "assignment": null, "floor": null, "set_air_time": false, "personnel_count": null, "officer": null } }],
+  "new_units": [{ "unit_name": "name", "unit_type": "engine|truck|rescue|squad|deputy|medic|tanker|brush|hazmat|other", "status": "status", "assignment": "unassigned", "notes": null }],
+  "upgrade_alarm": null,
+  "summary": "one sentence summary"
+}`;
 }
 
 export default function RadioInput({ incidentId, units, onTransmission }) {
@@ -37,9 +217,14 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isMayday, setIsMayday] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [interimText, setInterimText] = useState('');
+  const [autoSubmitPending, setAutoSubmitPending] = useState(false);
   const [listenError, setListenError] = useState('');
   const recognitionRef = useRef(null);
+  const isMaydayRef = useRef(isMayday);
   const [corrections, setCorrections] = useState([]);
+
+  useEffect(() => { isMaydayRef.current = isMayday; }, [isMayday]);
 
   useEffect(() => {
     base44.entities.TerminologyCorrection.list('-created_date', 50)
@@ -47,109 +232,118 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
       .catch(() => {});
   }, []);
 
-  const hasSpeech = !!SpeechRecognition;
-
+  // Auto-submit when voice recognition ends and there's a message
   useEffect(() => {
-    return () => {
-      if (recognitionRef.current) recognitionRef.current.stop();
-    };
-  }, []);
+    if (autoSubmitPending && message.trim() && !isProcessing) {
+      setAutoSubmitPending(false);
+      doSubmit(message);
+    }
+  }, [autoSubmitPending, message]);
 
-  // Detect iOS/iPadOS Safari — continuous mode not supported
+  const hasSpeech = !!SpeechRecognition;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  useEffect(() => {
+    return () => { if (recognitionRef.current) recognitionRef.current.stop(); };
+  }, []);
 
   const startListening = () => {
     if (!hasSpeech) {
       setListenError('Speech recognition not supported in this browser. On iPad, use Safari.');
       return;
     }
-
     setListenError('');
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = true;
-    // iOS Safari does not support continuous mode — must use single-shot
     recognition.continuous = !isIOS;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 3;
 
-    // Attempt to use grammar hints (Chrome feature, ignored elsewhere)
+    // Expanded grammar hints (Chrome only — ignored elsewhere)
     if ('SpeechGrammarList' in window) {
-      const grammar = `#JSGF V1.0; grammar fire_terms; public <fire> = (${
-        ['Engine', 'Truck', 'Rescue', 'Squad', 'Medic'].join('|')
-      }) [0-9];`;
+      const grammar = `#JSGF V1.0; grammar fire;
+        public <unit> = Engine | Truck | Rescue | Squad | Medic | Tower | Tanker | Hazmat | Car;
+        public <assign> = Division A | Division B | Division C | Division D | interior | roof | RIT | rehab | staging | ventilation | water supply | search | medical | exposure;
+        public <status> = on scene | working | working fire | responding | en route | available | PAR | MAYDAY | out of service | rehab;
+        public <alarm> = first alarm | second alarm | third alarm | 2nd alarm | 3rd alarm | 4th alarm | 5th alarm | strike team | task force;
+        public <fire> = <unit> | <assign> | <status> | <alarm>;`;
       try {
-        const grammarList = new window.SpeechGrammarList();
-        grammarList.addFromString(grammar, 1);
-        recognition.grammars = grammarList;
-      } catch (e) {
-        // Grammar list not fully supported, continue without hints
-      }
+        const gl = new window.SpeechGrammarList();
+        gl.addFromString(grammar, 1);
+        recognition.grammars = gl;
+      } catch (e) { /* not supported */ }
     }
 
     recognition.onstart = () => setIsListening(true);
 
     recognition.onresult = (event) => {
-      let transcript = '';
+      let finalTranscript = '';
+      let interimTranscript = '';
+      const FIRE_TERMS = /\b(engine|truck|rescue|medic|squad|tower|division|alarm|scene|working|mayday|rit|rehab|staging|ventilation|interior|roof|water supply|search|medical|exposure|responding|en route|available|par)\b/i;
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+        const result = event.results[i];
+        // Pick best alternative — prefer one containing known fire terms
+        let best = result[0].transcript;
+        for (let j = 1; j < result.length; j++) {
+          const alt = result[j].transcript;
+          if (FIRE_TERMS.test(alt) && !FIRE_TERMS.test(best)) best = alt;
+        }
+        if (result.isFinal) finalTranscript += best;
+        else interimTranscript += best;
       }
-      setMessage(prev => {
-        let combined;
-        // On iOS, each result is a fresh utterance — append to existing text
-        if (isIOS && prev && !prev.endsWith(' ')) combined = prev + ' ' + transcript;
-        else if (isIOS && prev) combined = prev + transcript;
-        else combined = transcript;
-        return normalizeTownAbbreviations(combined);
-      });
+
+      if (finalTranscript) {
+        setInterimText('');
+        setMessage(prev => {
+          const base = isIOS && prev ? (prev.trimEnd() + ' ') : '';
+          return normalizeSpeech(isIOS ? base + finalTranscript : finalTranscript);
+        });
+      } else if (interimTranscript) {
+        setInterimText(interimTranscript);
+      }
     };
 
     recognition.onerror = (event) => {
-      if (event.error === 'no-speech') {
-        // Not a real error — just silence, ignore
-        setIsListening(false);
-        return;
-      }
-      if (event.error === 'not-allowed') {
-        setListenError('Microphone access denied. Please allow mic access in Safari Settings → Websites → Microphone.');
-      } else {
-        setListenError(`Mic error: ${event.error}`);
-      }
+      if (event.error === 'no-speech') { setIsListening(false); return; }
+      setListenError(event.error === 'not-allowed'
+        ? 'Microphone access denied. Allow mic in browser settings.'
+        : `Mic error: ${event.error}`);
       setIsListening(false);
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      setInterimText('');
       recognitionRef.current = null;
+      // Auto-submit 600ms after mic stops
+      setTimeout(() => setAutoSubmitPending(true), 600);
     };
 
     recognitionRef.current = recognition;
-    try {
-      recognition.start();
-    } catch (e) {
+    try { recognition.start(); }
+    catch (e) {
       setListenError('Could not start microphone. Try tapping the mic button again.');
       setIsListening(false);
     }
   };
 
   const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
+    if (recognitionRef.current) recognitionRef.current.stop();
     setIsListening(false);
+    setInterimText('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-
-    // Stop mic if still running
+  const doSubmit = async (msg) => {
+    if (!msg.trim() || isProcessing) return;
     stopListening();
-
     setIsProcessing(true);
-    const normalizedMessage = normalizeTownAbbreviations(message);
-    const finalMessage = isMayday ? `MAYDAY MAYDAY MAYDAY — ${normalizedMessage}` : normalizedMessage;
-    const unitNames = units.map(u => u.unit_name).join(', ');
+
+    const normalizedMessage = normalizeSpeech(msg);
+    const finalMessage = isMaydayRef.current
+      ? `MAYDAY MAYDAY MAYDAY — ${normalizedMessage}`
+      : normalizedMessage;
 
     const correctionExamples = corrections.length > 0
       ? `\nLEARNED CORRECTIONS FROM THIS DEPARTMENT (apply these first — highest priority):\n` +
@@ -160,174 +354,8 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
       : '';
 
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are an expert fire department radio traffic parser for an Incident Command System (ICS) tactical board.
-${correctionExamples}
-CURRENT UNITS ON SCENE (match against these exactly — use fuzzy matching for spoken/spelled variants):
-${units.map(u => `  - "${u.unit_name}" (type: ${u.unit_type}${u.alarm_level ? `, alarm_level: ${u.alarm_level}` : ''})`).join('\n')}
-
-RADIO TRANSMISSION TO PARSE:
-"${finalMessage}"
-
-MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a unit):
-- "Watertown" / "Wat" → prefix "WAT" (e.g. "Watertown Engine 2" or "Wat Engine 2" → unit_name: "WAT Engine 2", unit_type: engine)
-- "Belmont" / "Bel" → prefix "BEL" (e.g. "Belmont Truck 1" or "Bel Truck 1" → unit_name: "BEL Truck 1", unit_type: truck)
-- "Cambridge" / "Cam" → prefix "CAM" (e.g. "Cambridge Engine 3" or "Cam Engine 3" → unit_name: "CAM Engine 3", unit_type: engine)
-- "Wellesley" / "Wel" → prefix "WEL" (e.g. "Wellesley Rescue 1" or "Wel Rescue 1" → unit_name: "WEL Rescue 1", unit_type: rescue)
-- "Newton" / "New" → prefix "NEW" (e.g. "Newton Truck 2" or "New Truck 2" → unit_name: "NEW Truck 2", unit_type: truck)
-- "Lincoln" / "Lin" → prefix "LIN" (e.g. "Lincoln Engine 1" or "Lin Engine 1" → unit_name: "LIN Engine 1", unit_type: engine)
-- "Lexington" / "Lex" → prefix "LEX" (e.g. "Lexington Rescue 2" or "Lex Rescue 2" → unit_name: "LEX Rescue 2", unit_type: rescue)
-- "Arlington" / "Arl" → prefix "ARL" (e.g. "Arlington Engine 2" or "Arl Engine 2" → unit_name: "ARL Engine 2", unit_type: engine)
-- "Armstrong" → prefix "ARM" — Armstrong is a PRIVATE BLS/ALS ambulance company serving Waltham. Their units are:
-  - "Armstrong BLS" / "Armstrong Basic" / "ARM BLS" → unit_name: "ARM BLS", unit_type: medic, notes: "Armstrong Ambulance — BLS"
-  - "Armstrong Medic" / "Armstrong ALS" / "ARM Medic" → unit_name: "ARM Medic", unit_type: medic, notes: "Armstrong Ambulance — ALS"
-  - "Armstrong FS2" / "ARM FS2" / "Field Supervisor" / "Armstrong Field Supervisor" → unit_name: "ARM FS2", unit_type: other, notes: "Armstrong Ambulance — Field Supervisor"
-  - For any other Armstrong unit, prefix with ARM and use unit_type: medic
-- Apply this same pattern to any other town/city name spoken — abbreviate to first 3 uppercase letters as prefix
-- Always add notes: "Mutual Aid — [full town name]" on the new unit
-- CRITICAL: If a town name is spoken with a unit, it is ALWAYS a mutual aid unit with the prefix. NEVER match "Arlington Engine 2" to an existing "Engine 2" — they are different units. Always create a NEW unit with the prefixed name (e.g. "ARL Engine 2").
-
-WALTHAM HOME DEPARTMENT RULES — CRITICAL:
-- Waltham is the HOME department. Units WITHOUT a town prefix (e.g. "Engine 1", "Truck 1", "Rescue 1", "Medic 1", "Car 1") are Waltham units. They may also appear as "WAL Engine 1", "WAL Truck 1" etc.
-- Units WITH a non-WAL town prefix (e.g. "WAT Engine 2", "BEL Truck 1", "CAM Engine 3") are MUTUAL AID units.
-- When "1st alarm" or "2nd alarm" is referenced with no qualifier, it means the Waltham (WAL or no-prefix) units.
-- IMPORTANT: When creating or identifying Waltham units, always use the "WAL" prefix format: "WAL Engine 1", "WAL Truck 1", "WAL Rescue 1", etc. If a unit exists without the WAL prefix (e.g. "Engine 1"), treat it as the same as "WAL Engine 1".
-
-ALARM UPGRADE RULES — CRITICAL:
-- "strike a 2nd alarm" / "transmit a 2nd alarm" / "go to 2nd alarm" / "request 2nd alarm" / "we need a 2nd alarm" → set upgrade_alarm: "2nd_alarm"
-- "strike a 3rd alarm" / "go to 3rd alarm" / "request 3rd alarm" → set upgrade_alarm: "3rd_alarm"
-- "strike a 4th alarm" / "4th alarm" → set upgrade_alarm: "4th_alarm"
-- "strike a 5th alarm" / "5th alarm" → set upgrade_alarm: "5th_alarm"
-- Any phrase indicating the incident is being escalated to a higher alarm level should set upgrade_alarm to the new alarm level.
-- Only set upgrade_alarm when a HIGHER alarm is being requested. Never downgrade.
-- Valid values: "2nd_alarm", "3rd_alarm", "4th_alarm", "5th_alarm", "task_force", "strike_team"
-
-BULK STATUS UPDATE RULES — CRITICAL (apply when a transmission refers to ALL units at an alarm level):
-- "all 1st alarm companies on scene" / "all first alarm on scene" / "all 1 alarm on scene" / "all 1st alarm on scene" → set status: on_scene for EVERY unit in the list that EITHER has alarm_level: 1st_alarm OR has no town prefix (i.e. is a Waltham home unit). Generate one action entry per matching unit.
-- "all 1st alarm companies working" / "all first alarm working" / "all 1 alarm working" → status: working for every unit with alarm_level: 1st_alarm OR no town prefix
-- "all 2nd alarm on scene" / "all second alarm on scene" / "all 2 alarm on scene" → set status: on_scene for EVERY unit in the list that EITHER has alarm_level: 2nd_alarm OR has no town prefix (i.e. is a Waltham home unit not already covered by 1st alarm). Generate one action entry per matching unit.
-- "all units on scene" / "everyone on scene" / "all companies on scene" → update ALL units in the list to on_scene
-- IMPORTANT: When you detect a bulk phrase, you MUST loop through the current units list, filter by the matching alarm_level (or home-unit heuristic), and emit one action entry per unit. Do NOT emit a single generic action.
-- alarm_level values to match: 1st_alarm, 2nd_alarm, 3rd_alarm, 4th_alarm, 5th_alarm, task_force, strike_team
-- A unit has NO town prefix if its name does NOT start with a 2-4 letter all-caps code followed by a space (e.g. "WAT ", "BEL ", "CAM ").
-
-CRITICAL UNIT NAME MATCHING RULES:
-- Always match spoken/voice variants to the closest existing unit name above
-- "Tower one" → "Tower 1", "engine three" → "Engine 3", "truck two" → "Truck 2"
-- "E-4", "E4" → "Engine 4"; "T-1", "T1" → "Truck 1"; "R-2", "R2" → "Rescue 2"
-- Number words: one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10
-- If a unit name is close but not exact (e.g., "Tower one" when "Tower 1" is on scene), use the existing unit's exact name
-- Only create a NEW unit (in new_units) if there is clearly NO match in the current units list
-
-ASSIGNMENT MAPPING (map these spoken phrases to the exact assignment values):
-- "Division A" / "Alpha side" / "A side" / "Alpha Division" → division_a
-- "Division B" / "Bravo side" / "B side" / "Bravo Division" → division_b
-- "Division C" / "Charlie side" / "C side" / "Charlie Division" → division_c
-- "Division D" / "Delta side" / "D side" / "Delta Division" → division_d
-- "interior" / "going interior" / "working interior" → interior
-- "roof" / "going to the roof" / "on the roof" → roof
-- "RIT" / "rapid intervention" / "RIT group" → rit
-- "rehab" / "rehabilitation" → rehab (also set status: rehab)
-- "staging" / "in staging" → staging
-- "ventilation" / "vent group" / "venting" → ventilation
-- "water supply" / "on hydrant" / "catching a plug" → water_supply
-- "search" / "primary search" / "secondary search" / "search group" → search
-- "medical group" / "treatment" / "triage" → medical
-- "exposure" / "exposure protection" → exposure
-
-STATUS MAPPING:
-- "on scene" / "on location" / "on the scene" / "arriving" / "we're arriving" / "pulling up" / "on the box" / "on the hydrant" / "on the plug" / "just arrived" / "have arrived" / "we're there" / "at the address" / "at scene" / "at location" / "[unit] is on scene" → on_scene (also set on_scene_time)
-- ARRIVAL DETECTION: Any phrase where a unit reports physically arriving at the incident address should set status to on_scene. Look for verbs like "arriving", "arrived", "pulling up", "on scene", "on location", "at [address/scene/location]".
-- "working" / "working fire" / "we have a worker" / "confirming working fire" / "we have fire" / "fire showing" → working
-- "on air" / "going on air" / "masking up" / "bottles on" → set_air_time: true, status: working
-- "PAR" / "PAR complete" / "all accounted for" / "personnel accountability" → par
-- "MAYDAY" → mayday (HIGHEST PRIORITY — always set this if heard)
-- "available" / "in service" / "back in service" → available
-- "out of service" / "OOS" / "taking out of service" → out_of_service
-- "responding" / "en route" → responding
-
-FLOOR MAPPING (set the floor field with a clean label):
-- "first floor" / "1st floor" / "floor one" → "1st Floor"
-- "second floor" / "2nd floor" / "floor two" → "2nd Floor"
-- "third floor" / "3rd floor" → "3rd Floor"
-- "fourth floor" / "4th floor" → "4th Floor"
-- "fifth floor" / "5th floor" → "5th Floor"
-- "basement" / "sub-basement" → "Basement"
-- "roof" (when used as floor location) → "Roof"
-- "lobby" → "Lobby"
-
-Respond with this exact JSON structure:
-{
-  "from_unit": "exact unit name from list or null",
-  "to_unit": "exact unit name from list or null",
-  "priority": "routine|urgent|emergency|mayday",
-  "actions": [
-    {
-      "unit_name": "MUST be exact name from existing units list above, or new name if truly new",
-      "changes": {
-        "status": "new status value or null",
-        "assignment": "new assignment value or null",
-        "floor": "floor label string or null",
-        "set_air_time": true or false,
-        "personnel_count": number or null,
-        "officer": "officer name or null"
-      }
-    }
-  ],
-  "new_units": [
-    {
-      "unit_name": "name (with town prefix if mutual aid, e.g. CAM Engine 3)",
-      "unit_type": "engine|truck|rescue|squad|deputy|medic|tanker|brush|hazmat|other",
-      "status": "status",
-      "assignment": "assignment or unassigned",
-      "notes": "Mutual Aid — [full town name] if applicable, else null"
-    }
-  ],
-  "upgrade_alarm": "new alarm level if this transmission requests a higher alarm (e.g. '2nd_alarm', '3rd_alarm', etc.), or null if no upgrade",
-  "summary": "one sentence summary of what happened"
-}`,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          from_unit: { type: 'string' },
-          to_unit: { type: 'string' },
-          priority: { type: 'string', enum: ['routine', 'urgent', 'emergency', 'mayday'] },
-          actions: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                unit_name: { type: 'string' },
-                changes: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string' },
-                    assignment: { type: 'string' },
-                    set_air_time: { type: 'boolean' },
-                    personnel_count: { type: 'number' },
-                    officer: { type: 'string' },
-                    floor: { type: 'string' }
-                  }
-                }
-              }
-            }
-          },
-          new_units: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                unit_name: { type: 'string' },
-                unit_type: { type: 'string' },
-                status: { type: 'string' },
-                assignment: { type: 'string' },
-                notes: { type: 'string' }
-              }
-            }
-          },
-          upgrade_alarm: { type: 'string' },
-          summary: { type: 'string' }
-        }
-      }
+      prompt: buildPrompt(correctionExamples, finalMessage, units),
+      response_json_schema: RESPONSE_SCHEMA,
     });
 
     await onTransmission(finalMessage, result);
@@ -335,6 +363,16 @@ Respond with this exact JSON structure:
     setIsMayday(false);
     setIsProcessing(false);
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    await doSubmit(message);
+  };
+
+  const displayValue = isListening && interimText
+    ? message + (message ? ' ' : '') + interimText
+    : message;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -361,18 +399,19 @@ Respond with this exact JSON structure:
             <Radio className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           )}
           <Input
-            value={message}
-            onChange={(e) => setMessage(normalizeTownAbbreviations(e.target.value))}
+            value={displayValue}
+            onChange={(e) => setMessage(normalizeTyped(e.target.value))}
             placeholder={
               isListening
-                ? 'Listening — speak your command...'
+                ? 'Listening — speak your transmission...'
                 : isMayday
                 ? 'MAYDAY — describe the emergency...'
-                : "Radio transmission or voice command  (e.g. 'Engine 2 to Division A working')"
+                : "Radio transmission  (e.g. 'Engine 2 Division A working')"
             }
             className={`pl-9 font-mono text-sm h-9 transition-all
               ${isMayday ? 'bg-red-950/40 border-red-500/50 text-red-200 placeholder:text-red-400/40' : 'bg-secondary/60 border-border/60'}
               ${isListening ? 'border-green-500/60 bg-green-950/20' : ''}
+              ${interimText ? 'italic opacity-70' : ''}
             `}
             disabled={isProcessing}
           />
@@ -396,7 +435,7 @@ Respond with this exact JSON structure:
               }`}
             onClick={isListening ? stopListening : startListening}
             disabled={isProcessing}
-            title={isListening ? 'Stop listening' : 'Voice input'}
+            title={isListening ? 'Stop & submit' : 'Voice input'}
           >
             {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </Button>
