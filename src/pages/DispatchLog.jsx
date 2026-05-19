@@ -5,7 +5,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Mic, Radio, Send, Loader2, AlertTriangle, GripVertical } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Radio, Send, Loader2, AlertTriangle, GripVertical } from 'lucide-react';
 import RadioInput from '@/components/command/RadioInput';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -32,7 +32,6 @@ export default function DispatchLog() {
   const queryClient = useQueryClient();
   const [editingFields, setEditingFields] = useState({});
   const [newUnitId, setNewUnitId] = useState(null);
-  const [listening, setListening] = useState(null);
 
   const { data: incident } = useQuery({
     queryKey: ['incident', incidentId],
@@ -106,35 +105,6 @@ export default function DispatchLog() {
     }
   };
 
-  const handleMicInput = (level) => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Speech recognition not supported');
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => setListening(level);
-    recognition.onend = () => setListening(null);
-    recognition.onerror = () => setListening(null);
-
-    recognition.onresult = (event) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      transcript = transcript.trim();
-      if (transcript && event.isFinal) {
-        createUnit.mutate({ unit_name: transcript, unit_type: 'engine', alarm_level: level });
-      }
-    };
-
-    recognition.start();
-  };
 
   const unitsByAlarm = {};
   alarmLevels.forEach(level => {
@@ -180,14 +150,13 @@ export default function DispatchLog() {
                     <p className="text-xs text-muted-foreground mt-1">{unitsByAlarm[level].length} units</p>
                   </div>
                   <Button
-                    size="sm"
-                    variant={listening === level ? 'default' : 'outline'}
-                    onClick={() => handleMicInput(level)}
-                    className="gap-1"
-                    disabled={listening !== null}
+                   size="sm"
+                   variant="outline"
+                   onClick={() => createUnit.mutate({ unit_name: 'New Unit', unit_type: 'engine', alarm_level: level })}
+                   className="gap-1"
                   >
-                    <Mic className="w-4 h-4" />
-                    {listening === level ? 'Listening...' : 'Add via Voice'}
+                   <Plus className="w-4 h-4" />
+                   Add Unit
                   </Button>
                 </div>
 
