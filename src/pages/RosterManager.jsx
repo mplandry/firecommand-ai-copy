@@ -368,35 +368,46 @@ function PhotoImportPanel({ onParsed, onClose }) {
     const fileUrls = uploads.map(u => u.file_url);
 
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a fire department daily roster parser. Analyze these roster sheet images (may be multiple pages) and extract ALL units and their personnel.
+      model: 'claude_sonnet_4_6',
+      prompt: `You are a fire department daily roster parser. Carefully analyze these roster sheet images (may be multiple pages) and extract ALL units and their personnel with 100% accuracy.
 
 CRITICAL RULES:
 1. UNIT NAME = the apparatus name only (e.g. "Engine 1", "Engine 2", "Ladder 2", "Tower 1", "Rescue 1", "Squad 5", "C2", "C3", "Moody Boat", "Central Boat", "RTV"). NEVER include riding position numbers in the unit name.
 2. RIDING POSITIONS = the 3-digit numbers (100, 101, 102, 200, etc.) next to personnel names. These are seat/position codes, NOT part of the unit name.
-3. The OFFICER is the first person listed for a unit (Captain, Lieutenant, or most senior rank). Store their riding position code separately.
-4. PERSONNEL = all crew members listed under that unit besides the officer. Each person may have a riding position number next to their name — store it with the person as "Name|PositionCode" (e.g. "James Vanaria|101").
-   POSITION CODE RULES — CRITICAL: Position codes are 3-digit numbers that indicate the unit series. The officer/first seat is always the X00 number (e.g. 100, 200, 500). Crew positions follow in sequence (101, 102... or 201, 202... etc.).
+3. OFFICER = the first person listed for a unit (Captain, Lieutenant, or most senior rank).
+   - officer field: store as "Name|PositionCode" (e.g. "Steven Hopkins|500") — the officer's position code is the X00 number for their unit type.
+   - officer_rank field: store their title separately (e.g. "Lieutenant", "Captain", "Acting Lieutenant").
+4. PERSONNEL = all crew members listed under that unit EXCEPT the officer. Include EVERY person — do NOT skip anyone.
+   Format: "Name|PositionCode" or "Name|PositionCode|OT" for overtime.
+
+POSITION CODE RULES — CRITICAL:
+   - The officer/first seat is ALWAYS the X00 number. Crew follow in sequence.
    - Engine units: officer=100, crew=101, 102, 103...
    - Truck/Ladder units: officer=200, crew=201, 202, 203...
    - Rescue units: officer=300, crew=301, 302, 303...
    - Tanker units: officer=400, crew=401, 402, 403...
    - Squad units: officer=500, crew=501, 502, 503...
    - Medic units: officer=600, crew=601, 602, 603...
-   - IMPORTANT: If a person is listed as officer/CO of a Squad, their position is 500 (NOT 501). 501 is a crew position. Apply this rule strictly — the officer is always the X00 seat.
-   OVERTIME DETECTION — THIS IS CRITICAL: Carefully examine the COLOR of every name on the roster. Names printed or written in GREEN ink/text (as opposed to the standard black/blue text) are OVERTIME personnel. Also flag as OT if: the name has "(OT)" or "OT" written next to it, or if it has a green highlight/background. For ANY overtime person, append "|OT" to their string (e.g. "James Vanaria|101|OT" or "James Vanaria|OT"). Do NOT miss green-colored names — this is the primary way overtime is indicated on these rosters.
-5. Command officers: C1 = Fire Chief, unit_type: "deputy". C2/C3/C4 = Deputy Chiefs, unit_type: "deputy". H1/H2 = special non-vehicle officer positions, unit_type: "other".
-6. Boats, marine units = unit_type: "other". RTV = unit_type: "other". 6A = a pickup truck, unit_type: "other".
-7. Do NOT split the same unit into multiple entries. Merge all personnel for a given unit name onto one entry.
+   - If the roster shows a different position number than expected, USE THE NUMBER FROM THE ROSTER exactly.
 
-For each unit extract:
-- unit_name: apparatus name only (e.g. "Engine 1", "Ladder 2", "C2", "Tower 1")
+OVERTIME DETECTION — CRITICAL: Names in GREEN ink/text = overtime. Also flag if name has "(OT)" or "OT" next to it.
+   - For OT personnel: append "|OT" (e.g. "James Vanaria|101|OT")
+   - Do NOT miss green-colored names.
+
+5. Command officers: C1 = Fire Chief (deputy). C2/C3/C4 = Deputy Chiefs (deputy). H1/H2 = unit_type: "other".
+6. Boats/marine units = unit_type: "other". RTV = unit_type: "other". 6A = unit_type: "other".
+7. Do NOT split the same unit into multiple entries. Merge all personnel for a given unit name.
+8. Read EVERY name carefully — do not skip or truncate any personnel.
+
+For each unit return:
+- unit_name: apparatus name only
 - unit_type: engine/truck/rescue/squad/deputy/medic/tanker/brush/hazmat/other
-- officer: officer name string (e.g. "Damon Ferranti") - just the name, no position code
-- personnel: array of ALL crew member strings (everyone EXCEPT the officer). Include every single person listed under the unit — do NOT skip anyone. Format: "Name|PositionCode" or just "Name" if no position visible.
+- officer: "FirstName LastName|PositionCode" (e.g. "Steven Hopkins|500")
+- officer_rank: title only (e.g. "Lieutenant", "Captain", "Acting Captain") — empty string if unknown
+- personnel: array of crew strings (everyone except officer), format "Name|PositionCode" or "Name|PositionCode|OT"
 - personnel_count: total headcount including officer
 
-IMPORTANT: Do NOT leave personnel arrays empty if people are listed. If Engine 3 has 3 people listed, all 3 must appear (officer + 2 in personnel). Never truncate or omit crew members.
-Combine across all pages. Return every unit found.`,
+Scan every unit on every page. Return all of them.`,
       file_urls: fileUrls,
       response_json_schema: {
         type: 'object',
@@ -409,6 +420,7 @@ Combine across all pages. Return every unit found.`,
                 unit_name: { type: 'string' },
                 unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'] },
                 officer: { type: 'string' },
+                officer_rank: { type: 'string' },
                 personnel: { type: 'array', items: { type: 'string' } },
                 personnel_count: { type: 'number' },
               },
@@ -431,6 +443,7 @@ Combine across all pages. Return every unit found.`,
       unit_name: u.unit_name,
       unit_type: u.unit_type || 'engine',
       officer: u.officer || '',
+      officer_rank: u.officer_rank || '',
       personnel: u.personnel || [],
       personnel_count: u.personnel_count || (u.personnel?.length) || null,
       notes: '',
@@ -561,6 +574,7 @@ export default function RosterManager() {
         unit_name: u.unit_name,
         unit_type: u.unit_type || 'engine',
         officer: u.officer || '',
+        officer_rank: u.officer_rank || '',
         personnel: u.personnel || [],
         personnel_count: u.personnel_count || u.personnel?.length || null,
         notes: '',
