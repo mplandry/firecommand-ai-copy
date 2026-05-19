@@ -134,7 +134,7 @@ function TacticalSlide({ units, incident }) {
 
 // Slide 2: PAR Status
 function PARSlide({ units, incident }) {
-  const accountable = units.filter(u => ['on_scene', 'working', 'par'].includes(u.status));
+  const accountable = units.filter(u => ['on_scene', 'working', 'par', 'rehab', 'mayday'].includes(u.status));
   const mayday = units.filter(u => u.status === 'mayday');
 
   return (
@@ -179,8 +179,14 @@ function PARSlide({ units, incident }) {
                   <span className="text-sm font-mono text-cyan-300 font-bold">{unit.floor}</span>
                 </div>
               )}
-              {/* Personnel — always visible */}
+              {/* Personnel accountability — always visible */}
               <div className="border-t border-white/10 pt-2 flex flex-col gap-0.5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-mono font-bold text-gray-500 uppercase tracking-widest">Accountability</span>
+                  <span className="text-[11px] font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded">
+                    {(unit.officer ? 1 : 0) + crew.length} FF
+                  </span>
+                </div>
                 {unit.officer && (
                   <p className="text-[12px] font-mono text-orange-300 truncate">
                     ★ {unit.officer_rank ? `${unit.officer_rank} ` : ''}{unit.officer.split('|')[0]}
