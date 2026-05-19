@@ -7,6 +7,28 @@ import { base44 } from '@/api/base44Client';
 // Web Speech API — works in Chrome/Edge, limited in Firefox/Safari
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+// Town name → prefix mapping (full name and short abbreviation both recognized)
+const TOWN_MAP = [
+  { pattern: /\b(watertown|wat)\b/gi, prefix: 'WAT', full: 'Watertown' },
+  { pattern: /\b(belmont|bel)\b/gi,   prefix: 'BEL', full: 'Belmont' },
+  { pattern: /\b(cambridge|cam)\b/gi, prefix: 'CAM', full: 'Cambridge' },
+  { pattern: /\b(wellesley|wel)\b/gi, prefix: 'WEL', full: 'Wellesley' },
+  { pattern: /\b(newton|new)\b/gi,    prefix: 'NEW', full: 'Newton' },
+  { pattern: /\b(lincoln|lin)\b/gi,   prefix: 'LIN', full: 'Lincoln' },
+  { pattern: /\b(lexington|lex)\b/gi, prefix: 'LEX', full: 'Lexington' },
+  { pattern: /\b(arlington|arl)\b/gi, prefix: 'ARL', full: 'Arlington' },
+];
+
+function normalizeTownAbbreviations(text) {
+  let result = text;
+  TOWN_MAP.forEach(({ pattern, prefix }) => {
+    // Replace "Watertown Engine 2" or "Wat Engine 2" → "WAT Engine 2"
+    // Only replace when followed by a unit type word or number (i.e. it's a unit, not standalone)
+    result = result.replace(pattern, prefix);
+  });
+  return result;
+}
+
 export default function RadioInput({ incidentId, units, onTransmission }) {
   const [message, setMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -70,10 +92,12 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
         transcript += event.results[i][0].transcript;
       }
       setMessage(prev => {
+        let combined;
         // On iOS, each result is a fresh utterance — append to existing text
-        if (isIOS && prev && !prev.endsWith(' ')) return prev + ' ' + transcript;
-        if (isIOS && prev) return prev + transcript;
-        return transcript;
+        if (isIOS && prev && !prev.endsWith(' ')) combined = prev + ' ' + transcript;
+        else if (isIOS && prev) combined = prev + transcript;
+        else combined = transcript;
+        return normalizeTownAbbreviations(combined);
       });
     };
 
@@ -120,7 +144,8 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     stopListening();
 
     setIsProcessing(true);
-    const finalMessage = isMayday ? `MAYDAY MAYDAY MAYDAY — ${message}` : message;
+    const normalizedMessage = normalizeTownAbbreviations(message);
+    const finalMessage = isMayday ? `MAYDAY MAYDAY MAYDAY — ${normalizedMessage}` : normalizedMessage;
     const unitNames = units.map(u => u.unit_name).join(', ');
 
     const correctionExamples = corrections.length > 0
@@ -303,7 +328,7 @@ Respond with this exact JSON structure:
           )}
           <Input
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => setMessage(normalizeTownAbbreviations(e.target.value))}
             placeholder={
               isListening
                 ? 'Listening — speak your command...'
