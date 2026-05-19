@@ -9,6 +9,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 // Town name → prefix mapping (full name and short abbreviation both recognized)
 const TOWN_MAP = [
+  { pattern: /\b(waltham|wal)\b/gi,   prefix: 'WAL', full: 'Waltham' },
   { pattern: /\b(watertown|wat)\b/gi, prefix: 'WAT', full: 'Watertown' },
   { pattern: /\b(belmont|bel)\b/gi,   prefix: 'BEL', full: 'Belmont' },
   { pattern: /\b(cambridge|cam)\b/gi, prefix: 'CAM', full: 'Cambridge' },
@@ -186,10 +187,10 @@ MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a
 - CRITICAL: If a town name is spoken with a unit, it is ALWAYS a mutual aid unit with the prefix. NEVER match "Arlington Engine 2" to an existing "Engine 2" — they are different units. Always create a NEW unit with the prefixed name (e.g. "ARL Engine 2").
 
 WALTHAM HOME DEPARTMENT RULES — CRITICAL:
-- Waltham is the HOME department. Units WITHOUT a town prefix (e.g. "Engine 1", "Truck 1", "Rescue 1", "Medic 1", "Car 1") are Waltham units.
-- Units WITH a town prefix (e.g. "WAT Engine 2", "BEL Truck 1", "CAM Engine 3") are MUTUAL AID units.
-- When "1st alarm" is referenced with no qualifier, it means the Waltham (no-prefix) units.
-- When "2nd alarm" or higher is referenced, it typically means mutual aid units (prefixed).
+- Waltham is the HOME department. Units WITHOUT a town prefix (e.g. "Engine 1", "Truck 1", "Rescue 1", "Medic 1", "Car 1") are Waltham units. They may also appear as "WAL Engine 1", "WAL Truck 1" etc.
+- Units WITH a non-WAL town prefix (e.g. "WAT Engine 2", "BEL Truck 1", "CAM Engine 3") are MUTUAL AID units.
+- When "1st alarm" or "2nd alarm" is referenced with no qualifier, it means the Waltham (WAL or no-prefix) units.
+- IMPORTANT: When creating or identifying Waltham units, always use the "WAL" prefix format: "WAL Engine 1", "WAL Truck 1", "WAL Rescue 1", etc. If a unit exists without the WAL prefix (e.g. "Engine 1"), treat it as the same as "WAL Engine 1".
 
 BULK STATUS UPDATE RULES — CRITICAL (apply when a transmission refers to ALL units at an alarm level):
 - "all 1st alarm companies on scene" / "all first alarm on scene" / "all 1 alarm on scene" / "all 1st alarm on scene" → set status: on_scene for EVERY unit in the list that EITHER has alarm_level: 1st_alarm OR has no town prefix (i.e. is a Waltham home unit). Generate one action entry per matching unit.
