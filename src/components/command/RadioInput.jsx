@@ -30,9 +30,13 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     };
   }, []);
 
+  // Detect iOS/iPadOS Safari — continuous mode not supported
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   const startListening = () => {
     if (!hasSpeech) {
-      setListenError('Speech recognition not supported in this browser (use Chrome/Edge).');
+      setListenError('Speech recognition not supported in this browser. On iPad, use Safari.');
       return;
     }
 
@@ -40,20 +44,11 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = true;
-    recognition.continuous = true;
+    // iOS Safari does not support continuous mode — must use single-shot
+    recognition.continuous = !isIOS;
     recognition.maxAlternatives = 1;
-    recognition.timeout = 180000; // 180 second timeout to capture full dispatch lists
 
-    // Fire department terminology hints for better recognition
-    const fireTerms = [
-      'Engine', 'Truck', 'Rescue', 'Squad', 'Battalion', 'Medic', 'Tanker', 'Hazmat',
-      'Division A', 'Division B', 'Division C', 'Division D',
-      'interior', 'roof', 'RIT', 'rehab', 'staging', 'ventilation', 'water supply',
-      'on scene', 'working fire', 'MAYDAY', 'all clear', 'PAR', 'available',
-      'Alpha', 'Bravo', 'Charlie', 'Delta', '1st Floor', '2nd Floor', '3rd Floor'
-    ].join(', ');
-
-    // Attempt to use grammar hints (Chrome feature)
+    // Attempt to use grammar hints (Chrome feature, ignored elsewhere)
     if ('SpeechGrammarList' in window) {
       const grammar = `#JSGF V1.0; grammar fire_terms; public <fire> = (${
         ['Engine', 'Truck', 'Rescue', 'Squad', 'Medic'].join('|')
@@ -63,7 +58,7 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
         grammarList.addFromString(grammar, 1);
         recognition.grammars = grammarList;
       } catch (e) {
-        // Grammar list not fully supported, continue with hints
+        // Grammar list not fully supported, continue without hints
       }
     }
 
@@ -74,11 +69,25 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
       }
-      setMessage(transcript);
+      setMessage(prev => {
+        // On iOS, each result is a fresh utterance — append to existing text
+        if (isIOS && prev && !prev.endsWith(' ')) return prev + ' ' + transcript;
+        if (isIOS && prev) return prev + transcript;
+        return transcript;
+      });
     };
 
     recognition.onerror = (event) => {
-      setListenError(`Mic error: ${event.error}`);
+      if (event.error === 'no-speech') {
+        // Not a real error — just silence, ignore
+        setIsListening(false);
+        return;
+      }
+      if (event.error === 'not-allowed') {
+        setListenError('Microphone access denied. Please allow mic access in Safari Settings → Websites → Microphone.');
+      } else {
+        setListenError(`Mic error: ${event.error}`);
+      }
       setIsListening(false);
     };
 
@@ -88,7 +97,12 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      setListenError('Could not start microphone. Try tapping the mic button again.');
+      setIsListening(false);
+    }
   };
 
   const stopListening = () => {
