@@ -219,6 +219,16 @@ export default function CommandBoard() {
       }
     }
 
+    // Upgrade alarm level if voiced
+    if (parsed.upgrade_alarm) {
+      const alarmOrder = ['1st_alarm', '2nd_alarm', '3rd_alarm', '4th_alarm', '5th_alarm', 'task_force', 'strike_team'];
+      const currentIdx = alarmOrder.indexOf(incident?.alarm_level);
+      const newIdx = alarmOrder.indexOf(parsed.upgrade_alarm);
+      if (newIdx > currentIdx) {
+        updateIncident.mutate({ alarm_level: parsed.upgrade_alarm });
+      }
+    }
+
     queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
   };
 

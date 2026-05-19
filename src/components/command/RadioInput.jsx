@@ -192,6 +192,15 @@ WALTHAM HOME DEPARTMENT RULES — CRITICAL:
 - When "1st alarm" or "2nd alarm" is referenced with no qualifier, it means the Waltham (WAL or no-prefix) units.
 - IMPORTANT: When creating or identifying Waltham units, always use the "WAL" prefix format: "WAL Engine 1", "WAL Truck 1", "WAL Rescue 1", etc. If a unit exists without the WAL prefix (e.g. "Engine 1"), treat it as the same as "WAL Engine 1".
 
+ALARM UPGRADE RULES — CRITICAL:
+- "strike a 2nd alarm" / "transmit a 2nd alarm" / "go to 2nd alarm" / "request 2nd alarm" / "we need a 2nd alarm" → set upgrade_alarm: "2nd_alarm"
+- "strike a 3rd alarm" / "go to 3rd alarm" / "request 3rd alarm" → set upgrade_alarm: "3rd_alarm"
+- "strike a 4th alarm" / "4th alarm" → set upgrade_alarm: "4th_alarm"
+- "strike a 5th alarm" / "5th alarm" → set upgrade_alarm: "5th_alarm"
+- Any phrase indicating the incident is being escalated to a higher alarm level should set upgrade_alarm to the new alarm level.
+- Only set upgrade_alarm when a HIGHER alarm is being requested. Never downgrade.
+- Valid values: "2nd_alarm", "3rd_alarm", "4th_alarm", "5th_alarm", "task_force", "strike_team"
+
 BULK STATUS UPDATE RULES — CRITICAL (apply when a transmission refers to ALL units at an alarm level):
 - "all 1st alarm companies on scene" / "all first alarm on scene" / "all 1 alarm on scene" / "all 1st alarm on scene" → set status: on_scene for EVERY unit in the list that EITHER has alarm_level: 1st_alarm OR has no town prefix (i.e. is a Waltham home unit). Generate one action entry per matching unit.
 - "all 1st alarm companies working" / "all first alarm working" / "all 1 alarm working" → status: working for every unit with alarm_level: 1st_alarm OR no town prefix
@@ -273,6 +282,7 @@ Respond with this exact JSON structure:
       "notes": "Mutual Aid — [full town name] if applicable, else null"
     }
   ],
+  "upgrade_alarm": "new alarm level if this transmission requests a higher alarm (e.g. '2nd_alarm', '3rd_alarm', etc.), or null if no upgrade",
   "summary": "one sentence summary of what happened"
 }`,
       response_json_schema: {
@@ -314,6 +324,7 @@ Respond with this exact JSON structure:
               }
             }
           },
+          upgrade_alarm: { type: 'string' },
           summary: { type: 'string' }
         }
       }
