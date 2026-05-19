@@ -194,7 +194,7 @@ WALTHAM HOME DEPARTMENT RULES — CRITICAL:
 BULK STATUS UPDATE RULES — CRITICAL (apply when a transmission refers to ALL units at an alarm level):
 - "all 1st alarm companies on scene" / "all first alarm on scene" / "all 1 alarm on scene" / "all 1st alarm on scene" → set status: on_scene for EVERY unit in the list that EITHER has alarm_level: 1st_alarm OR has no town prefix (i.e. is a Waltham home unit). Generate one action entry per matching unit.
 - "all 1st alarm companies working" / "all first alarm working" / "all 1 alarm working" → status: working for every unit with alarm_level: 1st_alarm OR no town prefix
-- "all 2nd alarm on scene" / "all second alarm on scene" → status: on_scene for every unit with alarm_level: 2nd_alarm
+- "all 2nd alarm on scene" / "all second alarm on scene" / "all 2 alarm on scene" → set status: on_scene for EVERY unit in the list that EITHER has alarm_level: 2nd_alarm OR has a town prefix (i.e. is a mutual aid unit). Generate one action entry per matching unit.
 - "all units on scene" / "everyone on scene" / "all companies on scene" → update ALL units in the list to on_scene
 - IMPORTANT: When you detect a bulk phrase, you MUST loop through the current units list, filter by the matching alarm_level (or home-unit heuristic), and emit one action entry per unit. Do NOT emit a single generic action.
 - alarm_level values to match: 1st_alarm, 2nd_alarm, 3rd_alarm, 4th_alarm, 5th_alarm, task_force, strike_team
