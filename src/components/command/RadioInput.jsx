@@ -18,6 +18,7 @@ const TOWN_MAP = [
   { pattern: /\b(lexington|lex)\b/gi, prefix: 'LEX', full: 'Lexington' },
   { pattern: /\b(arlington|arl)\b/gi, prefix: 'ARL', full: 'Arlington' },
   { pattern: /\b(waltham|wal)\b/gi,   prefix: 'WAL', full: 'Waltham' },
+  { pattern: /\b(armstrong)\b/gi,     prefix: 'ARM', full: 'Armstrong' },
 ];
 
 function normalizeTownAbbreviations(text) {
@@ -176,6 +177,11 @@ MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a
 - "Lexington" / "Lex" → prefix "LEX" (e.g. "Lexington Rescue 2" or "Lex Rescue 2" → unit_name: "LEX Rescue 2", unit_type: rescue)
 - "Arlington" / "Arl" → prefix "ARL" (e.g. "Arlington Engine 2" or "Arl Engine 2" → unit_name: "ARL Engine 2", unit_type: engine)
 - "Waltham" / "Wal" → prefix "WAL" (e.g. "Waltham Engine 3" or "Wal Engine 3" → unit_name: "WAL Engine 3", unit_type: engine)
+- "Armstrong" → prefix "ARM" — Armstrong is a PRIVATE BLS/ALS ambulance company serving Waltham. Their units are:
+  - "Armstrong BLS" / "Armstrong Basic" / "ARM BLS" → unit_name: "ARM BLS", unit_type: medic, notes: "Armstrong Ambulance — BLS"
+  - "Armstrong Medic" / "Armstrong ALS" / "ARM Medic" → unit_name: "ARM Medic", unit_type: medic, notes: "Armstrong Ambulance — ALS"
+  - "Armstrong FS2" / "ARM FS2" / "Field Supervisor" / "Armstrong Field Supervisor" → unit_name: "ARM FS2", unit_type: other, notes: "Armstrong Ambulance — Field Supervisor"
+  - For any other Armstrong unit, prefix with ARM and use unit_type: medic
 - Apply this same pattern to any other town/city name spoken — abbreviate to first 3 uppercase letters as prefix
 - Always add notes: "Mutual Aid — [full town name]" on the new unit
 - CRITICAL: If a town name is spoken with a unit, it is ALWAYS a mutual aid unit with the prefix. NEVER match "Arlington Engine 2" to an existing "Engine 2" — they are different units. Always create a NEW unit with the prefixed name (e.g. "ARL Engine 2").
