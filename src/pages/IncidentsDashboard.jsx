@@ -246,30 +246,32 @@ export default function IncidentsDashboard() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Link to={`/incident/${incident.id}`}>
+                            <Button size="sm" className="text-xs gap-1" variant={incident.status === 'cleared' ? 'outline' : 'default'}>
+                              {incident.status === 'cleared' ? 'View' : 'Open Board'}
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-950/40"
+                            onClick={() => { if (window.confirm('Delete this incident? This cannot be undone.')) deleteIncident.mutate(incident.id); }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                         {incident.status !== 'cleared' && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-xs gap-1"
+                            className="text-xs gap-1 w-full"
                             onClick={() => setClosingIncident(incident)}
                           >
-                            <Archive className="w-3.5 h-3.5" /> Close
+                            <Archive className="w-3.5 h-3.5" /> Close Incident
                           </Button>
                         )}
-                        <Link to={`/incident/${incident.id}`}>
-                          <Button size="sm" className="text-xs gap-1" variant={incident.status === 'cleared' ? 'outline' : 'default'}>
-                            {incident.status === 'cleared' ? 'View' : 'Open Board'}
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-950/40"
-                          onClick={() => { if (window.confirm('Delete this incident? This cannot be undone.')) deleteIncident.mutate(incident.id); }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
                       </div>
                     </div>
                   </div>
