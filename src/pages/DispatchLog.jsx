@@ -50,8 +50,13 @@ export default function DispatchLog() {
     recognition.onerror = () => setListening(null);
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript?.trim();
-      if (transcript) {
+      const raw = event.results[0]?.[0]?.transcript?.trim();
+      if (raw) {
+        // Normalize spoken unit name: "Engine one" → "Engine 1", etc.
+        const numberWords = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10 };
+        let transcript = raw.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/gi,
+          m => numberWords[m.toLowerCase()]);
+
         const lower = transcript.toLowerCase();
         let detectedType = 'engine';
         if (/truck|ladder|tiller/.test(lower)) detectedType = 'truck';
@@ -62,7 +67,10 @@ export default function DispatchLog() {
         else if (/hazmat/.test(lower)) detectedType = 'hazmat';
         else if (/brush|wildland/.test(lower)) detectedType = 'brush';
         else if (/deputy|chief|battalion/.test(lower)) detectedType = 'deputy';
-        createUnit.mutate({ unit_name: transcript, unit_type: detectedType, alarm_level: level, status: 'dispatched', assignment: 'unassigned' });
+
+        // Capitalize first letter of each word (e.g. "engine 1" → "Engine 1")
+        const unitName = transcript.replace(/\b\w/g, c => c.toUpperCase());
+        createUnit.mutate({ unit_name: unitName, unit_type: detectedType, alarm_level: level, status: 'dispatched', assignment: 'unassigned' });
       }
     };
 
