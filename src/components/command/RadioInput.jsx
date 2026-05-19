@@ -185,13 +185,20 @@ MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a
 - Always add notes: "Mutual Aid — [full town name]" on the new unit
 - CRITICAL: If a town name is spoken with a unit, it is ALWAYS a mutual aid unit with the prefix. NEVER match "Arlington Engine 2" to an existing "Engine 2" — they are different units. Always create a NEW unit with the prefixed name (e.g. "ARL Engine 2").
 
+WALTHAM HOME DEPARTMENT RULES — CRITICAL:
+- Waltham is the HOME department. Units WITHOUT a town prefix (e.g. "Engine 1", "Truck 1", "Rescue 1", "Medic 1", "Car 1") are Waltham units.
+- Units WITH a town prefix (e.g. "WAT Engine 2", "BEL Truck 1", "CAM Engine 3") are MUTUAL AID units.
+- When "1st alarm" is referenced with no qualifier, it means the Waltham (no-prefix) units.
+- When "2nd alarm" or higher is referenced, it typically means mutual aid units (prefixed).
+
 BULK STATUS UPDATE RULES — CRITICAL (apply when a transmission refers to ALL units at an alarm level):
-- "all 1st alarm companies on scene" / "all first alarm on scene" / "all 1 alarm on scene" / "all first alarm units arriving" → set status: on_scene for EVERY unit in the list with alarm_level: 1st_alarm. Generate one action entry per matching unit.
-- "all 1st alarm companies working" / "all first alarm working" / "all 1 alarm working" → status: working for every unit with alarm_level: 1st_alarm
+- "all 1st alarm companies on scene" / "all first alarm on scene" / "all 1 alarm on scene" / "all 1st alarm on scene" → set status: on_scene for EVERY unit in the list that EITHER has alarm_level: 1st_alarm OR has no town prefix (i.e. is a Waltham home unit). Generate one action entry per matching unit.
+- "all 1st alarm companies working" / "all first alarm working" / "all 1 alarm working" → status: working for every unit with alarm_level: 1st_alarm OR no town prefix
 - "all 2nd alarm on scene" / "all second alarm on scene" → status: on_scene for every unit with alarm_level: 2nd_alarm
 - "all units on scene" / "everyone on scene" / "all companies on scene" → update ALL units in the list to on_scene
-- IMPORTANT: When you detect a bulk phrase, you MUST loop through the current units list, filter by the matching alarm_level, and emit one action entry per unit. Do NOT emit a single generic action.
+- IMPORTANT: When you detect a bulk phrase, you MUST loop through the current units list, filter by the matching alarm_level (or home-unit heuristic), and emit one action entry per unit. Do NOT emit a single generic action.
 - alarm_level values to match: 1st_alarm, 2nd_alarm, 3rd_alarm, 4th_alarm, 5th_alarm, task_force, strike_team
+- A unit has NO town prefix if its name does NOT start with a 2-4 letter all-caps code followed by a space (e.g. "WAT ", "BEL ", "CAM ").
 
 CRITICAL UNIT NAME MATCHING RULES:
 - Always match spoken/voice variants to the closest existing unit name above
