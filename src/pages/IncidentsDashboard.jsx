@@ -279,7 +279,7 @@ export default function IncidentsDashboard() {
           </div>
 
           {/* Today's Roster Sidebar */}
-          <div className="w-80 shrink-0">
+          <div className="w-96 shrink-0">
             <RosterLineup />
           </div>
         </div>

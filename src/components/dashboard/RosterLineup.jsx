@@ -114,7 +114,7 @@ export default function RosterLineup() {
         </div>
       </div>
 
-      <div className="p-3 flex flex-col gap-2 max-h-[420px] overflow-y-auto">
+      <div className="p-4 flex flex-col gap-3 max-h-[600px] overflow-y-auto">
         {isLoading ? (
           <p className="text-xs font-mono text-muted-foreground text-center py-6">Loading roster...</p>
         ) : entries.length === 0 ? (
