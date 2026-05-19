@@ -74,26 +74,26 @@ export default function UnitCard({ unit, onEdit }) {
       {/* Status bar accent */}
       <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cfg.bar} rounded-l-lg`} />
 
-      <div className="pl-3 pr-3 py-3">
+     <div className="pl-5 pr-4 py-4">
         {/* Top row */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className={`text-[9px] font-mono font-bold tracking-widest px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.text} border border-current/20 shrink-0`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className={`text-sm font-mono font-bold tracking-widest px-2.5 py-1.5 rounded ${cfg.bg} ${cfg.text} border-2 border-current/20 shrink-0`}>
               {unitTypeLabel[unit.unit_type] || 'OTH'}
             </span>
-            <span className="font-mono font-bold text-base text-foreground truncate">
+            <span className="font-mono font-bold text-2xl text-foreground truncate">
               {unit.unit_name}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className={`text-[10px] font-mono font-semibold tracking-wider ${cfg.text}`}>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-sm font-mono font-semibold tracking-wider ${cfg.text}`}>
               {cfg.label}
             </span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
           </div>
         </div>
 
-        {/* Mutual aid town badge — derive from notes or from known prefixes in unit name */}
+        {/* Mutual aid town badge */}
         {(() => {
           const townMap = { CAM: 'Cambridge', BEL: 'Belmont', LEX: 'Lexington', ARL: 'Arlington' };
           const mutualAidLabel = unit.notes?.startsWith('Mutual Aid')
@@ -103,44 +103,44 @@ export default function UnitCard({ unit, onEdit }) {
                 return townMap[prefix] ? `Mutual Aid — ${townMap[prefix]}` : null;
               })();
           return mutualAidLabel ? (
-            <div className="mt-1.5 text-[10px] font-mono font-bold tracking-wider text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded px-2 py-0.5 inline-block">
+            <div className="mt-2.5 text-sm font-mono font-bold tracking-wider text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded px-3 py-1.5 inline-block">
               {mutualAidLabel}
             </div>
           ) : null;
         })()}
 
         {/* Meta row */}
-        <div className="flex items-center gap-3 mt-2 flex-wrap">
+        <div className="flex items-center gap-4 mt-3 flex-wrap">
           {unit.officer && (
-            <span className="text-xs text-muted-foreground font-mono truncate">{unit.officer}</span>
+            <span className="text-base text-muted-foreground font-mono truncate">{unit.officer}</span>
           )}
           {unit.personnel_count > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-              <Users className="w-3.5 h-3.5" />{unit.personnel_count}
+            <span className="flex items-center gap-1.5 text-base text-muted-foreground font-mono">
+              <Users className="w-5 h-5" />{unit.personnel_count}
             </span>
           )}
           {unit.floor && (
-            <span className="flex items-center gap-1 text-xs text-cyan-400 font-mono font-semibold">
+            <span className="flex items-center gap-1.5 text-base text-cyan-400 font-mono font-semibold">
               ▲ {unit.floor}
             </span>
           )}
           {unit.air_time && airElapsed && (
-            <span className="flex items-center gap-1 text-xs text-amber-400 font-mono">
-              <Wind className="w-3.5 h-3.5" />{airElapsed}
+            <span className="flex items-center gap-1.5 text-base text-amber-400 font-mono">
+              <Wind className="w-5 h-5" />{airElapsed}
             </span>
           )}
         </div>
 
         {/* Notes display */}
         {unit.notes && !unit.notes.startsWith('Mutual Aid') && (
-          <div className="mt-1.5 text-xs text-muted-foreground font-mono bg-secondary/40 rounded px-2 py-1 border border-border/40">
+          <div className="mt-2.5 text-sm text-muted-foreground font-mono bg-secondary/40 rounded px-3 py-2 border border-border/40">
             {unit.notes}
           </div>
         )}
 
-        {/* Active timer — always shown for working, rehab, on scene, mayday */}
+        {/* Active timer */}
          {(isWorking || isRehab || isOnScene || isMayday) && activeElapsed && (
-           <div className={`mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 border ${
+           <div className={`mt-3 flex items-center gap-2 rounded px-3 py-2.5 border-2 ${
              isMayday
                ? 'bg-red-600/20 border-red-500/40'
                : rehabWarning
@@ -151,15 +151,15 @@ export default function UnitCard({ unit, onEdit }) {
                ? 'bg-violet-500/10 border-violet-500/30'
                : 'bg-secondary/60 border-border/40'
            }`}>
-            <Clock className={`w-3.5 h-3.5 shrink-0 ${
+            <Clock className={`w-5 h-5 shrink-0 ${
               rehabWarning ? 'text-violet-300' : entryWarning ? 'text-orange-400' : isRehab ? 'text-violet-400' : 'text-muted-foreground'
             }`} />
-            <span className={`text-xs font-mono font-bold tracking-wider ${
+            <span className={`text-sm font-mono font-bold tracking-wider ${
              isMayday ? 'text-red-400' : rehabWarning ? 'text-violet-300' : entryWarning ? 'text-orange-300' : isRehab ? 'text-violet-400' : 'text-muted-foreground'
             }`}>
              {isMayday ? 'MAYDAY ELAPSED' : isRehab ? 'REHAB' : isOnScene ? 'ON SCENE' : 'WORKING'}
             </span>
-            <span className={`text-xs font-mono font-bold ml-auto ${
+            <span className={`text-base font-mono font-bold ml-auto ${
               rehabWarning ? 'text-violet-200' : entryWarning ? 'text-orange-300' : 'text-foreground'
             }`}>
               {activeElapsed}
@@ -169,19 +169,16 @@ export default function UnitCard({ unit, onEdit }) {
 
         {/* Personnel list */}
         {unit.personnel?.length > 0 && (
-          <div className="mt-1.5 text-[11px] font-mono text-muted-foreground/60 truncate">
+          <div className="mt-2.5 text-sm font-mono text-muted-foreground/60 truncate">
             {unit.personnel.join(' · ')}
           </div>
         )}
 
         {/* MAYDAY alert */}
         {isMayday && (
-          <div className="mt-2 flex items-center gap-1.5 bg-red-600/20 border border-red-500/40 rounded px-2 py-1.5">
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="text-red-300 text-xs font-bold tracking-wider">MAYDAY — MAYDAY — MAYDAY</span>
+          <div className="mt-3 flex items-center gap-2 bg-red-600/20 border-2 border-red-500/40 rounded px-3 py-2.5">
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+            <span className="text-red-300 text-sm font-bold tracking-wider">MAYDAY — MAYDAY — MAYDAY</span>
           </div>
         )}
       </div>
-    </div>
-  );
-}
