@@ -162,7 +162,7 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
       prompt: `You are an expert fire department radio traffic parser for an Incident Command System (ICS) tactical board.
 ${correctionExamples}
 CURRENT UNITS ON SCENE (match against these exactly — use fuzzy matching for spoken/spelled variants):
-${units.map(u => `  - "${u.unit_name}" (type: ${u.unit_type})`).join('\n')}
+${units.map(u => `  - "${u.unit_name}" (type: ${u.unit_type}${u.alarm_level ? `, alarm_level: ${u.alarm_level}` : ''})`).join('\n')}
 
 RADIO TRANSMISSION TO PARSE:
 "${finalMessage}"
@@ -184,6 +184,14 @@ MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a
 - Apply this same pattern to any other town/city name spoken — abbreviate to first 3 uppercase letters as prefix
 - Always add notes: "Mutual Aid — [full town name]" on the new unit
 - CRITICAL: If a town name is spoken with a unit, it is ALWAYS a mutual aid unit with the prefix. NEVER match "Arlington Engine 2" to an existing "Engine 2" — they are different units. Always create a NEW unit with the prefixed name (e.g. "ARL Engine 2").
+
+BULK STATUS UPDATE RULES (apply when a transmission refers to ALL units at an alarm level):
+- "all 1st alarm companies on scene" / "all first alarm on scene" / "all 1 alarm units arriving" → update status to on_scene for EVERY unit currently in the units list that has alarm_level matching 1st_alarm (or infer from context). Put each as a separate action entry.
+- "all 1st alarm companies working" / "all first alarm working" → status: working for all matching units
+- "all units on scene" / "everyone's on scene" → update ALL units in the list to on_scene
+- "all 2nd alarm on scene" → update all 2nd alarm units to on_scene
+- Apply this same pattern for any bulk alarm-level reference + status phrase
+- When handling bulk updates, generate one action entry per unit in the matching group
 
 CRITICAL UNIT NAME MATCHING RULES:
 - Always match spoken/voice variants to the closest existing unit name above
