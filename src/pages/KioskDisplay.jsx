@@ -93,6 +93,7 @@ function TacticalSlide({ units, incident }) {
                 {us.map(unit => {
                   const sc = STATUS_COLORS[unit.status] || STATUS_COLORS.dispatched;
                   const crew = unit.personnel || [];
+                  const totalPAX = (unit.officer ? 1 : 0) + crew.length || unit.personnel_count || 0;
                   return (
                     <div
                       key={unit.id}
@@ -104,17 +105,26 @@ function TacticalSlide({ units, incident }) {
                           <p className="font-mono font-bold text-white text-base leading-tight truncate">{unit.unit_name}</p>
                           {unit.officer && <p className="text-[11px] text-orange-300 truncate">★ {unit.officer_rank ? `${unit.officer_rank} ` : ''}{unit.officer.split('|')[0]}</p>}
                         </div>
-                        <span className={`text-[10px] font-mono font-bold uppercase ${sc.text}`}>
-                          {unit.status?.replace(/_/g, ' ')}
-                        </span>
+                        <div className="flex flex-col items-end gap-0.5 shrink-0">
+                          <span className={`text-[10px] font-mono font-bold uppercase ${sc.text}`}>
+                            {unit.status?.replace(/_/g, ' ')}
+                          </span>
+                          {totalPAX > 0 && (
+                            <span className="text-[10px] font-mono text-gray-400">{totalPAX} FF</span>
+                          )}
+                        </div>
                       </div>
-                      {crew.length > 0 && (
+                      {crew.length > 0 ? (
                         <div className="mt-2 pt-2 border-t border-white/10 flex flex-col gap-0.5">
                           {crew.map((name, i) => (
                             <p key={i} className="text-[11px] font-mono text-gray-300 truncate">• {name.split('|')[0]}</p>
                           ))}
                         </div>
-                      )}
+                      ) : unit.personnel_count > 0 && !unit.officer ? (
+                        <div className="mt-2 pt-2 border-t border-white/10">
+                          <p className="text-[11px] font-mono text-gray-500">{unit.personnel_count} personnel on board</p>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -184,7 +194,7 @@ function PARSlide({ units, incident }) {
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-mono font-bold text-gray-500 uppercase tracking-widest">Accountability</span>
                   <span className="text-[11px] font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded">
-                    {(unit.officer ? 1 : 0) + crew.length} FF
+                    {(unit.officer ? 1 : 0) + crew.length || unit.personnel_count || 0} FF
                   </span>
                 </div>
                 {unit.officer && (
@@ -195,7 +205,10 @@ function PARSlide({ units, incident }) {
                 {crew.map((name, i) => (
                   <p key={i} className="text-[12px] font-mono text-gray-300 truncate">• {name.split('|')[0]}</p>
                 ))}
-                {!unit.officer && crew.length === 0 && (
+                {!unit.officer && crew.length === 0 && unit.personnel_count > 0 && (
+                  <p className="text-[11px] font-mono text-gray-400">{unit.personnel_count} personnel on board</p>
+                )}
+                {!unit.officer && crew.length === 0 && !unit.personnel_count && (
                   <p className="text-[11px] font-mono text-gray-500 italic">No personnel listed</p>
                 )}
               </div>
@@ -377,7 +390,8 @@ export default function KioskDisplay() {
       return {
         ...unit,
         officer: rosterMatch.officer || unit.officer,
-        personnel: rosterMatch.personnel?.length ? rosterMatch.personnel : unit.personnel,
+        officer_rank: rosterMatch.officer_rank || unit.officer_rank,
+        personnel: rosterMatch.personnel?.length ? rosterMatch.personnel : (unit.personnel?.length ? unit.personnel : []),
         personnel_count: rosterMatch.personnel_count || unit.personnel_count,
       };
     });
