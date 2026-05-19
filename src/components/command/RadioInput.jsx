@@ -141,8 +141,12 @@ RADIO TRANSMISSION TO PARSE:
 "${finalMessage}"
 
 MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a unit):
-- "Cambridge" → prefix "CAM" (e.g. "Cambridge Engine 3" → unit_name: "CAM Engine 3", unit_type: engine)
-- "Belmont" → prefix "BEL" (e.g. "Belmont Truck 1" → unit_name: "BEL Truck 1", unit_type: truck)
+- "Watertown" / "Wat" → prefix "WAT" (e.g. "Watertown Engine 2" or "Wat Engine 2" → unit_name: "WAT Engine 2", unit_type: engine)
+- "Belmont" / "Bel" → prefix "BEL" (e.g. "Belmont Truck 1" or "Bel Truck 1" → unit_name: "BEL Truck 1", unit_type: truck)
+- "Cambridge" / "Cam" → prefix "CAM" (e.g. "Cambridge Engine 3" or "Cam Engine 3" → unit_name: "CAM Engine 3", unit_type: engine)
+- "Wellesley" / "Wel" → prefix "WEL" (e.g. "Wellesley Rescue 1" or "Wel Rescue 1" → unit_name: "WEL Rescue 1", unit_type: rescue)
+- "Newton" / "New" → prefix "NEW" (e.g. "Newton Truck 2" or "New Truck 2" → unit_name: "NEW Truck 2", unit_type: truck)
+- "Lincoln" / "Lin" → prefix "LIN" (e.g. "Lincoln Engine 1" or "Lin Engine 1" → unit_name: "LIN Engine 1", unit_type: engine)
 - "Lexington" / "Lex" → prefix "LEX" (e.g. "Lexington Rescue 2" or "Lex Rescue 2" → unit_name: "LEX Rescue 2", unit_type: rescue)
 - "Arlington" / "Arl" → prefix "ARL" (e.g. "Arlington Engine 2" or "Arl Engine 2" → unit_name: "ARL Engine 2", unit_type: engine)
 - Apply this same pattern to any other town/city name spoken — abbreviate to first 3 uppercase letters as prefix
