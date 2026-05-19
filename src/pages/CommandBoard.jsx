@@ -471,14 +471,14 @@ export default function CommandBoard() {
               <div className="flex flex-col items-center gap-2">
                 {/* Top */}
                 <div className="w-full max-w-xs">
-                  <DivisionColumn assignment={topSide} units={units.filter(u => u.assignment === topSide)} onEditUnit={isReadOnly ? null : setEditingUnit} allUnits={units} />
+                <DivisionColumn assignment={topSide} units={units.filter(u => u.assignment === topSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} />
                 </div>
 
                 {/* Middle row */}
                 <div className="w-full flex items-stretch gap-2">
-                  <div className="flex-1">
-                    <DivisionColumn assignment={leftSide} units={units.filter(u => u.assignment === leftSide)} onEditUnit={isReadOnly ? null : setEditingUnit} allUnits={units} />
-                  </div>
+                <div className="flex-1">
+                  <DivisionColumn assignment={leftSide} units={units.filter(u => u.assignment === leftSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} />
+                </div>
 
                   {/* Structure box */}
                   <div className="flex-shrink-0 w-32 flex items-center justify-center">
@@ -497,13 +497,13 @@ export default function CommandBoard() {
                   </div>
 
                   <div className="flex-1">
-                    <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} onEditUnit={isReadOnly ? null : setEditingUnit} allUnits={units} />
+                    <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} />
                   </div>
                 </div>
 
                 {/* Bottom (front/address side) */}
                 <div className="w-full max-w-xs">
-                  <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} onEditUnit={isReadOnly ? null : setEditingUnit} allUnits={units} />
+                  <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} />
                 </div>
               </div>
             );
@@ -517,6 +517,7 @@ export default function CommandBoard() {
                 assignment={assignment}
                 units={units.filter(u => u.assignment === assignment)}
                 onEditUnit={isReadOnly ? null : setEditingUnit}
+                onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })}
                 allUnits={units}
               />
             ))}

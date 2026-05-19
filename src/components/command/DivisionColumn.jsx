@@ -21,14 +21,18 @@ const divisionConfig = {
   unassigned:   { label: 'UNASSIGNED', sub: 'UNITS',    accent: 'border-t-slate-600',  dot: 'bg-slate-600',  count: 'text-slate-500' },
 };
 
-export default function DivisionColumn({ assignment, units, onEditUnit, allUnits = [] }) {
+export default function DivisionColumn({ assignment, units, onEditUnit, onUpdateUnit, allUnits = [] }) {
   const cfg = divisionConfig[assignment] || divisionConfig.unassigned;
   const isEmpty = units.length === 0;
   const isRITEmpty = assignment === 'rit' && isEmpty;
 
   const handleAssignToRIT = (unitId) => {
     const unit = allUnits.find(u => u.id === unitId);
-    if (unit && onEditUnit) {
+    if (!unit) return;
+    // If a direct update handler is available, use it to move unit to RIT immediately
+    if (onUpdateUnit) {
+      onUpdateUnit(unit.id, { assignment: 'rit', status: 'working' });
+    } else if (onEditUnit) {
       onEditUnit({ ...unit, assignment: 'rit' });
     }
   };
