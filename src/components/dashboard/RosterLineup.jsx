@@ -69,27 +69,31 @@ function UnitRow({ entry }) {
       )}
 
       {expanded && (
-        <div className="px-4 py-3 bg-card flex flex-col gap-2.5">
+        <div className="px-4 py-3 bg-card flex flex-col gap-3">
            {entry.officer && (
-             <div className="flex items-center gap-3">
-               <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-wider w-14 shrink-0">Officer</span>
+             <div className="flex flex-col gap-0.5">
+               <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-wider">Officer</span>
                <span className="text-sm font-mono text-foreground">
                  {entry.officer_rank ? `${entry.officer_rank} ` : ''}{entry.officer}
                </span>
              </div>
            )}
-           {crew.length > 0 ? (
-             crew.map((name, i) => (
-               <div key={i} className="flex items-center gap-3">
-                 <span className="text-[10px] font-mono text-muted-foreground w-14 shrink-0">FF {i + 1}</span>
-                 <span className="text-sm font-mono text-foreground">{name}</span>
-               </div>
-             ))
-           ) : (
+           {crew.length > 0 && (
+             <div className="flex flex-col gap-1.5">
+               <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider">Crew</span>
+               {crew.map((name, i) => (
+                 <div key={i} className="flex items-center gap-2 py-1 border-b border-border/20 last:border-0">
+                   <span className="text-[10px] font-mono text-muted-foreground shrink-0 w-8">FF{i + 1}</span>
+                   <span className="text-sm font-mono text-foreground">{name}</span>
+                 </div>
+               ))}
+             </div>
+           )}
+           {crew.length === 0 && (
              <p className="text-xs font-mono text-muted-foreground italic">No personnel listed</p>
            )}
            {entry.notes && (
-             <p className="text-xs font-mono text-muted-foreground mt-2 border-t border-border/40 pt-2">{entry.notes}</p>
+             <p className="text-xs font-mono text-muted-foreground border-t border-border/40 pt-2">{entry.notes}</p>
            )}
         </div>
       )}
