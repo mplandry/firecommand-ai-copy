@@ -36,30 +36,40 @@ function UnitRow({ entry }) {
 
   return (
     <div className="border border-border/50 rounded-lg overflow-hidden">
-      <div
-        className="flex items-center gap-3 px-3 py-2.5 bg-secondary/20 cursor-pointer hover:bg-secondary/40 transition-colors"
-        onClick={() => setExpanded(e => !e)}
-      >
-        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${typeColor}`}>
-          {unitTypeLabel[entry.unit_type] || 'OTH'}
-        </span>
-        <span className="font-mono font-bold text-sm text-foreground flex-1 truncate">{entry.unit_name}</span>
-        {entry.officer && (
-          <span className="text-xs font-mono text-muted-foreground truncate hidden sm:block max-w-[140px]">
-            {entry.officer_rank ? `${entry.officer_rank} ` : ''}{entry.officer}
+      {!expanded ? (
+        <div
+          className="flex items-center gap-3 px-3 py-2.5 bg-secondary/20 cursor-pointer hover:bg-secondary/40 transition-colors"
+          onClick={() => setExpanded(true)}
+        >
+          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${typeColor}`}>
+            {unitTypeLabel[entry.unit_type] || 'OTH'}
           </span>
-        )}
-        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-          <Users className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-xs font-mono text-muted-foreground">{total}</span>
-          {crew.length > 0 && (
-            expanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="font-mono font-bold text-sm text-foreground flex-1 truncate">{entry.unit_name}</span>
+          {entry.officer && (
+            <span className="text-xs font-mono text-muted-foreground truncate hidden sm:block max-w-[140px]">
+              {entry.officer_rank ? `${entry.officer_rank} ` : ''}{entry.officer}
+            </span>
           )}
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            <Users className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs font-mono text-muted-foreground">{total}</span>
+            {crew.length > 0 && <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-secondary/20 px-4 py-3 border-b border-border/40 flex items-center justify-between">
+          <span className="font-mono font-bold text-sm text-foreground">{entry.unit_name}</span>
+          <button
+            onClick={() => setExpanded(false)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronUp className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {expanded && (
-        <div className="px-4 py-3 bg-card border-t border-border/40 flex flex-col gap-2.5">
+        <div className="px-4 py-3 bg-card flex flex-col gap-2.5">
            {entry.officer && (
              <div className="flex items-center gap-3">
                <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-wider w-14 shrink-0">Officer</span>
