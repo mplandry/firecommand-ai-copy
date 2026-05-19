@@ -172,7 +172,10 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
                   <span className={`text-[9px] font-mono ${officerIsOOG ? 'text-red-600/70' : 'text-orange-700/70'}`}>{officerPos}</span>
                 )}
               </div>
-              <span className={`text-sm font-mono font-semibold ${officerIsOOG ? 'text-red-300' : 'text-orange-900'}`}>{officerName || entry.officer}</span>
+              <span className={`text-sm font-mono font-semibold ${officerIsOOG ? 'text-red-300' : 'text-foreground'}`}>
+                {entry.officer_rank && <span className="text-muted-foreground font-normal mr-1">{entry.officer_rank}</span>}
+                {officerName || entry.officer}
+              </span>
             </div>
           ) : (
             <div className="px-4 py-2.5 text-xs font-mono text-muted-foreground/40 italic">No officer assigned</div>
