@@ -17,7 +17,7 @@ const TOWN_MAP = [
   { pattern: /\b(lincoln|lin)\b/gi,   prefix: 'LIN', full: 'Lincoln' },
   { pattern: /\b(lexington|lex)\b/gi, prefix: 'LEX', full: 'Lexington' },
   { pattern: /\b(arlington|arl)\b/gi, prefix: 'ARL', full: 'Arlington' },
-  { pattern: /\b(waltham|wal)\b/gi,   prefix: 'WAL', full: 'Waltham' },
+
   { pattern: /\b(armstrong)\b/gi,     prefix: 'ARM', full: 'Armstrong' },
 ];
 
@@ -176,7 +176,6 @@ MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a
 - "Lincoln" / "Lin" → prefix "LIN" (e.g. "Lincoln Engine 1" or "Lin Engine 1" → unit_name: "LIN Engine 1", unit_type: engine)
 - "Lexington" / "Lex" → prefix "LEX" (e.g. "Lexington Rescue 2" or "Lex Rescue 2" → unit_name: "LEX Rescue 2", unit_type: rescue)
 - "Arlington" / "Arl" → prefix "ARL" (e.g. "Arlington Engine 2" or "Arl Engine 2" → unit_name: "ARL Engine 2", unit_type: engine)
-- "Waltham" / "Wal" → prefix "WAL" (e.g. "Waltham Engine 3" or "Wal Engine 3" → unit_name: "WAL Engine 3", unit_type: engine)
 - "Armstrong" → prefix "ARM" — Armstrong is a PRIVATE BLS/ALS ambulance company serving Waltham. Their units are:
   - "Armstrong BLS" / "Armstrong Basic" / "ARM BLS" → unit_name: "ARM BLS", unit_type: medic, notes: "Armstrong Ambulance — BLS"
   - "Armstrong Medic" / "Armstrong ALS" / "ARM Medic" → unit_name: "ARM Medic", unit_type: medic, notes: "Armstrong Ambulance — ALS"
