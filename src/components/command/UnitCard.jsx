@@ -95,7 +95,7 @@ export default function UnitCard({ unit, onEdit }) {
 
         {/* Mutual aid town badge */}
         {(() => {
-          const townMap = { CAM: 'Cambridge', BEL: 'Belmont', LEX: 'Lexington', ARL: 'Arlington' };
+          const townMap = { CAM: 'Cambridge', BEL: 'Belmont', LEX: 'Lexington', ARL: 'Arlington', WAT: 'Watertown', NEW: 'Newton' };
           const mutualAidLabel = unit.notes?.startsWith('Mutual Aid')
             ? unit.notes
             : (() => {
@@ -181,4 +181,6 @@ export default function UnitCard({ unit, onEdit }) {
             <span className="text-red-300 text-sm font-bold tracking-wider">MAYDAY — MAYDAY — MAYDAY</span>
           </div>
         )}
-      </div>
+    </div>
+  );
+}
