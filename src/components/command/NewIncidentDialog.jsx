@@ -5,46 +5,81 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+// Full Waltham apparatus roster
+const WAL_APPARATUS = [
+  { unit_name: 'WAL C2',          unit_type: 'deputy',  personnel_count: 1 },
+  { unit_name: 'WAL Engine 1',    unit_type: 'engine',  personnel_count: 4 },
+  { unit_name: 'WAL Engine 2',    unit_type: 'engine',  personnel_count: 4 },
+  { unit_name: 'WAL Engine 3',    unit_type: 'engine',  personnel_count: 4 },
+  { unit_name: 'WAL Engine 4',    unit_type: 'engine',  personnel_count: 4 },
+  { unit_name: 'WAL Squad 5',     unit_type: 'squad',   personnel_count: 4 },
+  { unit_name: 'WAL Engine 7',    unit_type: 'engine',  personnel_count: 4 },
+  { unit_name: 'WAL Engine 8',    unit_type: 'engine',  personnel_count: 4 },
+  { unit_name: 'WAL Rescue 1',    unit_type: 'rescue',  personnel_count: 4 },
+  { unit_name: 'WAL Tower 1',     unit_type: 'truck',   personnel_count: 4 },
+  { unit_name: 'WAL Ladder 2',    unit_type: 'truck',   personnel_count: 4 },
+  { unit_name: 'WAL Ladder 3',    unit_type: 'truck',   personnel_count: 4 },
+  { unit_name: 'WAL Moody Boat',  unit_type: 'other',   personnel_count: 2 },
+  { unit_name: 'WAL Central Boat',unit_type: 'other',   personnel_count: 2 },
+  { unit_name: 'WAL RTV',         unit_type: 'other',   personnel_count: 2 },
+];
 
+const TYPE_COLOR = {
+  engine:  'text-red-400 border-red-500/40 bg-red-500/10',
+  truck:   'text-yellow-400 border-yellow-500/40 bg-yellow-500/10',
+  rescue:  'text-blue-400 border-blue-500/40 bg-blue-500/10',
+  squad:   'text-orange-400 border-orange-500/40 bg-orange-500/10',
+  deputy:  'text-purple-400 border-purple-500/40 bg-purple-500/10',
+  medic:   'text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
+  other:   'text-slate-400 border-slate-500/40 bg-slate-500/10',
+};
+
+const EMPTY_FORM = { address: '', incident_type: 'structure_fire', alarm_level: '1st_alarm', ic_name: '', command_name: '' };
 
 export default function NewIncidentDialog({ open, onClose, onCreate }) {
-  const [form, setForm] = useState({
-    address: '',
-    incident_type: 'structure_fire',
-    alarm_level: '1st_alarm',
-    ic_name: '',
-    command_name: '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [selectedUnits, setSelectedUnits] = useState([]);
+
+  const toggleUnit = (unitName) => {
+    setSelectedUnits(prev =>
+      prev.includes(unitName) ? prev.filter(u => u !== unitName) : [...prev, unitName]
+    );
+  };
 
   const handleCreate = () => {
     if (!form.address.trim()) return;
     const commandName = form.command_name || form.address.split(' ').slice(0, 2).join(' ') + ' Command';
+
+    const units = WAL_APPARATUS
+      .filter(u => selectedUnits.includes(u.unit_name))
+      .map(u => ({ ...u, assignment: 'unassigned', status: 'dispatched', alarm_level: '1st_alarm' }));
 
     onCreate({
       ...form,
       command_name: commandName,
       status: 'active',
       started_at: new Date().toISOString(),
-      _template: null,
+      _template: units.length > 0 ? { units } : null,
     });
 
-    // Reset
-    setForm({ address: '', incident_type: 'structure_fire', alarm_level: '1st_alarm', ic_name: '', command_name: '' });
+    setForm(EMPTY_FORM);
+    setSelectedUnits([]);
   };
 
   const handleClose = () => {
-    setForm({ address: '', incident_type: 'structure_fire', alarm_level: '1st_alarm', ic_name: '', command_name: '' });
+    setForm(EMPTY_FORM);
+    setSelectedUnits([]);
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-card border-border max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="bg-card border-border max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="font-mono">New Incident</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           <div>
             <Label className="text-xs font-mono">Address *</Label>
             <Input
@@ -111,7 +146,54 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
             />
           </div>
 
-
+          {/* 1st Alarm Unit Picker */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-xs font-mono">1st Alarm Units</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUnits(WAL_APPARATUS.map(u => u.unit_name))}
+                  className="text-[10px] font-mono text-primary hover:text-primary/80 transition-colors"
+                >
+                  All
+                </button>
+                <span className="text-[10px] font-mono text-muted-foreground">/</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUnits([])}
+                  className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  None
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {WAL_APPARATUS.map((u) => {
+                const selected = selectedUnits.includes(u.unit_name);
+                const colorClass = TYPE_COLOR[u.unit_type] || TYPE_COLOR.other;
+                return (
+                  <button
+                    key={u.unit_name}
+                    type="button"
+                    onClick={() => toggleUnit(u.unit_name)}
+                    className={`text-[11px] font-mono px-2 py-1 rounded border transition-all ${
+                      selected
+                        ? colorClass
+                        : 'text-muted-foreground border-border/40 bg-secondary/30 hover:border-border'
+                    }`}
+                  >
+                    {u.unit_name.replace('WAL ', '')}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedUnits.length > 0 && (
+              <p className="text-[10px] font-mono text-muted-foreground mt-1.5">
+                {selectedUnits.length} unit{selectedUnits.length !== 1 ? 's' : ''} selected — dispatched, unassigned
+              </p>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
