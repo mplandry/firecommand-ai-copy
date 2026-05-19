@@ -12,6 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const UNIT_TYPES = ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'];
 
+// Officer/crew position numbering by unit type:
+// Engine=100s, Truck/Ladder=200s, Rescue=300s, Squad=500s, Deputy/Command=E prefix, Medic=600s
+const UNIT_POSITION_BASE = {
+  engine: 100, truck: 200, rescue: 300, squad: 500, medic: 600, tanker: 400,
+  brush: 700, hazmat: 800, deputy: 900, other: 100,
+};
+
 // Units exempt from the 3-person minimum requirement
 const EXEMPT_UNITS = ['c2','c3','c4'];
 const isExempt = (unitName) => EXEMPT_UNITS.includes((unitName || '').trim().toLowerCase());
@@ -368,6 +375,14 @@ CRITICAL RULES:
 2. RIDING POSITIONS = the 3-digit numbers (100, 101, 102, 200, etc.) next to personnel names. These are seat/position codes, NOT part of the unit name.
 3. The OFFICER is the first person listed for a unit (Captain, Lieutenant, or most senior rank). Store their riding position code separately.
 4. PERSONNEL = all crew members listed under that unit besides the officer. Each person may have a riding position number next to their name — store it with the person as "Name|PositionCode" (e.g. "James Vanaria|101").
+   POSITION CODE RULES — CRITICAL: Position codes are 3-digit numbers that indicate the unit series. The officer/first seat is always the X00 number (e.g. 100, 200, 500). Crew positions follow in sequence (101, 102... or 201, 202... etc.).
+   - Engine units: officer=100, crew=101, 102, 103...
+   - Truck/Ladder units: officer=200, crew=201, 202, 203...
+   - Rescue units: officer=300, crew=301, 302, 303...
+   - Tanker units: officer=400, crew=401, 402, 403...
+   - Squad units: officer=500, crew=501, 502, 503...
+   - Medic units: officer=600, crew=601, 602, 603...
+   - IMPORTANT: If a person is listed as officer/CO of a Squad, their position is 500 (NOT 501). 501 is a crew position. Apply this rule strictly — the officer is always the X00 seat.
    OVERTIME DETECTION — THIS IS CRITICAL: Carefully examine the COLOR of every name on the roster. Names printed or written in GREEN ink/text (as opposed to the standard black/blue text) are OVERTIME personnel. Also flag as OT if: the name has "(OT)" or "OT" written next to it, or if it has a green highlight/background. For ANY overtime person, append "|OT" to their string (e.g. "James Vanaria|101|OT" or "James Vanaria|OT"). Do NOT miss green-colored names — this is the primary way overtime is indicated on these rosters.
 5. Command officers: C1 = Fire Chief, unit_type: "deputy". C2/C3/C4 = Deputy Chiefs, unit_type: "deputy". H1/H2 = special non-vehicle officer positions, unit_type: "other".
 6. Boats, marine units = unit_type: "other". RTV = unit_type: "other". 6A = a pickup truck, unit_type: "other".
