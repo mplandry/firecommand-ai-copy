@@ -28,11 +28,14 @@ function getCurrentShift() {
   return h >= 6 && h < 18 ? 'day' : 'night';
 }
 
+const decodeName = (str) => (str || '').split('|')[0].trim();
+
 function UnitRow({ entry }) {
   const [expanded, setExpanded] = React.useState(false);
   const typeColor = unitTypeColor[entry.unit_type] || unitTypeColor.other;
   const crew = entry.personnel || [];
   const total = entry.personnel_count || crew.length || 0;
+  const officerName = decodeName(entry.officer);
 
   return (
     <div className="border border-border/50 rounded-lg overflow-hidden">
@@ -45,9 +48,9 @@ function UnitRow({ entry }) {
             {unitTypeLabel[entry.unit_type] || 'OTH'}
           </span>
           <span className="font-mono font-bold text-sm text-foreground flex-1 truncate">{entry.unit_name}</span>
-          {entry.officer && (
+          {officerName && (
             <span className="text-xs font-mono text-muted-foreground truncate hidden sm:block max-w-[140px]">
-              {entry.officer_rank ? `${entry.officer_rank} ` : ''}{entry.officer}
+              {entry.officer_rank ? `${entry.officer_rank} ` : ''}{officerName}
             </span>
           )}
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
@@ -70,21 +73,21 @@ function UnitRow({ entry }) {
 
       {expanded && (
         <div className="px-4 py-3 bg-card flex flex-col gap-3">
-           {entry.officer && (
+           {officerName && (
              <div className="flex flex-col gap-0.5">
                <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-wider">Officer</span>
                <span className="text-sm font-mono text-foreground">
-                 {entry.officer_rank ? `${entry.officer_rank} ` : ''}{entry.officer}
+                 {entry.officer_rank ? `${entry.officer_rank} ` : ''}{officerName}
                </span>
              </div>
            )}
            {crew.length > 0 && (
              <div className="flex flex-col gap-1.5">
                <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider">Crew</span>
-               {crew.map((name, i) => (
+               {crew.map((p, i) => (
                  <div key={i} className="flex items-center gap-2 py-1 border-b border-border/20 last:border-0">
                    <span className="text-[10px] font-mono text-muted-foreground shrink-0 w-8">FF{i + 1}</span>
-                   <span className="text-sm font-mono text-foreground">{name}</span>
+                   <span className="text-sm font-mono text-foreground">{decodeName(p)}</span>
                  </div>
                ))}
              </div>
