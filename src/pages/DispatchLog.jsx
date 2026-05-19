@@ -5,7 +5,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Radio, Send, Loader2, AlertTriangle, GripVertical } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Mic, GripVertical } from 'lucide-react';
 import RadioInput from '@/components/command/RadioInput';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -32,6 +32,42 @@ export default function DispatchLog() {
   const queryClient = useQueryClient();
   const [editingFields, setEditingFields] = useState({});
   const [newUnitId, setNewUnitId] = useState(null);
+  const [listening, setListening] = useState(null);
+
+  const handleMicInput = (level) => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { alert('Speech recognition not supported in this browser'); return; }
+
+    if (listening === level) return; // already listening
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setListening(level);
+    recognition.onend = () => setListening(null);
+    recognition.onerror = () => setListening(null);
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (transcript) {
+        const lower = transcript.toLowerCase();
+        let detectedType = 'engine';
+        if (/truck|ladder|tiller/.test(lower)) detectedType = 'truck';
+        else if (/rescue/.test(lower)) detectedType = 'rescue';
+        else if (/medic|ems|amb/.test(lower)) detectedType = 'medic';
+        else if (/squad/.test(lower)) detectedType = 'squad';
+        else if (/tanker/.test(lower)) detectedType = 'tanker';
+        else if (/hazmat/.test(lower)) detectedType = 'hazmat';
+        else if (/brush|wildland/.test(lower)) detectedType = 'brush';
+        else if (/deputy|chief|battalion/.test(lower)) detectedType = 'deputy';
+        createUnit.mutate({ unit_name: transcript, unit_type: detectedType, alarm_level: level, status: 'dispatched', assignment: 'unassigned' });
+      }
+    };
+
+    recognition.start();
+  };
 
   const { data: incident } = useQuery({
     queryKey: ['incident', incidentId],
@@ -149,15 +185,27 @@ export default function DispatchLog() {
                     <h2 className="font-mono font-bold text-foreground text-lg">{alarmLabels[level]}</h2>
                     <p className="text-xs text-muted-foreground mt-1">{unitsByAlarm[level].length} units</p>
                   </div>
-                  <Button
-                   size="sm"
-                   variant="outline"
-                   onClick={() => createUnit.mutate({ unit_name: 'New Unit', unit_type: 'engine', alarm_level: level })}
-                   className="gap-1"
-                  >
-                   <Plus className="w-4 h-4" />
-                   Add Unit
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant={listening === level ? 'default' : 'outline'}
+                      onClick={() => handleMicInput(level)}
+                      className="gap-1.5"
+                      disabled={listening !== null && listening !== level}
+                    >
+                      <Mic className={`w-4 h-4 ${listening === level ? 'animate-pulse' : ''}`} />
+                      {listening === level ? 'Listening...' : 'Voice'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => createUnit.mutate({ unit_name: 'New Unit', unit_type: 'engine', alarm_level: level })}
+                      className="gap-1"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Unit
+                    </Button>
+                  </div>
                 </div>
 
                 <Droppable droppableId={level}>
