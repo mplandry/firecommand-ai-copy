@@ -5,16 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Standard box assignment units for a working fire (1st alarm)
-const BOX_ASSIGNMENT_UNITS = [
-  { unit_name: 'Engine 1', unit_type: 'engine', assignment: 'division_a', status: 'dispatched', personnel_count: 4 },
-  { unit_name: 'Engine 2', unit_type: 'engine', assignment: 'division_b', status: 'dispatched', personnel_count: 4 },
-  { unit_name: 'Engine 3', unit_type: 'engine', assignment: 'water_supply', status: 'dispatched', personnel_count: 4 },
-  { unit_name: 'Truck 1', unit_type: 'truck', assignment: 'interior', status: 'dispatched', personnel_count: 4 },
-  { unit_name: 'Rescue 1', unit_type: 'rescue', assignment: 'rit', status: 'dispatched', personnel_count: 4 },
-  { unit_name: 'Medic 1', unit_type: 'medic', assignment: 'medical', status: 'dispatched', personnel_count: 2 },
-  { unit_name: 'Deputy 1', unit_type: 'deputy', assignment: 'unassigned', status: 'dispatched', personnel_count: 1 },
-];
+
 
 export default function NewIncidentDialog({ open, onClose, onCreate }) {
   const [form, setForm] = useState({
@@ -29,16 +20,12 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
     if (!form.address.trim()) return;
     const commandName = form.command_name || form.address.split(' ').slice(0, 2).join(' ') + ' Command';
 
-    // For working fire (1st alarm structure fire), pre-populate box assignment units
-    const isWorkingFire = form.alarm_level === '1st_alarm' && form.incident_type === 'structure_fire';
-    const units = isWorkingFire ? BOX_ASSIGNMENT_UNITS : [];
-
     onCreate({
       ...form,
       command_name: commandName,
       status: 'active',
       started_at: new Date().toISOString(),
-      _template: units.length > 0 ? { units } : null,
+      _template: null,
     });
 
     // Reset
@@ -49,8 +36,6 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
     setForm({ address: '', incident_type: 'structure_fire', alarm_level: '1st_alarm', ic_name: '', command_name: '' });
     onClose();
   };
-
-  const isWorkingFire = form.alarm_level === '1st_alarm' && form.incident_type === 'structure_fire';
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -126,18 +111,7 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
             />
           </div>
 
-          {isWorkingFire && (
-            <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-              <p className="text-[10px] font-mono text-primary font-semibold uppercase tracking-wider mb-1">Box Assignment — Auto-populated</p>
-              <div className="flex flex-wrap gap-1">
-                {BOX_ASSIGNMENT_UNITS.map((u, i) => (
-                  <span key={i} className="text-[9px] font-mono bg-secondary px-1.5 py-0.5 rounded border border-border text-muted-foreground">
-                    {u.unit_name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
 
         <DialogFooter>
