@@ -8,6 +8,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 export default function RITQuickInput({ units, onAssignUnit }) {
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [noMatch, setNoMatch] = useState(false);
   const recognitionRef = useRef(null);
 
   const handleSubmit = (e) => {
@@ -22,6 +23,10 @@ export default function RITQuickInput({ units, onAssignUnit }) {
     if (matched) {
       onAssignUnit(matched.id);
       setInput('');
+      setNoMatch(false);
+    } else {
+      setNoMatch(true);
+      setTimeout(() => setNoMatch(false), 1500);
     }
   };
 
@@ -54,9 +59,9 @@ export default function RITQuickInput({ units, onAssignUnit }) {
       <div className="relative flex-1">
         <Input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => { setInput(e.target.value); setNoMatch(false); }}
           placeholder={isListening ? 'Listening...' : 'Type unit name...'}
-          className="h-8 text-xs"
+          className={`h-8 text-xs ${noMatch ? 'border-red-500 text-red-400' : ''}`}
           autoFocus
         />
       </div>
