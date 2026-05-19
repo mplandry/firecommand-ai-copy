@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2 } from 'lucide-react';
 import NewIncidentDialog from '@/components/command/NewIncidentDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
+import RosterLineup from '@/components/dashboard/RosterLineup';
 import { formatDistanceToNow } from 'date-fns';
 
 const statusColors = {
@@ -150,7 +151,7 @@ export default function IncidentsDashboard() {
         </div>
       </div>
 
-      <div className="px-6 py-6 max-w-6xl mx-auto">
+      <div className="px-6 py-6 max-w-7xl mx-auto">
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-card border border-border rounded-lg p-4">
@@ -186,92 +187,102 @@ export default function IncidentsDashboard() {
           ))}
         </div>
 
-        {/* Incidents List */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20 text-muted-foreground font-mono text-sm">
-            Loading...
-          </div>
-        ) : incidents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Shield className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground font-mono text-sm">No incidents found</p>
-            <Button onClick={() => setShowNew(true)} className="mt-4 gap-2">
-              <Plus className="w-4 h-4" /> Start New Incident
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {incidents.map((incident) => (
-              <div
-                key={incident.id}
-                className="bg-card border border-border rounded-lg p-4 hover:border-primary/30 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <Badge className={statusColors[incident.status] || 'bg-secondary'}>
-                        {statusLabels[incident.status] || incident.status}
-                      </Badge>
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {alarmLabels[incident.alarm_level] || incident.alarm_level || 'Unknown'}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        {typeLabels[incident.incident_type] || incident.incident_type}
-                      </span>
-                    </div>
-                    <h2 className="font-bold font-mono text-foreground text-lg">
-                      {incident.command_name || incident.address}
-                    </h2>
-                    <div className="flex items-center gap-4 mt-1.5 flex-wrap">
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="w-3.5 h-3.5" /> {incident.address}
-                      </span>
-                      {incident.ic_name && (
-                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Shield className="w-3.5 h-3.5" /> IC: {incident.ic_name}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Users className="w-3.5 h-3.5" /> {unitCounts[incident.id] || 0} units
-                      </span>
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="w-3.5 h-3.5" />
-                        {incident.started_at
-                          ? formatDistanceToNow(new Date(incident.started_at), { addSuffix: true })
-                          : 'Unknown'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {incident.status !== 'cleared' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs gap-1"
-                        onClick={() => setClosingIncident(incident)}
-                      >
-                        <Archive className="w-3.5 h-3.5" /> Close
-                      </Button>
-                    )}
-                    <Link to={`/incident/${incident.id}`}>
-                      <Button size="sm" className="text-xs gap-1" variant={incident.status === 'cleared' ? 'outline' : 'default'}>
-                        {incident.status === 'cleared' ? 'View' : 'Open Board'}
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-950/40"
-                      onClick={() => { if (window.confirm('Delete this incident? This cannot be undone.')) deleteIncident.mutate(incident.id); }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
+        {/* Main content: incidents + roster sidebar */}
+        <div className="flex gap-6">
+          {/* Incidents List */}
+          <div className="flex-1 min-w-0">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20 text-muted-foreground font-mono text-sm">
+                Loading...
               </div>
-            ))}
+            ) : incidents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Shield className="w-12 h-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground font-mono text-sm">No incidents found</p>
+                <Button onClick={() => setShowNew(true)} className="mt-4 gap-2">
+                  <Plus className="w-4 h-4" /> Start New Incident
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {incidents.map((incident) => (
+                  <div
+                    key={incident.id}
+                    className="bg-card border border-border rounded-lg p-4 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <Badge className={statusColors[incident.status] || 'bg-secondary'}>
+                            {statusLabels[incident.status] || incident.status}
+                          </Badge>
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {alarmLabels[incident.alarm_level] || incident.alarm_level || 'Unknown'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {typeLabels[incident.incident_type] || incident.incident_type}
+                          </span>
+                        </div>
+                        <h2 className="font-bold font-mono text-foreground text-lg">
+                          {incident.command_name || incident.address}
+                        </h2>
+                        <div className="flex items-center gap-4 mt-1.5 flex-wrap">
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <MapPin className="w-3.5 h-3.5" /> {incident.address}
+                          </span>
+                          {incident.ic_name && (
+                            <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Shield className="w-3.5 h-3.5" /> IC: {incident.ic_name}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Users className="w-3.5 h-3.5" /> {unitCounts[incident.id] || 0} units
+                          </span>
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="w-3.5 h-3.5" />
+                            {incident.started_at
+                              ? formatDistanceToNow(new Date(incident.started_at), { addSuffix: true })
+                              : 'Unknown'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {incident.status !== 'cleared' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs gap-1"
+                            onClick={() => setClosingIncident(incident)}
+                          >
+                            <Archive className="w-3.5 h-3.5" /> Close
+                          </Button>
+                        )}
+                        <Link to={`/incident/${incident.id}`}>
+                          <Button size="sm" className="text-xs gap-1" variant={incident.status === 'cleared' ? 'outline' : 'default'}>
+                            {incident.status === 'cleared' ? 'View' : 'Open Board'}
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-950/40"
+                          onClick={() => { if (window.confirm('Delete this incident? This cannot be undone.')) deleteIncident.mutate(incident.id); }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Today's Roster Sidebar */}
+          <div className="w-80 shrink-0">
+            <RosterLineup />
+          </div>
+        </div>
       </div>
 
       <NewIncidentDialog
