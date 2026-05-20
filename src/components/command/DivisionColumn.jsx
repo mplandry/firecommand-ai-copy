@@ -40,18 +40,18 @@ export default function DivisionColumn({ assignment, units, onEditUnit, onUpdate
   return (
     <div className={`flex flex-col bg-card/80 border border-border/60 rounded-xl overflow-hidden border-t-2 ${cfg.accent} backdrop-blur-sm ${isRITEmpty ? 'animate-flash-contrast' : ''}`}>
       {/* Header */}
-      <div className="px-3 py-2.5 bg-secondary/30 border-b border-border/40 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0 ${isRITEmpty ? 'animate-pulse-red' : ''}`} />
+      <div className="px-3 py-3 bg-secondary/30 border-b border-border/40 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={`w-3 h-3 rounded-full ${cfg.dot} shrink-0 ${isRITEmpty ? 'animate-pulse-red' : ''}`} />
           <div className="min-w-0">
-            <div className={`text-[11px] font-mono font-bold tracking-widest ${isRITEmpty ? 'text-red-400' : 'text-foreground'}`}>{cfg.label}</div>
-            <div className="text-[9px] font-mono tracking-widest text-muted-foreground/60">{isRITEmpty ? 'UNASSIGNED' : cfg.sub}</div>
+            <div className={`text-base font-mono font-bold tracking-widest ${isRITEmpty ? 'text-red-400' : 'text-foreground'}`}>{cfg.label}</div>
+            <div className="text-[11px] font-mono tracking-widest text-muted-foreground/60">{isRITEmpty ? 'UNASSIGNED' : cfg.sub}</div>
           </div>
         </div>
         {isRITEmpty ? (
-          <span className="text-[9px] font-mono font-bold text-red-400 tracking-widest animate-pulse-red">NEEDED</span>
+          <span className="text-xs font-mono font-bold text-red-400 tracking-widest animate-pulse-red">NEEDED</span>
         ) : units.length > 0 && (
-          <span className={`text-xs font-mono font-bold ${cfg.count} bg-secondary rounded-md px-2 py-0.5`}>
+          <span className={`text-sm font-mono font-bold ${cfg.count} bg-secondary rounded-md px-2 py-0.5`}>
             {units.length}
           </span>
         )}
@@ -72,7 +72,7 @@ export default function DivisionColumn({ assignment, units, onEditUnit, onUpdate
                 {isRITEmpty ? (
                   <RITQuickInput units={allUnits} onAssignUnit={handleAssignToRIT} />
                 ) : (
-                  <span className="text-[10px] font-mono text-muted-foreground/30 tracking-wider">CLEAR</span>
+                  <span className="text-xs font-mono text-muted-foreground/30 tracking-wider">CLEAR</span>
                 )}
               </div>
             ) : (
