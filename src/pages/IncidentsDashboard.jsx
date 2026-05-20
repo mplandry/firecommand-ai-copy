@@ -119,13 +119,15 @@ export default function IncidentsDashboard() {
       const { _template, ...incidentData } = data;
       const incident = await base44.entities.Incident.create(incidentData);
       if (_template?.units?.length > 0) {
-        await base44.entities.Unit.bulkCreate(
-          _template.units.map(u => ({
-            ...u,
-            incident_id: incident.id,
-            floor: u.floor || undefined,
-            on_scene_time: new Date().toISOString(),
-          }))
+        await Promise.all(
+          _template.units.map(u =>
+            base44.entities.Unit.create({
+              ...u,
+              incident_id: incident.id,
+              floor: u.floor || undefined,
+              on_scene_time: new Date().toISOString(),
+            })
+          )
         );
       }
       return incident;
