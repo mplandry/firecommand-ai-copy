@@ -69,9 +69,6 @@ function SidePanel({ assignment, units, allUnits, onAssign, onRemove, className 
   const cfg = SIDE_CONFIG[assignment];
   return (
     <div className={`flex flex-col items-center gap-1 p-2 rounded border ${cfg.color} ${className}`}>
-      <span className="text-[9px] font-bold font-mono tracking-widest uppercase opacity-70">
-        {cfg.short} — {cfg.label}
-      </span>
       <UnitPicker
         assignment={assignment}
         units={units}
@@ -159,14 +156,6 @@ export default function StructureTactical({ units, onUpdateUnit }) {
           onRemove={handleRemove}
         />
 
-        {/* Legend */}
-        <div className="flex gap-1.5 flex-wrap justify-center mt-1">
-          {Object.entries(SIDE_CONFIG).map(([key, cfg]) => (
-            <span key={key} className={`text-[8px] font-mono px-1.5 py-0.5 rounded border ${cfg.color}`}>
-              {cfg.short} = {cfg.label}
-            </span>
-          ))}
-        </div>
       </div>
     </div>
   );
