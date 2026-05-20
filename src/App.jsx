@@ -55,6 +55,7 @@ const AuthenticatedApp = () => {
       <Route path="/incident/:incidentId/panel" element={<IncidentPanel />} />
       <Route path="/incident/:incidentId/kiosk" element={<KioskDisplay />} />
       <Route path="/incident/:incidentId/dispatch" element={<DispatchLog />} />
+      <Route path="/contacts" element={<IncidentContacts />} />
       <Route path="/incident/:incidentId/contacts" element={<IncidentContacts />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -95,6 +95,7 @@ export default function IncidentContacts() {
   const queryClient = useQueryClient();
   const [addingTo, setAddingTo] = useState(null); // 'incident' | 'global' | null
   const [editing, setEditing] = useState(null);
+  const isStandalone = !incidentId;
 
   const { data: incident } = useQuery({
     queryKey: ['incident', incidentId],
@@ -141,20 +142,22 @@ export default function IncidentContacts() {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <Link to={`/incident/${incidentId}`}>
+          <Link to={isStandalone ? '/' : `/incident/${incidentId}`}>
             <Button variant="ghost" size="icon" className="h-10 w-10">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-mono font-bold text-foreground">Incident Contacts</h1>
+            <h1 className="text-2xl font-mono font-bold text-foreground">
+              {isStandalone ? 'Contacts' : 'Incident Contacts'}
+            </h1>
             {incident && <p className="text-sm text-muted-foreground font-mono">{incident.address}</p>}
           </div>
         </div>
 
         <div className="space-y-8">
-          {/* Incident-specific contacts */}
-          <section>
+          {/* Incident-specific contacts — only when in an incident context */}
+          {!isStandalone && <section>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 text-accent" />
@@ -186,7 +189,7 @@ export default function IncidentContacts() {
                 )
               )}
             </div>
-          </section>
+          </section>}
 
           {/* Global contacts */}
           <section>
