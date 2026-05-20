@@ -106,7 +106,12 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
             </div>
             <div>
               <Label className="text-xs font-mono">Assignment</Label>
-              <Select value={form.assignment} onValueChange={(v) => setForm({ ...form, assignment: v })}>
+              <Select value={form.assignment} onValueChange={(v) => {
+                const extra = {};
+                if (v === 'roof') extra.floor = 'Roof';
+                else if (form.assignment === 'roof' && v !== 'roof') extra.floor = '';
+                setForm({ ...form, assignment: v, ...extra });
+              }}>
                 <SelectTrigger className="bg-secondary font-mono text-xs">
                   <SelectValue />
                 </SelectTrigger>

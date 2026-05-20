@@ -268,6 +268,14 @@ export default function CommandBoard() {
     const workingZones = ['division_a', 'division_b', 'division_c', 'division_d', 'roof', 'interior', 'ventilation', 'search', 'water_supply', 'medical', 'exposure'];
     const onSceneZones = ['staging'];
 
+    // Auto-set floor when dragged to roof assignment
+    if (newAssignment === 'roof') {
+      updateData.floor = 'Roof';
+    } else if (unit.floor === 'Roof' && newAssignment !== 'roof') {
+      // Clear roof floor when moved away from roof assignment
+      updateData.floor = '';
+    }
+
     if (workingZones.includes(newAssignment)) {
       updateData.status = 'working';
       if (!unit.on_scene_time) updateData.on_scene_time = now;
