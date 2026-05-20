@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 
 // Full Waltham apparatus roster
 const WAL_APPARATUS = [
@@ -36,7 +37,7 @@ const TYPE_COLOR = {
 
 const EMPTY_FORM = { address: '', incident_type: 'structure_fire', alarm_level: '1st_alarm', ic_name: '', command_name: '' };
 
-export default function NewIncidentDialog({ open, onClose, onCreate }) {
+export default function NewIncidentDialog({ open, onClose, onCreate, isCreating = false, createError = null }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [selectedUnits, setSelectedUnits] = useState([]);
 
@@ -73,8 +74,8 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-card border-border max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={isCreating ? undefined : handleClose}>
+      <DialogContent className="bg-card border-border max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-mono">New Incident</DialogTitle>
         </DialogHeader>
@@ -196,10 +197,20 @@ export default function NewIncidentDialog({ open, onClose, onCreate }) {
           </div>
         </div>
 
+        {createError && (
+          <p className="text-xs font-mono text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
+            {createError}
+          </p>
+        )}
+
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={!form.address.trim()}>
-            Start Incident
+          <Button variant="outline" onClick={handleClose} disabled={isCreating}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={!form.address.trim() || isCreating}>
+            {isCreating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating…</>
+            ) : (
+              'Start Incident'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -338,6 +338,8 @@ export default function IncidentsDashboard() {
         open={showNew}
         onClose={() => setShowNew(false)}
         onCreate={(data) => createIncident.mutate(data)}
+        isCreating={createIncident.isPending ?? createIncident.isLoading ?? false}
+        createError={createIncident.isError ? 'Failed to create incident — check connection and try again.' : null}
       />
 
       <CloseIncidentDialog
