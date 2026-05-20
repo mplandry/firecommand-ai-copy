@@ -130,11 +130,6 @@ export default function IncidentsDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/contacts">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-              <Phone className="w-4 h-4" /> Contacts
-            </Button>
-          </Link>
           <Link to="/roster">
             <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
               <BookUser className="w-4 h-4" /> Roster
@@ -256,6 +251,11 @@ export default function IncidentsDashboard() {
                           <Link to={`/incident/${incident.id}`}>
                             <Button size="sm" className="text-xs gap-1" variant={incident.status === 'cleared' ? 'outline' : 'default'}>
                               {incident.status === 'cleared' ? 'View' : 'Open Board'}
+                            </Button>
+                          </Link>
+                          <Link to={`/incident/${incident.id}/contacts`}>
+                            <Button size="sm" variant="outline" className="text-xs gap-1">
+                              <Phone className="w-3.5 h-3.5" /> Contacts
                             </Button>
                           </Link>
                           <Button
