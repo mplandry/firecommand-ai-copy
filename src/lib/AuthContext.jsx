@@ -1,151 +1,152 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import { Flame, Loader2 } from 'lucide-react';
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
-  const [authError, setAuthError] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+const TOKEN_KEY = 'base44_access_token';
 
-  useEffect(() => {
-    checkAppState();
-  }, []);
+function getStoredToken() {
+  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
 
-  const checkAppState = async () => {
+function storeToken(token) {
+  try { localStorage.setItem(TOKEN_KEY, token); } catch {}
+}
+
+function clearToken() {
+  try { localStorage.removeItem(TOKEN_KEY); } catch {}
+}
+
+// ── Simple login screen ───────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) return;
+    setLoading(true);
+    setError('');
     try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
-        }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
+      const result = await base44.auth.loginViaEmailPassword(email.trim(), password);
+      const token = result?.access_token || result?.token || result;
+      if (token && typeof token === 'string') {
+        storeToken(token);
+        base44.auth.setToken(token);
+        onLogin(token);
+      } else {
+        setError('Login failed — unexpected response. Try again.');
       }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
+    } catch (err) {
+      setError(err?.message || 'Invalid email or password.');
     }
-  };
-
-  const checkUserAuth = async () => {
-    try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-      setAuthChecked(true);
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-      setAuthChecked(true);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
-      }
-    }
-  };
-
-  const logout = (shouldRedirect = true) => {
-    setUser(null);
-    setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
-    }
-  };
-
-  const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    setLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoadingAuth,
-      isLoadingPublicSettings,
-      authError,
-      appPublicSettings,
-      authChecked,
-      logout,
-      navigateToLogin,
-      checkUserAuth,
-      checkAppState
-    }}>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center">
+            <Flame className="w-7 h-7 text-primary" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-mono font-bold text-foreground tracking-wide">FIREGROUND COMMAND</h1>
+            <p className="text-sm text-muted-foreground font-mono mt-1">Sign in to continue</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-mono text-muted-foreground mb-1.5">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full h-10 px-3 rounded-md border border-border bg-secondary text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              autoComplete="email"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-mono text-muted-foreground mb-1.5">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full h-10 px-3 rounded-md border border-border bg-secondary text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              autoComplete="current-password"
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs font-mono text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !email.trim() || !password.trim()}
+            className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-mono font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</> : 'Sign In'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(() => getStoredToken());
+  const [checking, setChecking] = useState(!!getStoredToken());
+
+  // On mount, if we have a stored token validate it's still good
+  useEffect(() => {
+    const stored = getStoredToken();
+    if (!stored) { setChecking(false); return; }
+    base44.auth.setToken(stored);
+    base44.auth.me()
+      .then(() => setChecking(false))
+      .catch(() => {
+        // Token expired or invalid — clear it and show login
+        clearToken();
+        setToken(null);
+        setChecking(false);
+      });
+  }, []);
+
+  const handleLogin = (newToken) => {
+    setToken(newToken);
+  };
+
+  const logout = () => {
+    clearToken();
+    base44.auth.setToken(null);
+    setToken(null);
+  };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+      </div>
+    );
+  }
+
+  if (!token) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  return (
+    <AuthContext.Provider value={{ isAuthenticated: true, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -153,8 +154,6 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
