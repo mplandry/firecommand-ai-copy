@@ -182,5 +182,6 @@ export default function UnitCard({ unit, onEdit }) {
           </div>
         )}
     </div>
+  </div>
   );
 }
