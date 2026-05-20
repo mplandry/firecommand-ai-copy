@@ -11,7 +11,7 @@ const ASSIGNMENTS = [
   'roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'exposure',
 ];
 const ASSIGNMENT_LABELS = {
-  division_a: 'Alpha', division_b: 'Bravo', division_c: 'Charlie', division_d: 'Delta',
+  division_a: 'Div Alpha', division_b: 'Div Bravo', division_c: 'Div Charlie', division_d: 'Div Delta',
   interior: 'Interior', roof: 'Roof', rit: 'RIT', rehab: 'Rehab',
   staging: 'Staging', water_supply: 'Water Supply', ventilation: 'Vent',
   search: 'Search', medical: 'Medical', exposure: 'Exposure', unassigned: 'Unassigned',

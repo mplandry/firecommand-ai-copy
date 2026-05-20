@@ -449,7 +449,7 @@ export default function CommandBoard() {
             const leftSide   = sides[(idx + 1) % 4];
             const rightSide  = sides[(idx + 3) % 4];
 
-            const sideLabel = { division_a: 'A', division_b: 'B', division_c: 'C', division_d: 'D' };
+            const sideLabel = { division_a: 'Alpha', division_b: 'Bravo', division_c: 'Charlie', division_d: 'Delta' };
             const sideColor = {
               division_a: 'text-red-400',
               division_b: 'text-blue-400',

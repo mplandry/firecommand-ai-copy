@@ -15,7 +15,7 @@ import { Flame, Clock, ChevronLeft, ChevronRight, Pause, Play, X, AlertTriangle,
 const SLIDE_DURATION = 12000; // ms per slide
 
 const ASSIGNMENT_LABELS = {
-  division_a: 'DIV A', division_b: 'DIV B', division_c: 'DIV C', division_d: 'DIV D',
+  division_a: 'DIV ALPHA', division_b: 'DIV BRAVO', division_c: 'DIV CHARLIE', division_d: 'DIV DELTA',
   roof: 'ROOF', interior: 'INTERIOR', rit: 'RIT', rehab: 'REHAB',
   water_supply: 'WATER', ventilation: 'VENT', search: 'SEARCH', medical: 'MEDICAL',
   exposure: 'EXPOSURE', staging: 'STAGING', unassigned: 'UNASSIGNED',

@@ -4,10 +4,10 @@ import UnitCard from './UnitCard';
 import RITQuickInput from './RITQuickInput';
 
 const divisionConfig = {
-  division_a:   { label: 'DIVISION A', sub: 'ALPHA',    accent: 'border-t-red-500',    dot: 'bg-red-500',    count: 'text-red-400' },
-  division_b:   { label: 'DIVISION B', sub: 'BRAVO',    accent: 'border-t-blue-500',   dot: 'bg-blue-500',   count: 'text-blue-400' },
-  division_c:   { label: 'DIVISION C', sub: 'CHARLIE',  accent: 'border-t-green-500',  dot: 'bg-green-500',  count: 'text-green-400' },
-  division_d:   { label: 'DIVISION D', sub: 'DELTA',    accent: 'border-t-yellow-500', dot: 'bg-yellow-500', count: 'text-yellow-400' },
+  division_a:   { label: 'DIVISION',   sub: 'ALPHA',    accent: 'border-t-red-500',    dot: 'bg-red-500',    count: 'text-red-400' },
+  division_b:   { label: 'DIVISION',   sub: 'BRAVO',    accent: 'border-t-blue-500',   dot: 'bg-blue-500',   count: 'text-blue-400' },
+  division_c:   { label: 'DIVISION',   sub: 'CHARLIE',  accent: 'border-t-green-500',  dot: 'bg-green-500',  count: 'text-green-400' },
+  division_d:   { label: 'DIVISION',   sub: 'DELTA',    accent: 'border-t-yellow-500', dot: 'bg-yellow-500', count: 'text-yellow-400' },
   roof:         { label: 'ROOF',       sub: 'DIVISION', accent: 'border-t-orange-500', dot: 'bg-orange-500', count: 'text-orange-400' },
   interior:     { label: 'INTERIOR',   sub: 'OPS',      accent: 'border-t-red-400',    dot: 'bg-red-400',    count: 'text-red-400' },
   rit:          { label: 'RIT',        sub: 'IRIC',     accent: 'border-t-red-700',    dot: 'bg-red-700',    count: 'text-red-500' },

@@ -5,8 +5,8 @@ import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 
 const ASSIGNMENT_LABELS = {
-  division_a: 'Division A', division_b: 'Division B',
-  division_c: 'Division C', division_d: 'Division D',
+  division_a: 'Division Alpha', division_b: 'Division Bravo',
+  division_c: 'Division Charlie', division_d: 'Division Delta',
   roof: 'Roof', interior: 'Interior', rit: 'RIT',
   rehab: 'Rehab', water_supply: 'Water Supply',
   ventilation: 'Ventilation', search: 'Search',
