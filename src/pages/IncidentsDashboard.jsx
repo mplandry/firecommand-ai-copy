@@ -116,8 +116,14 @@ export default function IncidentsDashboard() {
 
   const createIncident = useMutation({
     mutationFn: async (data) => {
-      const { _template, ...incidentData } = data;
+      const { _template, ...rawData } = data;
+      // Strip empty strings so the API doesn't complain about empty optional fields
+      const incidentData = Object.fromEntries(
+        Object.entries(rawData).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+      );
+      console.log('[CreateIncident] Sending:', incidentData);
       const incident = await base44.entities.Incident.create(incidentData);
+      console.log('[CreateIncident] Created:', incident);
       if (_template?.units?.length > 0) {
         await Promise.all(
           _template.units.map(u =>
@@ -132,10 +138,14 @@ export default function IncidentsDashboard() {
       }
       return incident;
     },
-    onSuccess: () => {
+    onSuccess: (incident) => {
+      console.log('[CreateIncident] Success, refreshing list');
       queryClient.invalidateQueries({ queryKey: ['incidents-all'] });
       queryClient.invalidateQueries({ queryKey: ['unit-counts'] });
       setShowNew(false);
+    },
+    onError: (error) => {
+      console.error('[CreateIncident] FAILED:', error);
     },
   });
 

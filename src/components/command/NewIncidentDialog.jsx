@@ -62,9 +62,8 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
       started_at: new Date().toISOString(),
       _template: units.length > 0 ? { units } : null,
     });
-
-    setForm(EMPTY_FORM);
-    setSelectedUnits([]);
+    // Note: form is reset when dialog closes (handleClose), not here
+    // so the user can see what they entered while the API call is in flight
   };
 
   const handleClose = () => {
