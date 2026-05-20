@@ -5,7 +5,8 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Pencil, Phone, Mail, Home, FileText, Users, Eye, Heart, Building2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, Phone, Mail, Home, FileText, Users, Eye, Heart, Building2, Camera, X } from 'lucide-react';
+import CameraCapture from '@/components/shared/CameraCapture';
 
 const CATEGORIES = [
   {
@@ -239,6 +240,75 @@ function CategorySection({ categoryKey, contacts, addingTo, setAddingTo, editing
   );
 }
 
+// ── Scene Photos panel ────────────────────────────────────────────────────────
+function ScenePhotos({ incidentId }) {
+  const [photos, setPhotos] = useState([]); // [{ url, name }]
+  const [uploading, setUploading] = useState(false);
+
+  const handleCapture = async (files) => {
+    setUploading(true);
+    try {
+      const uploads = await Promise.all(
+        files.map(f => base44.integrations.Core.UploadFile({ file: f }))
+      );
+      setPhotos(prev => [
+        ...prev,
+        ...uploads.map((u, i) => ({ url: u.file_url, name: files[i].name })),
+      ]);
+    } catch (e) {
+      console.error('Photo upload failed', e);
+    }
+    setUploading(false);
+  };
+
+  const removePhoto = (i) => setPhotos(prev => prev.filter((_, j) => j !== i));
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Camera className="w-4 h-4 text-muted-foreground" />
+          <h2 className="font-mono font-bold text-foreground">Scene Photos</h2>
+          {photos.length > 0 && <span className="text-xs text-muted-foreground">({photos.length})</span>}
+        </div>
+        <CameraCapture
+          label="Take / Upload"
+          multiple
+          onCapture={handleCapture}
+        />
+      </div>
+
+      {uploading && (
+        <p className="text-xs text-muted-foreground font-mono italic mb-2">Uploading…</p>
+      )}
+
+      {photos.length === 0 && !uploading && (
+        <p className="text-sm text-muted-foreground italic">
+          No photos yet. Snap ID cards, insurance cards, or scene documentation.
+        </p>
+      )}
+
+      {photos.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {photos.map((p, i) => (
+            <div key={i} className="relative w-28 h-28 rounded-lg overflow-hidden border border-border group">
+              <a href={p.url} target="_blank" rel="noreferrer">
+                <img src={p.url} alt={p.name} className="w-full h-full object-cover" />
+              </a>
+              <button
+                onClick={() => removePhoto(i)}
+                className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function IncidentContacts() {
   const { incidentId } = useParams();
   const queryClient = useQueryClient();
@@ -295,6 +365,8 @@ export default function IncidentContacts() {
         </div>
 
         <div className="space-y-8">
+          <ScenePhotos incidentId={incidentId} />
+
           {CATEGORIES.map(cat => (
             <CategorySection
               key={cat.key}

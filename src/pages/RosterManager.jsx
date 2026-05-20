@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CameraCapture from '@/components/shared/CameraCapture';
 
 const UNIT_TYPES = ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'];
 
@@ -461,20 +462,30 @@ Scan every unit on every page. Return all of them.`,
         </button>
       </div>
       <div className="p-3 space-y-3">
-        {/* Drop zone — always visible so user can add more photos */}
-        <div
-          className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-          onClick={() => fileInputRef.current?.click()}
-          onDrop={e => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
-          onDragOver={e => e.preventDefault()}
-        >
-          <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
-          <p className="text-sm font-mono text-foreground font-semibold">
-            {imageFiles.length === 0 ? 'Drop roster photos or tap to browse' : 'Add more pages'}
-          </p>
-          <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Select multiple pages at once or add one by one</p>
-          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
-            onChange={e => handleFiles(e.target.files)} />
+        {/* Capture options */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* Take photo with camera */}
+          <CameraCapture
+            label={imageFiles.length === 0 ? 'Take Photo' : 'Add Page'}
+            multiple
+            variant="tile"
+            onCapture={handleFiles}
+          />
+          {/* Upload from files */}
+          <div
+            className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-lg p-5 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+            onDrop={e => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
+            onDragOver={e => e.preventDefault()}
+          >
+            <Upload className="w-6 h-6 text-muted-foreground" />
+            <p className="text-sm font-mono font-semibold text-foreground">
+              {imageFiles.length === 0 ? 'Upload Photo' : 'Add More'}
+            </p>
+            <p className="text-[10px] font-mono text-muted-foreground">Browse or drag files</p>
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={e => handleFiles(e.target.files)} />
+          </div>
         </div>
 
         {/* Previews */}

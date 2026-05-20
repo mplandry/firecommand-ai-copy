@@ -4,10 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone } from 'lucide-react';
+import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2 } from 'lucide-react';
 import NewIncidentDialog from '@/components/command/NewIncidentDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import RosterLineup from '@/components/dashboard/RosterLineup';
+import CameraCapture from '@/components/shared/CameraCapture';
 import { formatDistanceToNow } from 'date-fns';
 
 const statusColors = {
@@ -48,7 +49,41 @@ export default function IncidentsDashboard() {
   const [showNew, setShowNew] = useState(false);
   const [closingIncident, setClosingIncident] = useState(null);
   const [filter, setFilter] = useState('active');
+  const [quickPhotos, setQuickPhotos] = useState([]); // captured but not yet attached
+  const [attachingPhoto, setAttachingPhoto] = useState(null); // { file, preview }
+  const [uploading, setUploading] = useState(false);
+  const [savedNotice, setSavedNotice] = useState('');
   const queryClient = useQueryClient();
+
+  const activeIncidents = [];  // will be populated from query below
+
+  const handleQuickPhoto = (files) => {
+    if (!files.length) return;
+    const file = files[0];
+    const preview = URL.createObjectURL(file);
+    setAttachingPhoto({ file, preview });
+  };
+
+  const savePhotoToIncident = async (incidentId) => {
+    if (!attachingPhoto) return;
+    setUploading(true);
+    try {
+      const upload = await base44.integrations.Core.UploadFile({ file: attachingPhoto.file });
+      await base44.entities.Contact.create({
+        incident_id: incidentId,
+        category: 'photo',
+        name: `Quick Photo — ${new Date().toLocaleTimeString()}`,
+        notes: upload.file_url,
+      });
+      setSavedNotice('Photo saved to incident.');
+      setTimeout(() => setSavedNotice(''), 3000);
+    } catch (e) {
+      setSavedNotice('Upload failed — try again.');
+      setTimeout(() => setSavedNotice(''), 3000);
+    }
+    setUploading(false);
+    setAttachingPhoto(null);
+  };
 
   const { data: incidents = [], isLoading } = useQuery({
     queryKey: ['incidents-all', filter],
@@ -61,6 +96,11 @@ export default function IncidentsDashboard() {
         return base44.entities.Incident.filter({ status: 'cleared' }, '-created_date', 50);
       }
     },
+  });
+
+  const { data: activeIncidentList = [] } = useQuery({
+    queryKey: ['incidents-active'],
+    queryFn: () => base44.entities.Incident.filter({ status: 'active' }, '-created_date'),
   });
 
   const { data: unitCounts = {} } = useQuery({
@@ -304,6 +344,103 @@ export default function IncidentsDashboard() {
         onClose={() => setClosingIncident(null)}
         onConfirm={(notes) => closeIncident.mutate({ id: closingIncident.id, notes })}
       />
+
+      {/* ── Floating quick-camera FAB ── */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {savedNotice && (
+          <div className="absolute bottom-20 right-0 bg-card border border-border rounded-lg px-4 py-2.5 text-xs font-mono text-foreground shadow-lg flex items-center gap-2 whitespace-nowrap">
+            <Check className="w-3.5 h-3.5 text-green-400" /> {savedNotice}
+          </div>
+        )}
+        <div className="relative">
+          <input
+            type="file"
+            id="fab-camera-input"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length) handleQuickPhoto(files);
+              e.target.value = '';
+            }}
+          />
+          <button
+            onClick={() => {
+              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+              if (isMobile) {
+                document.getElementById('fab-camera-input').click();
+              } else {
+                document.getElementById('fab-camera-input').click();
+              }
+            }}
+            className="w-16 h-16 rounded-full bg-primary shadow-2xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all border-4 border-background"
+            title="Quick Photo"
+          >
+            <Camera className="w-7 h-7 text-primary-foreground" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Photo attach modal ── */}
+      {attachingPhoto && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/40">
+              <span className="text-sm font-mono font-bold text-foreground">Attach Photo</span>
+              <button onClick={() => setAttachingPhoto(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Preview */}
+            <div className="p-4">
+              <img
+                src={attachingPhoto.preview}
+                alt="Captured"
+                className="w-full max-h-48 object-contain rounded-lg border border-border bg-secondary/20"
+              />
+            </div>
+
+            {/* Attach to incident */}
+            <div className="px-4 pb-4 space-y-2">
+              <p className="text-xs font-mono text-muted-foreground">Attach to an active incident:</p>
+              {activeIncidentList.length === 0 ? (
+                <p className="text-xs font-mono text-muted-foreground italic">No active incidents.</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {activeIncidentList.map(inc => (
+                    <button
+                      key={inc.id}
+                      onClick={() => savePhotoToIncident(inc.id)}
+                      disabled={uploading}
+                      className="w-full text-left px-3 py-2.5 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors font-mono text-sm flex items-center justify-between gap-2"
+                    >
+                      <span className="font-semibold text-foreground truncate">
+                        {inc.command_name || inc.address}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {inc.address !== (inc.command_name || inc.address) ? inc.address : ''}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {uploading && (
+                <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground py-1">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+                </div>
+              )}
+              <button
+                onClick={() => setAttachingPhoto(null)}
+                className="w-full text-center text-xs font-mono text-muted-foreground hover:text-foreground pt-1"
+              >
+                Discard photo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
