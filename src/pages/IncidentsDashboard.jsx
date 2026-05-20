@@ -353,32 +353,26 @@ export default function IncidentsDashboard() {
           </div>
         )}
         <div className="relative">
+          {/* Use <label> so iOS Safari fires the input directly — programmatic .click() is blocked */}
           <input
             type="file"
             id="fab-camera-input"
             accept="image/*"
             capture="environment"
-            className="hidden"
+            className="sr-only"
             onChange={(e) => {
               const files = Array.from(e.target.files || []);
               if (files.length) handleQuickPhoto(files);
               e.target.value = '';
             }}
           />
-          <button
-            onClick={() => {
-              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-              if (isMobile) {
-                document.getElementById('fab-camera-input').click();
-              } else {
-                document.getElementById('fab-camera-input').click();
-              }
-            }}
-            className="w-16 h-16 rounded-full bg-primary shadow-2xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all border-4 border-background"
+          <label
+            htmlFor="fab-camera-input"
+            className="w-16 h-16 rounded-full bg-primary shadow-2xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all border-4 border-background cursor-pointer"
             title="Quick Photo"
           >
             <Camera className="w-7 h-7 text-primary-foreground" />
-          </button>
+          </label>
         </div>
       </div>
 
