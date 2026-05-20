@@ -60,30 +60,30 @@ export default function FloorTracker({ units, onUpdateUnit }) {
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       {/* Header */}
       <button
-        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-secondary/30 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/30 transition-colors"
         onClick={() => setExpanded(e => !e)}
       >
-        <h3 className="text-xs font-bold font-mono tracking-wider text-muted-foreground uppercase">
+        <h3 className="text-sm font-bold font-mono tracking-widest text-foreground uppercase">
           Floor Accountability
         </h3>
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] font-mono text-muted-foreground">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono text-muted-foreground">
             {units.filter(u => u.floor).length} tracked
           </span>
-          {expanded ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </div>
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3">
+        <div className="px-4 pb-4">
           {/* Show all toggle */}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[9px] font-mono text-muted-foreground/50">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-mono text-muted-foreground/50">
               Drag units between floors
             </span>
             <button
               onClick={() => setShowAll(s => !s)}
-              className="text-[9px] font-mono text-primary hover:underline"
+              className="text-xs font-mono text-primary hover:underline"
             >
               {showAll ? 'show fewer' : 'show all floors'}
             </button>
@@ -91,7 +91,7 @@ export default function FloorTracker({ units, onUpdateUnit }) {
 
           <DragDropContext onDragEnd={handleDragEnd}>
             {/* Building cross-section */}
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               {/* Floor labels column */}
               <div className="flex flex-col" style={{ gap: 4 }}>
                 {visibleFloors.map(floor => {
@@ -101,10 +101,10 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                     <div
                       key={floor}
                       className="flex items-center justify-end"
-                      style={{ height: 44 }}
+                      style={{ height: 64 }}
                     >
-                      <span className={`text-[8px] font-mono font-bold tracking-wider pr-1.5 whitespace-nowrap ${
-                        isRoof || isBasement ? 'text-amber-400/70' : 'text-cyan-400/60'
+                      <span className={`text-xs font-mono font-bold tracking-wider pr-2 whitespace-nowrap ${
+                        isRoof || isBasement ? 'text-amber-400/80' : 'text-cyan-400/70'
                       }`}>
                         {floor === '1st Floor' ? '1F' :
                          floor === '2nd Floor' ? '2F' :
@@ -136,7 +136,7 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                         <div
                           ref={provided.innerRef}
                           {...provided.droppableProps}
-                          className={`flex items-center px-1.5 gap-1 transition-colors border-b border-border/30 last:border-b-0 ${
+                          className={`flex items-center px-2 gap-2 transition-colors border-b border-border/30 last:border-b-0 ${
                             snapshot.isDraggingOver
                               ? 'bg-primary/15'
                               : hasMayday
@@ -149,7 +149,7 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                               ? 'bg-secondary/20'
                               : 'bg-secondary/10'
                           }`}
-                          style={{ minHeight: 44 }}
+                          style={{ minHeight: 64 }}
                         >
                           {floorUnits.map((unit, uIdx) => (
                             <Draggable
@@ -163,13 +163,13 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                                   ref={dragProvided.innerRef}
                                   {...dragProvided.draggableProps}
                                   {...dragProvided.dragHandleProps}
-                                  className={`flex items-center gap-0.5 rounded border px-1 py-0.5 text-[9px] font-mono font-semibold cursor-grab active:cursor-grabbing select-none ${
+                                  className={`flex items-center gap-1.5 rounded border px-2 py-1.5 text-xs font-mono font-semibold cursor-grab active:cursor-grabbing select-none ${
                                     dragSnapshot.isDragging
                                       ? 'shadow-lg ring-1 ring-primary opacity-90 bg-card'
                                       : statusColors[unit.status] || 'border-border text-foreground'
                                   } bg-card/80`}
                                 >
-                                  <span>{unitTypeIcons[unit.unit_type] || '🚐'}</span>
+                                  <span className="text-base">{unitTypeIcons[unit.unit_type] || '🚐'}</span>
                                   <span>{unit.unit_name}</span>
                                 </div>
                               )}
@@ -179,7 +179,7 @@ export default function FloorTracker({ units, onUpdateUnit }) {
 
                           {/* Personnel count if any units */}
                           {floorUnits.length > 0 && (
-                            <span className="ml-auto text-[8px] font-mono text-muted-foreground/50 pr-0.5">
+                            <span className="ml-auto text-xs font-mono font-bold text-muted-foreground/60 pr-1">
                               {floorUnits.reduce((s, u) => s + (u.personnel_count || 0), 0)}p
                             </span>
                           )}
@@ -192,8 +192,8 @@ export default function FloorTracker({ units, onUpdateUnit }) {
             </div>
 
             {/* Unassigned / no-floor drop zone */}
-            <div className="mt-2">
-              <div className="text-[8px] font-mono text-muted-foreground/40 mb-1">
+            <div className="mt-3">
+              <div className="text-xs font-mono text-muted-foreground/40 mb-1.5">
                 UNASSIGNED FLOOR — drag here to clear floor
               </div>
               <Droppable droppableId="__none__" direction="horizontal">
@@ -201,7 +201,7 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`flex flex-wrap gap-1 min-h-[36px] rounded border border-dashed p-1.5 transition-colors ${
+                    className={`flex flex-wrap gap-1.5 min-h-[48px] rounded border border-dashed p-2 transition-colors ${
                       snapshot.isDraggingOver ? 'border-primary/60 bg-primary/10' : 'border-border/40'
                     }`}
                   >
@@ -217,11 +217,11 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                             ref={dragProvided.innerRef}
                             {...dragProvided.draggableProps}
                             {...dragProvided.dragHandleProps}
-                            className={`flex items-center gap-0.5 rounded border border-border px-1 py-0.5 text-[9px] font-mono cursor-grab active:cursor-grabbing select-none ${
+                            className={`flex items-center gap-1.5 rounded border border-border px-2 py-1.5 text-xs font-mono cursor-grab active:cursor-grabbing select-none ${
                               dragSnapshot.isDragging ? 'shadow-lg ring-1 ring-primary bg-card' : 'bg-secondary/30 text-muted-foreground'
                             }`}
                           >
-                            <span>{unitTypeIcons[unit.unit_type] || '🚐'}</span>
+                            <span className="text-base">{unitTypeIcons[unit.unit_type] || '🚐'}</span>
                             <span>{unit.unit_name}</span>
                           </div>
                         )}
@@ -229,7 +229,7 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                     ))}
                     {provided.placeholder}
                     {units.filter(u => !u.floor?.trim()).length === 0 && !snapshot.isDraggingOver && (
-                      <span className="text-[8px] font-mono text-muted-foreground/30">all units assigned to a floor</span>
+                      <span className="text-xs font-mono text-muted-foreground/30">all units assigned to a floor</span>
                     )}
                   </div>
                 )}
