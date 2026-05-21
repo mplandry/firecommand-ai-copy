@@ -55,7 +55,7 @@ export default function CommandBoard() {
     },
     placeholderData: () => getCached(incidentId).units || [],
     enabled: !!incidentId,
-    staleTime: 30000,
+    staleTime: 0,
   });
 
   const { data: radioLogs = [] } = useQuery({
@@ -68,7 +68,7 @@ export default function CommandBoard() {
     },
     placeholderData: () => getCached(incidentId).radioLogs || [],
     enabled: !!incidentId,
-    staleTime: 30000,
+    staleTime: 0,
   });
 
   const { data: departments = [] } = useQuery({
