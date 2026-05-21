@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2 } from 'lucide-react';
@@ -54,6 +54,7 @@ export default function IncidentsDashboard() {
   const [uploading, setUploading] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const activeIncidents = [];  // will be populated from query below
 
@@ -125,7 +126,7 @@ export default function IncidentsDashboard() {
       const incident = await base44.entities.Incident.create(incidentData);
       console.log('[CreateIncident] Created:', incident);
       if (_template?.units?.length > 0) {
-        await Promise.all(
+        await Promise.allSettled(
           _template.units.map(u =>
             base44.entities.Unit.create({
               ...u,
@@ -142,6 +143,7 @@ export default function IncidentsDashboard() {
       queryClient.invalidateQueries({ queryKey: ['incidents-all'] });
       queryClient.invalidateQueries({ queryKey: ['unit-counts'] });
       setShowNew(false);
+      navigate(`/incident/${incident.id}`);
     },
     onError: (error) => {
       console.error('[CreateIncident] FAILED:', error);
