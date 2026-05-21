@@ -4,11 +4,11 @@ import UnitCard from './UnitCard';
 import RITQuickInput from './RITQuickInput';
 
 const divisionConfig = {
-  division_a:   { label: 'DIVISION',   sub: 'ALPHA',    accent: 'border-t-red-500',    dot: 'bg-red-500',    count: 'text-red-400' },
-  division_b:   { label: 'DIVISION',   sub: 'BRAVO',    accent: 'border-t-blue-500',   dot: 'bg-blue-500',   count: 'text-blue-400' },
-  division_c:   { label: 'DIVISION',   sub: 'CHARLIE',  accent: 'border-t-green-500',  dot: 'bg-green-500',  count: 'text-green-400' },
-  division_d:   { label: 'DIVISION',   sub: 'DELTA',    accent: 'border-t-yellow-500', dot: 'bg-yellow-500', count: 'text-yellow-400' },
-  roof:         { label: 'ROOF',       sub: 'DIVISION', accent: 'border-t-orange-500', dot: 'bg-orange-500', count: 'text-orange-400' },
+  division_a:   { label: 'ALPHA',      sub: '',         accent: 'border-t-red-500',    dot: 'bg-red-500',    count: 'text-red-400' },
+  division_b:   { label: 'BRAVO',      sub: '',         accent: 'border-t-blue-500',   dot: 'bg-blue-500',   count: 'text-blue-400' },
+  division_c:   { label: 'CHARLIE',    sub: '',         accent: 'border-t-green-500',  dot: 'bg-green-500',  count: 'text-green-400' },
+  division_d:   { label: 'DELTA',      sub: '',         accent: 'border-t-yellow-500', dot: 'bg-yellow-500', count: 'text-yellow-400' },
+  roof:         { label: 'ROOF',       sub: '',         accent: 'border-t-orange-500', dot: 'bg-orange-500', count: 'text-orange-400' },
   interior:     { label: 'INTERIOR',   sub: 'OPS',      accent: 'border-t-red-400',    dot: 'bg-red-400',    count: 'text-red-400' },
   rit:          { label: 'RIT',        sub: 'IRIC',     accent: 'border-t-red-700',    dot: 'bg-red-700',    count: 'text-red-500' },
   rehab:        { label: 'REHAB',      sub: 'SECTOR',   accent: 'border-t-violet-500', dot: 'bg-violet-500', count: 'text-violet-400' },
@@ -44,8 +44,8 @@ export default function DivisionColumn({ assignment, units, onEditUnit, onUpdate
         <div className="flex items-center gap-2.5 min-w-0">
           <div className={`w-3 h-3 rounded-full ${cfg.dot} shrink-0 ${isRITEmpty ? 'animate-pulse-red' : ''}`} />
           <div className="min-w-0">
-            <div className={`text-base font-mono font-bold tracking-widest ${isRITEmpty ? 'text-red-400' : 'text-foreground'}`}>{cfg.label}</div>
-            <div className="text-[11px] font-mono tracking-widest text-muted-foreground/60">{isRITEmpty ? 'UNASSIGNED' : cfg.sub}</div>
+            <div className={`text-xl font-mono font-bold tracking-widest ${isRITEmpty ? 'text-red-400' : 'text-foreground'}`}>{cfg.label}</div>
+            {cfg.sub && <div className="text-[11px] font-mono tracking-widest text-muted-foreground/60">{isRITEmpty ? 'UNASSIGNED' : cfg.sub}</div>}
           </div>
         </div>
         {isRITEmpty ? (
