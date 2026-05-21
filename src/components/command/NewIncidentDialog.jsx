@@ -53,7 +53,7 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
 
     const units = WAL_APPARATUS
       .filter(u => selectedUnits.includes(u.unit_name))
-      .map(u => ({ ...u, assignment: 'unassigned', status: 'dispatched', alarm_level: '1st_alarm' }));
+      .map(u => ({ ...u, assignment: 'unassigned', status: 'dispatched' }));
 
     onCreate({
       ...form,

@@ -131,7 +131,6 @@ export default function IncidentsDashboard() {
               ...u,
               incident_id: incident.id,
               floor: u.floor || undefined,
-              on_scene_time: new Date().toISOString(),
             })
           )
         );
