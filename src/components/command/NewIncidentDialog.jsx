@@ -39,7 +39,7 @@ const EMPTY_FORM = { address: '', incident_type: 'structure_fire', alarm_level: 
 
 export default function NewIncidentDialog({ open, onClose, onCreate, isCreating = false, createError = null }) {
   const [form, setForm] = useState(EMPTY_FORM);
-  const [selectedUnits, setSelectedUnits] = useState([]);
+  const [selectedUnits, setSelectedUnits] = useState(WAL_APPARATUS.map(u => u.unit_name));
 
   const toggleUnit = (unitName) => {
     setSelectedUnits(prev =>
@@ -68,7 +68,7 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
 
   const handleClose = () => {
     setForm(EMPTY_FORM);
-    setSelectedUnits([]);
+    setSelectedUnits(WAL_APPARATUS.map(u => u.unit_name));
     onClose();
   };
 
