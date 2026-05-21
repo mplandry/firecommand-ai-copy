@@ -85,7 +85,7 @@ function parseCSV(text) {
         officer: officer || '',
         personnel,
         personnel_count: !isNaN(parsedCount) ? parsedCount : (personnel.length || null),
-        assignment: 'staging',
+        assignment: 'unassigned',
         status: 'dispatched',
       };
     })
@@ -184,7 +184,7 @@ For each unit found, extract:
 - personnel: array of crew member names listed under that unit
 - personnel_count: total count of personnel on that unit
 
-Deduplicate units that appear on multiple pages (use the most complete record). If no assignment is shown, default to "staging".
+Deduplicate units that appear on multiple pages (use the most complete record). If no assignment is shown, default to "unassigned".
 
 Return ONLY the structured JSON with the units array.`,
       file_urls: fileUrls,
@@ -222,7 +222,7 @@ Return ONLY the structured JSON with the units array.`,
       officer: u.officer || '',
       personnel: u.personnel || [],
       personnel_count: u.personnel_count || (u.personnel?.length) || null,
-      assignment: 'staging',
+      assignment: 'unassigned',
       status: 'dispatched',
       _isNew: !existingUnits.some(e => e.unit_name.toLowerCase() === u.unit_name.toLowerCase()),
     }));
