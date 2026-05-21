@@ -2,8 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Camera, Loader2, CheckCircle2, AlertTriangle, Trash2, Users, Plus, X } from 'lucide-react';
+import { Upload, Camera, Loader2, AlertTriangle, Trash2, Users, Plus, X, FileSpreadsheet } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import CameraCapture from '@/components/shared/CameraCapture';
 
 const UNIT_TYPES = ['engine', 'truck', 'rescue', 'squad', 'deputy', 'medic', 'tanker', 'brush', 'hazmat', 'other'];
 const ASSIGNMENTS = [
@@ -17,6 +18,81 @@ const ASSIGNMENT_LABELS = {
   search: 'Search', medical: 'Medical', exposure: 'Exposure', unassigned: 'Unassigned',
 };
 
+// ── CSV parser ────────────────────────────────────────────────────────────────
+// Auto-detects columns from First Due exports and generic roster CSVs.
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+
+  const delimiter = lines[0].includes('\t') ? '\t' : ',';
+
+  const splitLine = (line) => {
+    const result = [];
+    let cur = '';
+    let inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuote = !inQuote; continue; }
+      if (ch === delimiter && !inQuote) { result.push(cur.trim()); cur = ''; continue; }
+      cur += ch;
+    }
+    result.push(cur.trim());
+    return result;
+  };
+
+  const headers = splitLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+  const col = (...keywords) => headers.findIndex(h => keywords.some(k => h.includes(k)));
+
+  const nameCol    = col('unit', 'apparatus', 'truck', 'engine', 'company');
+  const typeCol    = col('type', 'apparatus_type', 'unit_type');
+  const officerCol = col('officer', 'captain', 'lieutenant', 'supervisor');
+  const countCol   = col('count', 'staffing', 'pax', 'crew_size', 'on_duty', 'personnel');
+  const crewCol    = col('crew', 'members', 'names', 'personnel_names');
+
+  if (nameCol === -1) return null; // can't identify units
+
+  const inferType = (name = '', rawType = '') => {
+    const s = (name + ' ' + rawType).toLowerCase();
+    if (s.includes('truck') || s.includes('ladder') || s.includes('aerial')) return 'truck';
+    if (s.includes('engine') || s.includes('pumper')) return 'engine';
+    if (s.includes('rescue')) return 'rescue';
+    if (s.includes('medic') || s.includes('ems') || s.includes('ambulance')) return 'medic';
+    if (s.includes('squad')) return 'squad';
+    if (s.includes('tanker') || s.includes('tender')) return 'tanker';
+    if (s.includes('brush') || s.includes('wildland')) return 'brush';
+    if (s.includes('hazmat')) return 'hazmat';
+    if (s.includes('deputy') || s.includes('battalion') || s.includes('chief')) return 'deputy';
+    return 'other';
+  };
+
+  return lines.slice(1)
+    .map(line => splitLine(line))
+    .filter(row => row.some(cell => cell.length > 0))
+    .map(row => {
+      const unitName = nameCol    !== -1 ? row[nameCol]    || '' : '';
+      const rawType  = typeCol    !== -1 ? row[typeCol]    || '' : '';
+      const officer  = officerCol !== -1 ? row[officerCol] || '' : '';
+      const rawCount = countCol   !== -1 ? row[countCol]   || '' : '';
+      const rawCrew  = crewCol    !== -1 ? row[crewCol]    || '' : '';
+      if (!unitName) return null;
+      const personnel = rawCrew
+        ? rawCrew.split(/[;|]/).map(n => n.trim()).filter(Boolean)
+        : [];
+      const parsedCount = parseInt(rawCount, 10);
+      return {
+        unit_name: unitName,
+        unit_type: inferType(unitName, rawType),
+        officer: officer || '',
+        personnel,
+        personnel_count: !isNaN(parsedCount) ? parsedCount : (personnel.length || null),
+        assignment: 'staging',
+        status: 'dispatched',
+      };
+    })
+    .filter(Boolean);
+}
+
+// ── EditableUnitRow ───────────────────────────────────────────────────────────
 function EditableUnitRow({ unit, onChange, onRemove }) {
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-1.5 items-center py-1.5 border-b border-border/40 last:border-0">
@@ -58,14 +134,18 @@ function EditableUnitRow({ unit, onChange, onRemove }) {
   );
 }
 
+// ── Main dialog ───────────────────────────────────────────────────────────────
 export default function RosterUploadDialog({ open, onClose, existingUnits, onImportUnits }) {
-  const [images, setImages] = useState([]); // [{ file, preview }]
+  const [mode, setMode] = useState('photo'); // 'photo' | 'csv'
+  const [images, setImages] = useState([]);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedUnits, setParsedUnits] = useState(null);
   const [parseError, setParseError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef(null);
+  const csvInputRef = useRef(null);
 
+  // ── Photo helpers ──
   const addFiles = (files) => {
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
     const newEntries = imageFiles.map(file => ({ file, preview: URL.createObjectURL(file) }));
@@ -79,9 +159,11 @@ export default function RosterUploadDialog({ open, onClose, existingUnits, onImp
     setParsedUnits(null);
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    addFiles(e.dataTransfer.files);
+  const handleCameraCapture = (files) => {
+    const newEntries = files.map(file => ({ file, preview: URL.createObjectURL(file) }));
+    setImages(prev => [...prev, ...newEntries]);
+    setParsedUnits(null);
+    setParseError('');
   };
 
   const handleParse = async () => {
@@ -89,7 +171,6 @@ export default function RosterUploadDialog({ open, onClose, existingUnits, onImp
     setIsParsing(true);
     setParseError('');
 
-    // Upload all images in parallel
     const uploads = await Promise.all(images.map(img => base44.integrations.Core.UploadFile({ file: img.file })));
     const fileUrls = uploads.map(u => u.file_url);
 
@@ -150,6 +231,33 @@ Return ONLY the structured JSON with the units array.`,
     setIsParsing(false);
   };
 
+  // ── CSV helpers ──
+  const handleCSVFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setParseError('');
+    setParsedUnits(null);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const rows = parseCSV(evt.target.result);
+      if (rows === null) {
+        setParseError('Could not find a unit/apparatus name column. Make sure the file has a header row with a column named "Unit", "Apparatus", or similar.');
+        return;
+      }
+      if (rows.length === 0) {
+        setParseError('No units found in this CSV. Check that the file has data rows below the header.');
+        return;
+      }
+      setParsedUnits(rows.map(u => ({
+        ...u,
+        _isNew: !existingUnits.some(e => e.unit_name.toLowerCase() === u.unit_name.toLowerCase()),
+      })));
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // ── Shared ──
   const handleImport = async () => {
     if (!parsedUnits) return;
     setIsImporting(true);
@@ -162,6 +270,7 @@ Return ONLY the structured JSON with the units array.`,
     setImages([]);
     setParsedUnits(null);
     setParseError('');
+    setMode('photo');
     onClose();
   };
 
@@ -176,86 +285,155 @@ Return ONLY the structured JSON with the units array.`,
       <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-mono flex items-center gap-2">
-            <Camera className="w-4 h-4 text-primary" /> Upload Daily Roster Sheet
+            <Camera className="w-4 h-4 text-primary" /> Import Daily Roster
           </DialogTitle>
         </DialogHeader>
 
-        {/* Drop Zone */}
-        <div
-          className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-          onClick={() => fileInputRef.current?.click()}
-          onDrop={handleDrop}
-          onDragOver={e => e.preventDefault()}
-        >
-          <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="font-mono text-sm text-foreground font-semibold">Drop roster photos or click to browse</p>
-          <p className="font-mono text-xs text-muted-foreground mt-1">Multiple pages supported — add as many photos as needed</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            className="hidden"
-            onChange={e => addFiles(e.target.files)}
-          />
+        {/* Mode toggle */}
+        <div className="flex gap-1 p-1 bg-secondary/60 rounded-lg">
+          <button
+            onClick={() => { setMode('photo'); setParsedUnits(null); setParseError(''); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-mono py-1.5 rounded-md transition-colors ${
+              mode === 'photo'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5" /> Photo / Camera
+          </button>
+          <button
+            onClick={() => { setMode('csv'); setParsedUnits(null); setParseError(''); setImages([]); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-mono py-1.5 rounded-md transition-colors ${
+              mode === 'csv'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" /> CSV / Spreadsheet
+          </button>
         </div>
 
-        {/* Image Previews */}
-        {images.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                {images.length} photo{images.length !== 1 ? 's' : ''} queued
-              </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground gap-1 h-7"
+        {/* ── PHOTO MODE ── */}
+        {mode === 'photo' && (
+          <>
+            {/* Drop zone + camera side by side */}
+            <div className="grid grid-cols-[1fr_auto] gap-2 items-stretch">
+              <div
+                className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
                 onClick={() => fileInputRef.current?.click()}
+                onDrop={e => { e.preventDefault(); addFiles(e.dataTransfer.files); }}
+                onDragOver={e => e.preventDefault()}
               >
-                <Plus className="w-3 h-3" /> Add more
-              </Button>
+                <Upload className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
+                <p className="font-mono text-sm text-foreground font-semibold">Drop roster photos or click to browse</p>
+                <p className="font-mono text-xs text-muted-foreground mt-1">Multiple pages supported</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={e => addFiles(e.target.files)}
+                />
+              </div>
+
+              {/* Camera tile */}
+              <div className="w-32">
+                <CameraCapture
+                  onCapture={handleCameraCapture}
+                  label="Take Photo"
+                  multiple={true}
+                  variant="tile"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {images.map((img, idx) => (
-                <div key={idx} className="relative rounded-lg overflow-hidden border border-border aspect-[3/4]">
-                  <img src={img.preview} alt={`Roster ${idx + 1}`} className="w-full h-full object-cover object-top" />
-                  <button
-                    onClick={() => removeImage(idx)}
-                    className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 text-white hover:bg-black/90"
+
+            {/* Image previews */}
+            {images.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                    {images.length} photo{images.length !== 1 ? 's' : ''} queued
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground gap-1 h-7"
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[9px] font-mono text-center py-0.5 text-white">
-                    Page {idx + 1}
-                  </div>
+                    <Plus className="w-3 h-3" /> Add more
+                  </Button>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {images.map((img, idx) => (
+                    <div key={idx} className="relative rounded-lg overflow-hidden border border-border aspect-[3/4]">
+                      <img src={img.preview} alt={`Roster ${idx + 1}`} className="w-full h-full object-cover object-top" />
+                      <button
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 text-white hover:bg-black/90"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[9px] font-mono text-center py-0.5 text-white">
+                        Page {idx + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-            {!parsedUnits && !isParsing && (
-              <Button onClick={handleParse} className="w-full gap-2">
-                <Camera className="w-4 h-4" /> Extract Units from {images.length} Photo{images.length !== 1 ? 's' : ''}
-              </Button>
+                {!parsedUnits && !isParsing && (
+                  <Button onClick={handleParse} className="w-full gap-2">
+                    <Camera className="w-4 h-4" /> Extract Units from {images.length} Photo{images.length !== 1 ? 's' : ''}
+                  </Button>
+                )}
+              </div>
             )}
+
+            {isParsing && (
+              <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground font-mono text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" /> Reading {images.length} roster photo{images.length !== 1 ? 's' : ''} with AI…
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── CSV MODE ── */}
+        {mode === 'csv' && !parsedUnits && (
+          <div className="space-y-3">
+            <div
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+              onClick={() => csvInputRef.current?.click()}
+            >
+              <FileSpreadsheet className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="font-mono text-sm text-foreground font-semibold">Drop a CSV or click to browse</p>
+              <p className="font-mono text-xs text-muted-foreground mt-1">
+                Works with First Due exports and any spreadsheet saved as CSV
+              </p>
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv,.tsv,text/csv"
+                className="hidden"
+                onChange={handleCSVFile}
+              />
+            </div>
+            <div className="bg-secondary/40 rounded-lg px-3 py-2.5 text-[11px] font-mono text-muted-foreground space-y-1">
+              <p className="font-semibold text-foreground">Exporting from First Due:</p>
+              <p>Scheduling → Daily Roster → Export → Download CSV</p>
+              <p className="opacity-70 mt-1">Column headers are auto-detected — Unit, Type, Officer, and Personnel count don't need to match exactly.</p>
+            </div>
           </div>
         )}
 
-        {isParsing && (
-          <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground font-mono text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" /> Reading {images.length} roster photo{images.length !== 1 ? 's' : ''} with AI...
-          </div>
-        )}
-
+        {/* ── Error ── */}
         {parseError && (
           <div className="flex items-center gap-2 bg-red-900/20 border border-red-700/40 rounded-lg px-3 py-2 text-xs font-mono text-red-400">
             <AlertTriangle className="w-4 h-4 shrink-0" /> {parseError}
           </div>
         )}
 
-        {/* Parsed Units Review */}
+        {/* ── Parsed units review (shared by both modes) ── */}
         {parsedUnits && (
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -296,7 +474,7 @@ Return ONLY the structured JSON with the units array.`,
           {parsedUnits && parsedUnits.length > 0 && (
             <Button onClick={handleImport} disabled={isImporting} className="gap-2">
               {isImporting
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing...</>
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing…</>
                 : <><Users className="w-4 h-4" /> Import {parsedUnits.length} Unit{parsedUnits.length !== 1 ? 's' : ''}</>
               }
             </Button>
