@@ -5,7 +5,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Pencil, Phone, Mail, Home, FileText, Users, Eye, Heart, Building2, Camera, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, Phone, Mail, Home, FileText, Users, Eye, Heart, Building2, Camera, X, Ambulance, Car } from 'lucide-react';
 import CameraCapture from '@/components/shared/CameraCapture';
 
 const CATEGORIES = [
@@ -30,13 +30,33 @@ const CATEGORIES = [
     emptyText: 'No insurance info logged.',
   },
   {
+    key: 'injuries',
+    label: 'Injuries',
+    icon: Ambulance,
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/10',
+    roles: ['Civilian', 'Firefighter', 'EMS Personnel', 'Police Officer', 'Occupant', 'Other'],
+    fields: ['name', 'role', 'dob', 'injury_type', 'transported_to', 'phone', 'notes'],
+    emptyText: 'No injuries reported.',
+  },
+  {
+    key: 'vehicle',
+    label: 'Vehicles',
+    icon: Car,
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-500/10',
+    roles: ['Driver', 'Owner', 'Passenger', 'Registered Owner'],
+    fields: ['name', 'role', 'phone', 'dob', 'make', 'model', 'year', 'vin', 'plate', 'plate_state', 'insurance_company', 'policy_number', 'notes'],
+    emptyText: 'No vehicles logged.',
+  },
+  {
     key: 'family',
     label: 'Family / Occupants',
     icon: Users,
     color: 'text-amber-400',
     bgColor: 'bg-amber-500/10',
     roles: ['Spouse', 'Child', 'Parent', 'Sibling', 'Occupant', 'Pet'],
-    fields: ['name', 'role', 'phone', 'notes'],
+    fields: ['name', 'role', 'dob', 'phone', 'notes'],
     emptyText: 'No family or occupant info logged.',
   },
   {
@@ -53,18 +73,31 @@ const CATEGORIES = [
     key: 'relief',
     label: 'Relief / Services',
     icon: Heart,
-    color: 'text-red-400',
-    bgColor: 'bg-red-500/10',
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/10',
     roles: ['Red Cross', 'Salvation Army', 'Utility — Gas', 'Utility — Electric', 'Utility — Water', 'Animal Services', 'Other Agency'],
     fields: ['agency', 'role', 'phone', 'notes'],
     emptyText: 'No relief services logged.',
   },
 ];
 
+const INJURY_TYPES = [
+  'Burns', 'Smoke Inhalation', 'Trauma / Laceration', 'Fracture',
+  'Cardiac', 'Respiratory', 'Eye Injury', 'Head Injury', 'Unknown', 'Other',
+];
+
 function initForm(categoryKey) {
-  return { name: '', agency: '', role: '', phone: '', email: '', policy_number: '', notes: '', category: categoryKey };
+  return {
+    name: '', agency: '', role: '', phone: '', email: '',
+    policy_number: '', notes: '', category: categoryKey,
+    // Injury fields
+    dob: '', injury_type: '', transported_to: '',
+    // Vehicle fields
+    make: '', model: '', year: '', vin: '', plate: '', plate_state: '', insurance_company: '',
+  };
 }
 
+// ── ContactForm ───────────────────────────────────────────────────────────────
 function ContactForm({ categoryKey, initial, onSave, onCancel }) {
   const cat = CATEGORIES.find(c => c.key === categoryKey);
   const [form, setForm] = useState(initial || initForm(categoryKey));
@@ -72,25 +105,32 @@ function ContactForm({ categoryKey, initial, onSave, onCancel }) {
   const setVal = (k) => (v) => setForm(f => ({ ...f, [k]: v }));
 
   const hasField = (f) => cat.fields.includes(f);
-  const nameLabel = hasField('agency') && !hasField('name') ? 'Organization Name' : 'Name';
   const primaryName = hasField('name') ? form.name : form.agency;
   const canSave = primaryName.trim().length > 0;
 
   return (
     <div className="bg-secondary/40 border border-border/60 rounded-lg p-4 space-y-3">
       <div className="grid grid-cols-2 gap-3">
+
+        {/* Name */}
         {hasField('name') && (
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Name *</label>
             <Input value={form.name} onChange={set('name')} placeholder="Full name" className="h-8 text-sm font-mono" />
           </div>
         )}
+
+        {/* Organization */}
         {hasField('agency') && (
           <div className={hasField('name') ? '' : 'col-span-2'}>
-            <label className="text-xs text-muted-foreground mb-1 block">{hasField('name') ? 'Organization' : 'Organization Name *'}</label>
+            <label className="text-xs text-muted-foreground mb-1 block">
+              {hasField('name') ? 'Organization' : 'Organization Name *'}
+            </label>
             <Input value={form.agency} onChange={set('agency')} placeholder="Company or agency" className="h-8 text-sm font-mono" />
           </div>
         )}
+
+        {/* Role */}
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Type / Role</label>
           <Select value={form.role} onValueChange={setVal('role')}>
@@ -104,27 +144,117 @@ function ContactForm({ categoryKey, initial, onSave, onCancel }) {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Phone */}
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Phone</label>
           <Input value={form.phone} onChange={set('phone')} placeholder="Phone number" className="h-8 text-sm font-mono" />
         </div>
+
+        {/* DOB */}
+        {hasField('dob') && (
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Date of Birth</label>
+            <Input
+              type="date"
+              value={form.dob}
+              onChange={set('dob')}
+              className="h-8 text-sm font-mono"
+            />
+          </div>
+        )}
+
+        {/* Email */}
         {hasField('email') && (
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Email</label>
             <Input value={form.email} onChange={set('email')} placeholder="Email address" className="h-8 text-sm font-mono" />
           </div>
         )}
+
+        {/* ── Injury fields ── */}
+        {hasField('injury_type') && (
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Injury Type</label>
+            <Select value={form.injury_type} onValueChange={setVal('injury_type')}>
+              <SelectTrigger className="h-8 text-xs font-mono bg-background">
+                <SelectValue placeholder="Select injury..." />
+              </SelectTrigger>
+              <SelectContent>
+                {INJURY_TYPES.map(t => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {hasField('transported_to') && (
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Transported To</label>
+            <Input value={form.transported_to} onChange={set('transported_to')} placeholder="Hospital / facility" className="h-8 text-sm font-mono" />
+          </div>
+        )}
+
+        {/* ── Vehicle fields ── */}
+        {hasField('make') && (
+          <>
+            <div className="col-span-2">
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2 mt-1 border-t border-border/40 pt-2">
+                Vehicle Info
+              </p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Make</label>
+              <Input value={form.make} onChange={set('make')} placeholder="e.g. Ford" className="h-8 text-sm font-mono" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Model</label>
+              <Input value={form.model} onChange={set('model')} placeholder="e.g. F-150" className="h-8 text-sm font-mono" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Year</label>
+              <Input value={form.year} onChange={set('year')} placeholder="e.g. 2022" className="h-8 text-sm font-mono" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">License Plate</label>
+              <Input value={form.plate} onChange={set('plate')} placeholder="Plate number" className="h-8 text-sm font-mono uppercase" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Plate State</label>
+              <Input value={form.plate_state} onChange={set('plate_state')} placeholder="e.g. MA" className="h-8 text-sm font-mono uppercase" maxLength={2} />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs text-muted-foreground mb-1 block">VIN</label>
+              <Input value={form.vin} onChange={set('vin')} placeholder="Vehicle identification number" className="h-8 text-sm font-mono uppercase" maxLength={17} />
+            </div>
+            <div className="col-span-2">
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2 mt-1 border-t border-border/40 pt-2">
+                Insurance
+              </p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Insurance Company</label>
+              <Input value={form.insurance_company} onChange={set('insurance_company')} placeholder="e.g. State Farm" className="h-8 text-sm font-mono" />
+            </div>
+          </>
+        )}
+
+        {/* Policy number — insurance category + vehicle category */}
         {hasField('policy_number') && (
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Policy Number</label>
             <Input value={form.policy_number} onChange={set('policy_number')} placeholder="Policy #" className="h-8 text-sm font-mono" />
           </div>
         )}
+
+        {/* Notes */}
         <div className="col-span-2">
-          <label className="text-xs text-muted-foreground mb-1 block">Notes / Status</label>
-          <Input value={form.notes} onChange={set('notes')} placeholder="e.g. Evacuated, ETA 20 min, unaccounted..." className="h-8 text-sm font-mono" />
+          <label className="text-xs text-muted-foreground mb-1 block">Notes</label>
+          <Input value={form.notes} onChange={set('notes')} placeholder="e.g. Refused transport, minor laceration, airbags deployed..." className="h-8 text-sm font-mono" />
         </div>
       </div>
+
       <div className="flex gap-2 justify-end">
         <Button size="sm" variant="ghost" onClick={onCancel}>Cancel</Button>
         <Button size="sm" onClick={() => canSave && onSave(form)} disabled={!canSave}>Save</Button>
@@ -133,10 +263,19 @@ function ContactForm({ categoryKey, initial, onSave, onCancel }) {
   );
 }
 
+// ── ContactCard ───────────────────────────────────────────────────────────────
 function ContactCard({ contact, onEdit, onDelete }) {
   const cat = CATEGORIES.find(c => c.key === contact.category) || CATEGORIES[0];
   const displayName = contact.name || contact.agency || '—';
   const initials = displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  const formatDOB = (dob) => {
+    if (!dob) return null;
+    try {
+      const d = new Date(dob + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    } catch { return dob; }
+  };
 
   return (
     <div className="flex items-start gap-3 p-3 bg-secondary/40 border border-border/40 rounded-lg group hover:border-border/70 transition-colors">
@@ -144,6 +283,7 @@ function ContactCard({ contact, onEdit, onDelete }) {
         <span className={`text-xs font-mono font-bold ${cat.color}`}>{initials}</span>
       </div>
       <div className="flex-1 min-w-0">
+        {/* Name + role + org */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono font-semibold text-foreground text-sm">{displayName}</span>
           {contact.role && (
@@ -155,9 +295,45 @@ function ContactCard({ contact, onEdit, onDelete }) {
             </span>
           )}
         </div>
-        {contact.policy_number && (
+
+        {/* DOB */}
+        {contact.dob && (
+          <p className="text-xs text-muted-foreground mt-0.5">DOB: {formatDOB(contact.dob)}</p>
+        )}
+
+        {/* Injury info */}
+        {contact.injury_type && (
+          <p className="text-xs text-red-400 mt-0.5 font-mono">⚕ {contact.injury_type}{contact.transported_to ? ` · Transported to ${contact.transported_to}` : ''}</p>
+        )}
+
+        {/* Vehicle info */}
+        {(contact.make || contact.plate) && (
+          <div className="mt-1 space-y-0.5">
+            {(contact.year || contact.make || contact.model) && (
+              <p className="text-xs text-muted-foreground font-mono">
+                🚗 {[contact.year, contact.make, contact.model].filter(Boolean).join(' ')}
+              </p>
+            )}
+            {contact.plate && (
+              <p className="text-xs text-muted-foreground font-mono">
+                🪪 {contact.plate}{contact.plate_state ? ` (${contact.plate_state.toUpperCase()})` : ''}
+                {contact.vin ? <span className="ml-2 opacity-60">VIN: {contact.vin}</span> : ''}
+              </p>
+            )}
+            {contact.insurance_company && (
+              <p className="text-xs text-muted-foreground font-mono">
+                📋 {contact.insurance_company}{contact.policy_number ? ` · Policy #${contact.policy_number}` : ''}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Standard insurance policy (non-vehicle) */}
+        {!contact.make && contact.policy_number && (
           <p className="text-xs text-muted-foreground mt-0.5">Policy #{contact.policy_number}</p>
         )}
+
+        {/* Phone / email */}
         <div className="flex flex-wrap gap-3 mt-1">
           {contact.phone && (
             <a href={`tel:${contact.phone}`} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
@@ -170,8 +346,10 @@ function ContactCard({ contact, onEdit, onDelete }) {
             </a>
           )}
         </div>
+
         {contact.notes && <p className="text-xs text-muted-foreground/80 italic mt-1">{contact.notes}</p>}
       </div>
+
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onEdit(contact)}>
           <Pencil className="w-3.5 h-3.5" />
@@ -184,6 +362,7 @@ function ContactCard({ contact, onEdit, onDelete }) {
   );
 }
 
+// ── CategorySection ───────────────────────────────────────────────────────────
 function CategorySection({ categoryKey, contacts, addingTo, setAddingTo, editing, setEditing, onCreate, onUpdate, onDelete }) {
   const cat = CATEGORIES.find(c => c.key === categoryKey);
   const Icon = cat.icon;
@@ -240,9 +419,9 @@ function CategorySection({ categoryKey, contacts, addingTo, setAddingTo, editing
   );
 }
 
-// ── Scene Photos panel ────────────────────────────────────────────────────────
+// ── Scene Photos ──────────────────────────────────────────────────────────────
 function ScenePhotos({ incidentId }) {
-  const [photos, setPhotos] = useState([]); // [{ url, name }]
+  const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
 
   const handleCapture = async (files) => {
@@ -271,11 +450,7 @@ function ScenePhotos({ incidentId }) {
           <h2 className="font-mono font-bold text-foreground">Scene Photos</h2>
           {photos.length > 0 && <span className="text-xs text-muted-foreground">({photos.length})</span>}
         </div>
-        <CameraCapture
-          label="Take / Upload"
-          multiple
-          onCapture={handleCapture}
-        />
+        <CameraCapture label="Take / Upload" multiple onCapture={handleCapture} />
       </div>
 
       {uploading && (
@@ -309,6 +484,7 @@ function ScenePhotos({ incidentId }) {
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function IncidentContacts() {
   const { incidentId } = useParams();
   const queryClient = useQueryClient();
@@ -353,7 +529,7 @@ export default function IncidentContacts() {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <Link to={`/incident/${incidentId}`}>
+          <Link to={incidentId ? `/incident/${incidentId}` : '/'}>
             <Button variant="ghost" size="icon" className="h-10 w-10">
               <ArrowLeft className="w-5 h-5" />
             </Button>
