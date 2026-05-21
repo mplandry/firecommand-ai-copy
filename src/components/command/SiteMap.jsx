@@ -61,7 +61,7 @@ export default function SiteMap({ units, isReadOnly }) {
       const next = { ...prev };
       units.forEach((unit, i) => {
         if (!next[unit.id]) {
-          next[unit.id] = { x: i % COLS, y: ROWS - 1 };
+          next[unit.id] = { x: i % 10, y: ROWS - 1 - Math.floor(i / 10) };
         }
       });
       // Clean up removed units
