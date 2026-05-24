@@ -109,7 +109,7 @@ export default function IncidentsDashboard() {
     queryFn: async () => {
       const allUnits = await base44.entities.Unit.list('-created_date', 500);
       return allUnits.reduce((acc, u) => {
-        acc[u.incident_id] = (acc[u.incident_id] || 0) + 1;
+        acc[u.incident_id] = (acc[u.incident_id] || 0) + (u.personnel_count || 1);
         return acc;
       }, {});
     },

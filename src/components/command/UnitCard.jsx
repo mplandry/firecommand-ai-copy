@@ -81,7 +81,7 @@ export default function UnitCard({ unit, onEdit }) {
             <span className={`text-sm font-mono font-bold tracking-widest px-2.5 py-1.5 rounded ${cfg.bg} ${cfg.text} border-2 border-current/20 shrink-0`}>
               {unitTypeLabel[unit.unit_type] || 'OTH'}
             </span>
-            <span className="font-mono font-bold text-2xl text-foreground truncate">
+            <span className="font-mono font-bold text-sm text-foreground truncate">
               {unit.unit_name}
             </span>
           </div>
