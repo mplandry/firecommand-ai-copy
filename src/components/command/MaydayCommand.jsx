@@ -425,58 +425,62 @@ function NotesTab({ notes, onNoteChange, ritTimes, onRitTime }) {
                 background: "#f9fafb",
                 border: "1px solid #e5e7eb",
                 borderRadius: 8,
-                padding: 12,
+                padding: 10,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 8,
               }}
             >
               {["RIT 1", "RIT 2", "RIT 3", "RIT 4"].map((r) => (
                 <div
                   key={r}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    marginBottom: 8,
-                  }}
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
                 >
                   <span
                     style={{
-                      fontSize: 13,
-                      fontWeight: 600,
+                      fontSize: 11,
+                      fontWeight: 700,
                       color: "#374151",
-                      width: 48,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.3,
                     }}
                   >
-                    {r}:
+                    {r}
                   </span>
-                  <input
-                    type='text'
-                    placeholder='HH:MM'
-                    value={ritTimes[r] || ""}
-                    onChange={(e) => onRitTime(r, e.target.value)}
-                    style={{
-                      width: 90,
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      border: "1.5px solid #d1d5db",
-                      fontSize: 13,
-                      fontFamily: "inherit",
-                    }}
-                  />
-                  <button
-                    onClick={() => onRitTime(r, now24().slice(0, 5))}
-                    style={{
-                      padding: "5px 10px",
-                      borderRadius: 6,
-                      border: "1px solid #3b82f6",
-                      background: "#eff6ff",
-                      color: "#1d4ed8",
-                      fontSize: 12,
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Log Now
-                  </button>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <input
+                      type='text'
+                      placeholder='--:--'
+                      value={ritTimes[r] || ""}
+                      onChange={(e) => onRitTime(r, e.target.value)}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        padding: "5px 8px",
+                        borderRadius: 6,
+                        border: "1.5px solid #d1d5db",
+                        fontSize: 13,
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    <button
+                      onClick={() => onRitTime(r, now24().slice(0, 5))}
+                      title="Log current time"
+                      style={{
+                        padding: "5px 7px",
+                        borderRadius: 6,
+                        border: "1px solid #3b82f6",
+                        background: "#eff6ff",
+                        color: "#1d4ed8",
+                        fontSize: 10,
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      NOW
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1118,16 +1122,34 @@ export default function MaydayCommand({ onActiveChange } = {}) {
               {isActive ? "🚨 MAYDAY ACTIVE" : "MAYDAY COMMAND"}
             </div>
             {isActive && (
-              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 2 }}>
-                Declared: {maydayTime} &nbsp;|&nbsp; Elapsed:{" "}
-                <span
+              <div style={{ marginTop: 8 }}>
+                {/* Big elapsed timer */}
+                <div
                   style={{
-                    fontWeight: 700,
+                    fontSize: 36,
+                    fontWeight: 900,
                     fontVariantNumeric: "tabular-nums",
+                    fontFamily: "monospace",
+                    letterSpacing: 2,
+                    lineHeight: 1,
+                    color: "#fff",
                   }}
                 >
                   {formatElapsed(elapsed)}
-                </span>
+                </div>
+                {/* Declared time underneath */}
+                <div
+                  style={{
+                    fontSize: 12,
+                    marginTop: 4,
+                    color: "rgba(255,255,255,0.75)",
+                    fontWeight: 600,
+                    letterSpacing: 0.5,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Declared {maydayTime}
+                </div>
               </div>
             )}
           </div>
