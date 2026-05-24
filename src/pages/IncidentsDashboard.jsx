@@ -126,7 +126,8 @@ export default function IncidentsDashboard() {
       const incident = await base44.entities.Incident.create(incidentData);
       console.log('[CreateIncident] Created:', incident);
       if (_template?.units?.length > 0) {
-        await Promise.allSettled(
+        console.log('[Units] Creating', _template.units.length, 'units for incident', incident.id);
+        const unitResults = await Promise.allSettled(
           _template.units.map(u =>
             base44.entities.Unit.create({
               ...u,
@@ -135,6 +136,14 @@ export default function IncidentsDashboard() {
             })
           )
         );
+        unitResults.forEach((r, i) => {
+          const u = _template.units[i];
+          if (r.status === 'rejected') {
+            console.error('[Unit FAILED]', u?.unit_name, u?.unit_type, r.reason?.message || r.reason);
+          } else {
+            console.log('[Unit OK]', u?.unit_name, '->', r.value?.id);
+          }
+        });
       }
       return incident;
     },
