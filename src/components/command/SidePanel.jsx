@@ -91,7 +91,7 @@ export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, 
           <SiteMap
             units={units}
             isReadOnly={isReadOnly}
-            onMoveUnit={isReadOnly ? null : (unitId, assignment) => onUpdateUnit(unitId, { assignment })}
+            onMoveUnit={isReadOnly ? null : (unit, assignment) => onUpdateUnit(unit, { assignment })}
           />
         )}
       </div>

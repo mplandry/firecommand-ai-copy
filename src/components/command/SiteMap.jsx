@@ -138,6 +138,10 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
   const [dragging, setDragging] = useState(null); // { unitId, offsetX, offsetY }
   const gridRef = useRef(null);
   const prevAssignments = useRef({});
+  const positionsRef = useRef({});
+
+  // Keep a ref so handleMouseUp always reads the latest positions (avoids stale closure)
+  useEffect(() => { positionsRef.current = positions; }, [positions]);
 
   // Mirror tactical board: auto-place/move units when assignment changes
   useEffect(() => {
@@ -205,17 +209,17 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
 
   const handleMouseUp = useCallback(() => {
     if (dragging && onMoveUnit) {
-      const pos = positions[dragging.unitId];
+      const pos = positionsRef.current[dragging.unitId];
       if (pos) {
         const unit = units.find(u => u.id === dragging.unitId);
         const newAssignment = positionToAssignment(pos.x, pos.y);
         if (unit && newAssignment !== (unit.assignment || 'unassigned')) {
-          onMoveUnit(dragging.unitId, newAssignment);
+          onMoveUnit(unit, newAssignment);
         }
       }
     }
     setDragging(null);
-  }, [dragging, positions, units, onMoveUnit]);
+  }, [dragging, units, onMoveUnit]);
 
   // Global listeners while dragging
   useEffect(() => {
