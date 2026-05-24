@@ -51,9 +51,12 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
     if (!form.address.trim()) return;
     const commandName = form.command_name || form.address.split(' ').slice(0, 2).join(' ') + ' Command';
 
-    const units = WAL_APPARATUS
-      .filter(u => selectedUnits.includes(u.unit_name))
-      .map(u => ({ ...u, assignment: 'division_a', status: 'on_scene', on_scene_time: new Date().toISOString() }));
+    const onSceneTime = new Date().toISOString();
+    const units = WAL_APPARATUS.map(u =>
+      selectedUnits.includes(u.unit_name)
+        ? { ...u, assignment: 'division_a', status: 'on_scene', on_scene_time: onSceneTime }
+        : { ...u, assignment: 'unassigned', status: 'dispatched' }
+    );
 
     onCreate({
       ...form,
