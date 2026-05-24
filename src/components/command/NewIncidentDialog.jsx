@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react';
 
 // Full Waltham apparatus roster
 const WAL_APPARATUS = [
-  { unit_name: 'WAL C2',          unit_type: 'deputy',  personnel_count: 1 },
+  { unit_name: 'WAL C2',          unit_type: 'deputy',  personnel_count: 2 },
   { unit_name: 'WAL Engine 1',    unit_type: 'engine',  personnel_count: 4 },
   { unit_name: 'WAL Engine 2',    unit_type: 'engine',  personnel_count: 4 },
   { unit_name: 'WAL Engine 3',    unit_type: 'engine',  personnel_count: 4 },
