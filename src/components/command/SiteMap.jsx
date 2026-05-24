@@ -250,7 +250,7 @@ export default function SiteMap({ units, isReadOnly }) {
             ].map(({ label, x, y }) => (
               <span
                 key={label}
-                className="absolute text-[11px] font-mono font-bold text-amber-400/80 uppercase tracking-widest drop-shadow-sm"
+                className="absolute text-xs font-mono font-bold text-white bg-black/70 border border-white/30 rounded px-2 py-0.5 uppercase tracking-wider whitespace-nowrap z-20"
                 style={{ left: x * GRID_SIZE, top: y * GRID_SIZE }}
               >
                 {label}
