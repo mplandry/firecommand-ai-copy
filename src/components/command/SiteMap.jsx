@@ -19,9 +19,22 @@ const STATUS_COLORS = {
   out_of_service:'border-gray-600  bg-gray-900/80',
 };
 
-const GRID_SIZE = 40; // px per cell
+const GRID_SIZE = 48; // px per cell
 const COLS = 20;
 const ROWS = 16;
+
+// ── Abbreviate unit name for tight label ──────────────────────────────────────
+function shortName(name) {
+  return name
+    .replace(/^WAL\s+/i, '')
+    .replace(/^Engine\s*/i, 'E')
+    .replace(/^Tower\s*/i, 'Twr')
+    .replace(/^Ladder\s*/i, 'Ldr')
+    .replace(/^Rescue\s*/i, 'Rsc')
+    .replace(/^Squad\s*/i, 'Sqd')
+    .replace(/Moody Boat/i, 'M.Boat')
+    .replace(/Central Boat/i, 'C.Boat');
+}
 
 // ── Draggable unit token ──────────────────────────────────────────────────────
 function UnitToken({ unit, position, onDragStart, isReadOnly }) {
@@ -29,16 +42,16 @@ function UnitToken({ unit, position, onDragStart, isReadOnly }) {
   return (
     <div
       className={`absolute flex flex-col items-center cursor-${isReadOnly ? 'default' : 'grab'} select-none z-10`}
-      style={{ left: position.x * GRID_SIZE, top: position.y * GRID_SIZE, width: GRID_SIZE, height: GRID_SIZE }}
+      style={{ left: position.x * GRID_SIZE + 2, top: position.y * GRID_SIZE + 2, width: GRID_SIZE - 4, height: GRID_SIZE + 4 }}
       onMouseDown={isReadOnly ? undefined : (e) => onDragStart(e, unit.id)}
       onTouchStart={isReadOnly ? undefined : (e) => onDragStart(e, unit.id)}
       title={`${unit.unit_name} — ${unit.status}`}
     >
-      <div className={`w-8 h-8 rounded-md border-2 ${colorClass} flex items-center justify-center text-base leading-none shadow-lg`}>
+      <div className={`w-10 h-10 rounded-md border-2 ${colorClass} flex items-center justify-center text-xl leading-none shadow-lg`}>
         {UNIT_TYPE_ICONS[unit.unit_type] || '🚐'}
       </div>
-      <span className="font-mono text-[8px] text-foreground font-bold leading-none mt-0.5 bg-background/80 px-0.5 rounded truncate max-w-[38px] text-center">
-        {unit.unit_name}
+      <span className="font-mono text-[10px] text-foreground font-bold leading-tight mt-0.5 bg-background/90 px-1 rounded truncate max-w-[44px] text-center">
+        {shortName(unit.unit_name)}
       </span>
     </div>
   );
