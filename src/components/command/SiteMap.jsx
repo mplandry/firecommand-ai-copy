@@ -55,6 +55,32 @@ function shortName(name) {
   return rest ? `${town} ${abbrev}` : town;
 }
 
+// ── Map tactical board assignment → SiteMap grid zone ────────────────────────
+function assignmentToPosition(assignment, index) {
+  const col = index % 3;
+  const row = Math.floor(index / 3);
+  const cx = (v) => Math.min(COLS - 1, Math.max(0, v));
+  const cy = (v) => Math.min(ROWS - 1, Math.max(0, v));
+  switch (assignment) {
+    case 'division_a':   return { x: cx(col),       y: cy(4 + row) };   // Alpha — left side
+    case 'division_b':   return { x: cx(6 + col),   y: cy(row) };       // Bravo — top
+    case 'division_c':   return { x: cx(17 + col),  y: cy(4 + row) };   // Charlie — right side
+    case 'division_d':   return { x: cx(6 + col),   y: cy(13 + row) };  // Delta — bottom
+    case 'roof':         return { x: cx(7 + col),   y: cy(2 + row) };   // Roof — upper center
+    case 'interior':     return { x: cx(8 + col),   y: cy(6 + row) };   // Interior — center
+    case 'rit':          return { x: cx(col),        y: cy(1 + row) };   // RIT — top-left
+    case 'rehab':        return { x: cx(16 + col),  y: cy(13 + row) };  // Rehab — bottom-right
+    case 'staging':      return { x: cx(13 + col),  y: cy(13 + row) };  // Staging — bottom center
+    case 'medical':      return { x: cx(10 + col),  y: cy(11 + row) };  // Medical
+    case 'water_supply': return { x: cx(col),        y: cy(12 + row) };  // Water supply — bottom-left
+    case 'ventilation':  return { x: cx(3 + col),   y: cy(row) };       // Ventilation — top
+    case 'search':       return { x: cx(8 + col),   y: cy(9 + row) };   // Search — lower interior
+    case 'exposure':     return { x: cx(17 + col),  y: cy(row) };       // Exposure — top-right
+    case 'unassigned':   return { x: cx(3 + col),   y: cy(13 + row) };  // Unassigned — bottom staging
+    default:             return { x: cx(col),        y: cy(ROWS - 1 - row) };
+  }
+}
+
 // ── Draggable unit token ──────────────────────────────────────────────────────
 function UnitToken({ unit, position, onDragStart, isReadOnly }) {
   const colorClass = STATUS_COLORS[unit.status] || STATUS_COLORS.dispatched;
@@ -86,20 +112,41 @@ export default function SiteMap({ units, isReadOnly }) {
   const [positions, setPositions] = useState({});
   const [dragging, setDragging] = useState(null); // { unitId, offsetX, offsetY }
   const gridRef = useRef(null);
+  const prevAssignments = useRef({});
 
-  // Initialise unplaced units in a row across the bottom
+  // Mirror tactical board: auto-place/move units when assignment changes
   useEffect(() => {
     setPositions(prev => {
       const next = { ...prev };
-      units.forEach((unit, i) => {
-        if (!next[unit.id]) {
-          next[unit.id] = { x: i % 10, y: ROWS - 1 - Math.floor(i / 10) };
-        }
+
+      // Group units by assignment so we can stagger within each zone
+      const groups = {};
+      units.forEach(u => {
+        const a = u.assignment || 'unassigned';
+        if (!groups[a]) groups[a] = [];
+        groups[a].push(u.id);
       });
+
+      units.forEach((unit) => {
+        const curr = unit.assignment || 'unassigned';
+        const prev2 = prevAssignments.current[unit.id];
+        const idx = groups[curr].indexOf(unit.id);
+
+        if (!next[unit.id] || prev2 !== curr) {
+          // New unit or assignment changed → snap to zone
+          next[unit.id] = assignmentToPosition(curr, idx);
+        }
+        prevAssignments.current[unit.id] = curr;
+      });
+
       // Clean up removed units
       Object.keys(next).forEach(id => {
-        if (!units.find(u => u.id === id)) delete next[id];
+        if (!units.find(u => u.id === id)) {
+          delete next[id];
+          delete prevAssignments.current[id];
+        }
       });
+
       return next;
     });
   }, [units]);
