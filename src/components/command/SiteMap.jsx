@@ -81,6 +81,28 @@ function assignmentToPosition(assignment, index) {
   }
 }
 
+// ── Map SiteMap grid position → tactical board assignment ─────────────────────
+function positionToAssignment(x, y) {
+  // Corners (most specific, check first)
+  if (x <= 2 && y <= 3)  return 'rit';
+  if (x >= 17 && y <= 2) return 'exposure';
+  if (x >= 16 && y >= 12) return 'rehab';
+  if (x <= 2 && y >= 11)  return 'water_supply';
+  // Sides
+  if (y >= 12 && x >= 5 && x <= 15) return 'division_a';
+  if (x <= 3  && y >= 3  && y <= 11) return 'division_b';
+  if (y <= 2  && x >= 4  && x <= 16) return 'division_c';
+  if (x >= 16 && y >= 3  && y <= 11) return 'division_d';
+  // Interior zones
+  if (y >= 2 && y <= 4 && x >= 5 && x <= 15) return 'roof';
+  if (y >= 5 && y <= 8 && x >= 5 && x <= 14) return 'interior';
+  if (y >= 8 && y <= 11 && x >= 6 && x <= 12) return 'search';
+  if (y >= 9 && y <= 12 && x >= 9 && x <= 14) return 'medical';
+  if (y >= 11 && x >= 11 && x <= 15) return 'staging';
+  if (y <= 4 && x >= 3 && x <= 6) return 'ventilation';
+  return 'unassigned';
+}
+
 // ── Draggable unit token ──────────────────────────────────────────────────────
 function UnitToken({ unit, position, onDragStart, isReadOnly }) {
   const colorClass = STATUS_COLORS[unit.status] || STATUS_COLORS.dispatched;
@@ -110,7 +132,7 @@ function snapToGrid(px) {
   return Math.max(0, Math.round(px / GRID_SIZE));
 }
 
-export default function SiteMap({ units, isReadOnly }) {
+export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
   // positions: { [unitId]: { x, y } }
   const [positions, setPositions] = useState({});
   const [dragging, setDragging] = useState(null); // { unitId, offsetX, offsetY }
@@ -181,7 +203,19 @@ export default function SiteMap({ units, isReadOnly }) {
     setPositions(prev => ({ ...prev, [dragging.unitId]: { x, y } }));
   }, [dragging]);
 
-  const handleMouseUp = useCallback(() => setDragging(null), []);
+  const handleMouseUp = useCallback(() => {
+    if (dragging && onMoveUnit) {
+      const pos = positions[dragging.unitId];
+      if (pos) {
+        const unit = units.find(u => u.id === dragging.unitId);
+        const newAssignment = positionToAssignment(pos.x, pos.y);
+        if (unit && newAssignment !== (unit.assignment || 'unassigned')) {
+          onMoveUnit(dragging.unitId, newAssignment);
+        }
+      }
+    }
+    setDragging(null);
+  }, [dragging, positions, units, onMoveUnit]);
 
   // Global listeners while dragging
   useEffect(() => {

@@ -88,7 +88,11 @@ export default function SidePanel({ units, radioLogs, isReadOnly, onUpdateUnit, 
           />
         )}
         {activeTab === 'sitemap' && (
-          <SiteMap units={units} isReadOnly={isReadOnly} />
+          <SiteMap
+            units={units}
+            isReadOnly={isReadOnly}
+            onMoveUnit={isReadOnly ? null : (unitId, assignment) => onUpdateUnit(unitId, { assignment })}
+          />
         )}
       </div>
     </div>
