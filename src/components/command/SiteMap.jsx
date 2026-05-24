@@ -62,10 +62,10 @@ function assignmentToPosition(assignment, index) {
   const cx = (v) => Math.min(COLS - 1, Math.max(0, v));
   const cy = (v) => Math.min(ROWS - 1, Math.max(0, v));
   switch (assignment) {
-    case 'division_a':   return { x: cx(col),       y: cy(4 + row) };   // Alpha — left side
-    case 'division_b':   return { x: cx(6 + col),   y: cy(row) };       // Bravo — top
-    case 'division_c':   return { x: cx(17 + col),  y: cy(4 + row) };   // Charlie — right side
-    case 'division_d':   return { x: cx(6 + col),   y: cy(13 + row) };  // Delta — bottom
+    case 'division_a':   return { x: cx(6 + col),   y: cy(13 + row) };  // Alpha — bottom
+    case 'division_b':   return { x: cx(col),        y: cy(4 + row) };   // Bravo — left
+    case 'division_c':   return { x: cx(6 + col),   y: cy(row) };        // Charlie — top
+    case 'division_d':   return { x: cx(17 + col),  y: cy(4 + row) };   // Delta — right
     case 'roof':         return { x: cx(7 + col),   y: cy(2 + row) };   // Roof — upper center
     case 'interior':     return { x: cx(8 + col),   y: cy(6 + row) };   // Interior — center
     case 'rit':          return { x: cx(col),        y: cy(1 + row) };   // RIT — top-left
@@ -243,10 +243,10 @@ export default function SiteMap({ units, isReadOnly }) {
           {/* Zone labels */}
           <div className="absolute inset-0 pointer-events-none">
             {[
-              { label: 'ALPHA ▶', x: 0,  y: ROWS/2 - 0.5, rotate: false, anchor: 'left'   },
-              { label: '◀ CHARLIE', x: COLS - 4, y: ROWS/2 - 0.5, rotate: false, anchor: 'left' },
-              { label: '▼ BRAVO', x: COLS/2 - 1.5, y: 0.2, rotate: false, anchor: 'left'  },
-              { label: '▲ DELTA', x: COLS/2 - 1.5, y: ROWS - 1.2, rotate: false, anchor: 'left' },
+              { label: '▲ ALPHA',    x: COLS/2 - 2,   y: ROWS - 1.2,    rotate: false, anchor: 'left' },
+              { label: '▼ CHARLIE', x: COLS/2 - 2.5, y: 0.2,           rotate: false, anchor: 'left' },
+              { label: 'BRAVO ▶',  x: 0,             y: ROWS/2 - 0.5,  rotate: false, anchor: 'left' },
+              { label: '◀ DELTA',  x: COLS - 4,      y: ROWS/2 - 0.5,  rotate: false, anchor: 'left' },
             ].map(({ label, x, y }) => (
               <span
                 key={label}
