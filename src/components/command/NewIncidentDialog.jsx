@@ -54,8 +54,8 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
     const onSceneTime = new Date().toISOString();
     const units = WAL_APPARATUS.map(u =>
       selectedUnits.includes(u.unit_name)
-        ? { ...u, assignment: 'division_a', status: 'on_scene', on_scene_time: onSceneTime }
-        : { ...u, assignment: 'unassigned', status: 'dispatched' }
+        ? { ...u, assignment: 'unassigned', status: 'dispatched' }
+        : { ...u, assignment: 'division_a', status: 'on_scene', on_scene_time: onSceneTime }
     );
 
     onCreate({
