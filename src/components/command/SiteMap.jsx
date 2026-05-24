@@ -19,7 +19,7 @@ const STATUS_COLORS = {
   out_of_service:'border-gray-600  bg-gray-900/80',
 };
 
-const GRID_SIZE = 48; // px per cell
+const GRID_SIZE = 64; // px per cell
 const COLS = 20;
 const ROWS = 16;
 
@@ -27,7 +27,7 @@ const ROWS = 16;
 function shortName(name) {
   const parts = name.trim().split(/\s+/);
   const rawTown = parts[0];
-  const town = rawTown.charAt(0).toUpperCase() + rawTown.slice(1).toLowerCase(); // WAL→Wal, CAM→Cam
+  const town = rawTown.toUpperCase(); // WAL→WAL, CAM→CAM
   const rest = parts.slice(1).join(' ');
 
   const typeMap = [
@@ -86,18 +86,21 @@ function UnitToken({ unit, position, onDragStart, isReadOnly }) {
   const colorClass = STATUS_COLORS[unit.status] || STATUS_COLORS.dispatched;
   return (
     <div
-      className={`absolute flex flex-col items-center cursor-${isReadOnly ? 'default' : 'grab'} select-none z-10`}
-      style={{ left: position.x * GRID_SIZE + 2, top: position.y * GRID_SIZE + 2, width: GRID_SIZE - 4, height: GRID_SIZE + 4 }}
+      className={`absolute cursor-${isReadOnly ? 'default' : 'grab'} active:cursor-grabbing select-none z-10`}
+      style={{ left: position.x * GRID_SIZE + 2, top: position.y * GRID_SIZE + 2 }}
       onMouseDown={isReadOnly ? undefined : (e) => onDragStart(e, unit.id)}
       onTouchStart={isReadOnly ? undefined : (e) => onDragStart(e, unit.id)}
       title={`${unit.unit_name} — ${unit.status}`}
     >
-      <div className={`w-10 h-10 rounded-md border-2 ${colorClass} flex items-center justify-center text-xl leading-none shadow-lg`}>
-        {UNIT_TYPE_ICONS[unit.unit_type] || '🚐'}
+      <div
+        className={`rounded-md border-2 ${colorClass} shadow-lg flex flex-col items-center justify-center gap-0.5`}
+        style={{ width: GRID_SIZE - 4, height: GRID_SIZE - 4 }}
+      >
+        <span className="text-xl leading-none">{UNIT_TYPE_ICONS[unit.unit_type] || '🚐'}</span>
+        <span className="font-mono text-xs font-bold text-white leading-none text-center tracking-tight px-1">
+          {shortName(unit.unit_name)}
+        </span>
       </div>
-      <span className="font-mono text-xs text-white font-bold leading-tight mt-0.5 bg-black/80 px-1.5 py-px rounded truncate max-w-[52px] text-center whitespace-nowrap">
-        {shortName(unit.unit_name)}
-      </span>
     </div>
   );
 }
