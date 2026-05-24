@@ -95,7 +95,7 @@ function UnitToken({ unit, position, onDragStart, isReadOnly }) {
       <div className={`w-10 h-10 rounded-md border-2 ${colorClass} flex items-center justify-center text-xl leading-none shadow-lg`}>
         {UNIT_TYPE_ICONS[unit.unit_type] || '🚐'}
       </div>
-      <span className="font-mono text-[10px] text-foreground font-bold leading-tight mt-0.5 bg-background/90 px-1 rounded truncate max-w-[44px] text-center">
+      <span className="font-mono text-xs text-white font-bold leading-tight mt-0.5 bg-black/80 px-1.5 py-px rounded truncate max-w-[52px] text-center whitespace-nowrap">
         {shortName(unit.unit_name)}
       </span>
     </div>
