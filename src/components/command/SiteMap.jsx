@@ -25,15 +25,34 @@ const ROWS = 16;
 
 // ── Abbreviate unit name for tight label ──────────────────────────────────────
 function shortName(name) {
-  return name
-    .replace(/^WAL\s+/i, '')
-    .replace(/^Engine\s*/i, 'E')
-    .replace(/^Tower\s*/i, 'Twr')
-    .replace(/^Ladder\s*/i, 'Ldr')
-    .replace(/^Rescue\s*/i, 'Rsc')
-    .replace(/^Squad\s*/i, 'Sqd')
-    .replace(/Moody Boat/i, 'M.Boat')
-    .replace(/Central Boat/i, 'C.Boat');
+  const parts = name.trim().split(/\s+/);
+  const rawTown = parts[0];
+  const town = rawTown.charAt(0).toUpperCase() + rawTown.slice(1).toLowerCase(); // WAL→Wal, CAM→Cam
+  const rest = parts.slice(1).join(' ');
+
+  const typeMap = [
+    [/^Engine\s*/i,       'E'],
+    [/^Tower\s*/i,        'Tw'],
+    [/^Ladder\s*/i,       'L'],
+    [/^Rescue\s*/i,       'R'],
+    [/^Squad\s*/i,        'Sq'],
+    [/^Moody Boat/i,      'MB'],
+    [/^Central Boat/i,    'CB'],
+    [/^Medic\s*/i,        'M'],
+    [/^Tanker\s*/i,       'Tnk'],
+    [/^Brush\s*/i,        'Br'],
+    [/^Hazmat\s*/i,       'Hz'],
+  ];
+
+  let abbrev = rest;
+  for (const [pattern, short] of typeMap) {
+    if (pattern.test(rest)) {
+      abbrev = rest.replace(pattern, short);
+      break;
+    }
+  }
+
+  return rest ? `${town} ${abbrev}` : town;
 }
 
 // ── Draggable unit token ──────────────────────────────────────────────────────
