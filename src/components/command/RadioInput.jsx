@@ -29,8 +29,7 @@ const SPEECH_FIXES = [
   [/\bE(\d)\b/g, 'Engine $1'],
   [/\bT(\d)\b/g, 'Truck $1'],
   [/\bR(\d)\b/g, 'Rescue $1'],
-  [/\bL(\d)\b/g, 'Truck $1'],        // Ladder → Truck
-  [/\bladder\b/gi, 'Truck'],          // "ladder" misheard
+  [/\bL(\d)\b/g, 'Ladder $1'],       // Keep Ladder as Ladder (not Truck)
   // ICS phonetic alphabet → Division labels
   [/\balpha\s+(?:side|division)?\b/gi, 'Division A'],
   [/\bbravo\s+(?:side|division)?\b/gi, 'Division B'],
@@ -127,7 +126,7 @@ SPEECH-TO-TEXT CONTEXT: This transmission may have come from voice recognition. 
 - "fower" → 4, "niner" → 9, "tree" → 3
 - "may day" → MAYDAY
 - "alpha/bravo/charlie/delta" → Division A/B/C/D
-- "ladder" → Truck, "E1" → Engine 1, "T2" → Truck 2
+- "E1" → Engine 1, "T2" → Truck 2, "L3" → Ladder 3
 - Number words: one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10
 - "en route" may sound like "and route" or "inroute"
 - "working" may sound like "working fire" context clue
@@ -167,7 +166,7 @@ BULK STATUS UPDATE RULES — CRITICAL:
 
 CRITICAL UNIT NAME MATCHING RULES:
 - Always match spoken variants to the closest existing unit name
-- "E-4" / "E4" → "Engine 4"; "T-1" / "T1" → "Truck 1"; "R-2" / "R2" → "Rescue 2"
+- "E-4" / "E4" → "Engine 4"; "T-1" / "T1" → "Truck 1"; "R-2" / "R2" → "Rescue 2"; "L-3" / "L3" → "Ladder 3"
 - Only create a NEW unit (in new_units) if there is clearly NO match in the current units list
 
 ASSIGNMENT MAPPING:
@@ -206,7 +205,7 @@ Respond with this exact JSON structure:
   "to_unit": "exact unit name from list or null",
   "priority": "routine|urgent|emergency|mayday",
   "actions": [{ "unit_name": "exact name", "changes": { "status": null, "assignment": null, "floor": null, "set_air_time": false, "personnel_count": null, "officer": null } }],
-  "new_units": [{ "unit_name": "name", "unit_type": "engine|truck|rescue|squad|deputy|medic|tanker|brush|hazmat|other", "status": "status", "assignment": "unassigned", "notes": null }],
+  "new_units": [{ "unit_name": "name", "unit_type": "engine|truck|ladder|rescue|squad|deputy|medic|tanker|brush|hazmat|other", "status": "status", "assignment": "unassigned", "notes": null }],
   "upgrade_alarm": null,
   "summary": "one sentence summary"
 }`;
@@ -222,6 +221,10 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
   const [listenError, setListenError] = useState('');
   const recognitionRef = useRef(null);
   const isMaydayRef = useRef(isMayday);
+  // manualStopRef: true when the user explicitly tapped the mic button to stop.
+  // When false and recognition ends on its own (iOS timeout / browser cutoff),
+  // we restart automatically so the mic stays live until deliberately stopped.
+  const manualStopRef = useRef(false);
   const [corrections, setCorrections] = useState([]);
 
   useEffect(() => { isMaydayRef.current = isMayday; }, [isMayday]);
@@ -245,7 +248,10 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   useEffect(() => {
-    return () => { if (recognitionRef.current) recognitionRef.current.stop(); };
+    return () => {
+      manualStopRef.current = true;
+      if (recognitionRef.current) recognitionRef.current.stop();
+    };
   }, []);
 
   const startListening = () => {
@@ -254,82 +260,109 @@ export default function RadioInput({ incidentId, units, onTransmission }) {
       return;
     }
     setListenError('');
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.continuous = !isIOS;
-    recognition.maxAlternatives = 3;
+    manualStopRef.current = false;
 
-    // Expanded grammar hints (Chrome only — ignored elsewhere)
-    if ('SpeechGrammarList' in window) {
-      const grammar = `#JSGF V1.0; grammar fire;
-        public <unit> = Engine | Truck | Rescue | Squad | Medic | Tower | Tanker | Hazmat | Car;
-        public <assign> = Division A | Division B | Division C | Division D | interior | roof | RIT | rehab | staging | ventilation | water supply | search | medical | exposure;
-        public <status> = on scene | working | working fire | responding | en route | available | PAR | MAYDAY | out of service | rehab;
-        public <alarm> = first alarm | second alarm | third alarm | 2nd alarm | 3rd alarm | 4th alarm | 5th alarm | strike team | task force;
-        public <fire> = <unit> | <assign> | <status> | <alarm>;`;
-      try {
-        const gl = new window.SpeechGrammarList();
-        gl.addFromString(grammar, 1);
-        recognition.grammars = gl;
-      } catch (e) { /* not supported */ }
-    }
+    // boot() creates and starts a single recognition session.
+    // On iOS, recognition.continuous = false so the browser stops after a pause.
+    // We restart automatically (by calling boot() again from onend) unless the
+    // user manually tapped the stop button (manualStopRef.current = true).
+    const boot = () => {
+      if (manualStopRef.current) return; // user stopped while we were restarting
 
-    recognition.onstart = () => setIsListening(true);
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = true;
+      recognition.continuous = !isIOS; // iOS doesn't support continuous
+      recognition.maxAlternatives = 3;
 
-    recognition.onresult = (event) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-      const FIRE_TERMS = /\b(engine|truck|rescue|medic|squad|tower|division|alarm|scene|working|mayday|rit|rehab|staging|ventilation|interior|roof|water supply|search|medical|exposure|responding|en route|available|par)\b/i;
+      // Expanded grammar hints (Chrome only — ignored elsewhere)
+      if ('SpeechGrammarList' in window) {
+        const grammar = `#JSGF V1.0; grammar fire;
+          public <unit> = Engine | Truck | Ladder | Rescue | Squad | Medic | Tower | Tanker | Hazmat | Car;
+          public <assign> = Division A | Division B | Division C | Division D | interior | roof | RIT | rehab | staging | ventilation | water supply | search | medical | exposure;
+          public <status> = on scene | working | working fire | responding | en route | available | PAR | MAYDAY | out of service | rehab;
+          public <alarm> = first alarm | second alarm | third alarm | 2nd alarm | 3rd alarm | 4th alarm | 5th alarm | strike team | task force;
+          public <fire> = <unit> | <assign> | <status> | <alarm>;`;
+        try {
+          const gl = new window.SpeechGrammarList();
+          gl.addFromString(grammar, 1);
+          recognition.grammars = gl;
+        } catch (e) { /* not supported */ }
+      }
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        // Pick best alternative — prefer one containing known fire terms
-        let best = result[0].transcript;
-        for (let j = 1; j < result.length; j++) {
-          const alt = result[j].transcript;
-          if (FIRE_TERMS.test(alt) && !FIRE_TERMS.test(best)) best = alt;
+      recognition.onstart = () => setIsListening(true);
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        const FIRE_TERMS = /\b(engine|truck|ladder|rescue|medic|squad|tower|division|alarm|scene|working|mayday|rit|rehab|staging|ventilation|interior|roof|water supply|search|medical|exposure|responding|en route|available|par)\b/i;
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          // Pick best alternative — prefer one containing known fire terms
+          let best = result[0].transcript;
+          for (let j = 1; j < result.length; j++) {
+            const alt = result[j].transcript;
+            if (FIRE_TERMS.test(alt) && !FIRE_TERMS.test(best)) best = alt;
+          }
+          if (result.isFinal) finalTranscript += best;
+          else interimTranscript += best;
         }
-        if (result.isFinal) finalTranscript += best;
-        else interimTranscript += best;
-      }
 
-      if (finalTranscript) {
+        if (finalTranscript) {
+          setInterimText('');
+          // Always append to any existing text so multiple utterances
+          // (or iOS restarts) build up into one complete transmission.
+          setMessage(prev => {
+            const base = prev ? (prev.trimEnd() + ' ') : '';
+            return normalizeSpeech(base + finalTranscript);
+          });
+        } else if (interimTranscript) {
+          setInterimText(interimTranscript);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        // 'no-speech' is normal — the browser just didn't hear anything in this
+        // session. onend will fire next and we'll restart if needed.
+        if (event.error === 'no-speech') return;
+        setListenError(event.error === 'not-allowed'
+          ? 'Microphone access denied. Allow mic in browser settings.'
+          : `Mic error: ${event.error}`);
+        setIsListening(false);
+        manualStopRef.current = true; // stop restart loop on real errors
+      };
+
+      recognition.onend = () => {
         setInterimText('');
-        setMessage(prev => {
-          const base = isIOS && prev ? (prev.trimEnd() + ' ') : '';
-          return normalizeSpeech(isIOS ? base + finalTranscript : finalTranscript);
-        });
-      } else if (interimTranscript) {
-        setInterimText(interimTranscript);
+        recognitionRef.current = null;
+
+        if (manualStopRef.current) {
+          // User tapped stop — submit what we have
+          setIsListening(false);
+          setTimeout(() => setAutoSubmitPending(true), 600);
+        } else {
+          // Browser ended on its own (iOS timeout, brief silence, etc.)
+          // Restart silently — mic indicator stays green, no submit yet.
+          setTimeout(boot, 150);
+        }
+      };
+
+      recognitionRef.current = recognition;
+      try {
+        recognition.start();
+      } catch (e) {
+        setListenError('Could not start microphone. Try tapping the mic button again.');
+        setIsListening(false);
+        manualStopRef.current = true;
       }
     };
 
-    recognition.onerror = (event) => {
-      if (event.error === 'no-speech') { setIsListening(false); return; }
-      setListenError(event.error === 'not-allowed'
-        ? 'Microphone access denied. Allow mic in browser settings.'
-        : `Mic error: ${event.error}`);
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      setInterimText('');
-      recognitionRef.current = null;
-      // Auto-submit 600ms after mic stops
-      setTimeout(() => setAutoSubmitPending(true), 600);
-    };
-
-    recognitionRef.current = recognition;
-    try { recognition.start(); }
-    catch (e) {
-      setListenError('Could not start microphone. Try tapping the mic button again.');
-      setIsListening(false);
-    }
+    boot();
   };
 
   const stopListening = () => {
+    manualStopRef.current = true; // signals onend to submit rather than restart
     if (recognitionRef.current) recognitionRef.current.stop();
     setIsListening(false);
     setInterimText('');
