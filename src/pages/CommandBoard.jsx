@@ -155,9 +155,12 @@ export default function CommandBoard() {
       auto_applied: true,
     });
 
+    // Strip WAL prefix so 'WAL Engine 1' matches 'Engine 1' and vice-versa
+    const normalizeUnit = (name) => (name || '').toLowerCase().replace(/^wal\s+/i, '').trim();
+
     if (parsed.actions?.length > 0) {
       for (const action of parsed.actions) {
-        const existingUnit = units.find(u => u.unit_name.toLowerCase() === action.unit_name?.toLowerCase());
+        const existingUnit = units.find(u => normalizeUnit(u.unit_name) === normalizeUnit(action.unit_name));
         if (existingUnit && action.changes) {
           const updateData = {};
           if (action.changes.status) {
@@ -197,7 +200,7 @@ export default function CommandBoard() {
 
     if (parsed.new_units?.length > 0) {
       for (const newUnit of parsed.new_units) {
-        const exists = units.find(u => u.unit_name.toLowerCase() === newUnit.unit_name?.toLowerCase());
+        const exists = units.find(u => normalizeUnit(u.unit_name) === normalizeUnit(newUnit.unit_name));
         if (!exists) {
           const newUnitPayload = {
             incident_id: incidentId,
