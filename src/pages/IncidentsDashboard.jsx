@@ -411,35 +411,40 @@ export default function IncidentsDashboard() {
               </button>
             </div>
 
-            {/* Preview */}
-            <div className="p-4">
+            {/* Preview — compact thumbnail */}
+            <div className="px-4 pt-3 pb-1">
               <img
                 src={attachingPhoto.preview}
                 alt="Captured"
-                className="w-full max-h-48 object-contain rounded-lg border border-border bg-secondary/20"
+                className="w-full max-h-28 object-cover rounded-lg border border-border"
               />
             </div>
 
             {/* Attach to incident */}
             <div className="px-4 pb-4 space-y-2">
-              <p className="text-xs font-mono text-muted-foreground">Attach to an active incident:</p>
+              <p className="text-xs font-mono font-bold text-foreground uppercase tracking-wider pt-2">
+                {activeIncidentList.length === 1 ? 'Save to incident:' : 'Choose incident:'}
+              </p>
               {activeIncidentList.length === 0 ? (
                 <p className="text-xs font-mono text-muted-foreground italic">No active incidents.</p>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="space-y-2 max-h-56 overflow-y-auto">
                   {activeIncidentList.map(inc => (
                     <button
                       key={inc.id}
                       onClick={() => savePhotoToIncident(inc.id)}
                       disabled={uploading}
-                      className="w-full text-left px-3 py-2.5 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors font-mono text-sm flex items-center justify-between gap-2"
+                      className="w-full text-left px-4 py-3 rounded-lg border-2 border-border hover:border-primary hover:bg-primary/10 active:bg-primary/20 transition-colors font-mono flex items-center justify-between gap-2"
                     >
-                      <span className="font-semibold text-foreground truncate">
-                        {inc.command_name || inc.address}
-                      </span>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {inc.address !== (inc.command_name || inc.address) ? inc.address : ''}
-                      </span>
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-sm font-bold text-foreground truncate">
+                          {inc.command_name || inc.address}
+                        </span>
+                        {inc.address !== (inc.command_name || inc.address) && (
+                          <span className="text-xs text-muted-foreground truncate">{inc.address}</span>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-primary shrink-0">ATTACH →</span>
                     </button>
                   ))}
                 </div>

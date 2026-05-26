@@ -7,6 +7,7 @@ import {
   Map,
   Maximize2,
   Siren,
+  Camera,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import ICAccountabilitySummary from "./ICAccountabilitySummary";
@@ -17,6 +18,7 @@ import RadioLogPanel from "./RadioLogPanel";
 import PARCountdownTimer from "./PARCountdownTimer";
 import SiteMap from "./SiteMap";
 import MaydayCommand from "./MaydayCommand";
+import PhotoPanel from "./PhotoPanel";
 
 const TABS = [
   { id: "ic", label: "IC Summary", icon: ShieldCheck },
@@ -24,6 +26,7 @@ const TABS = [
   { id: "par", label: "PAR", icon: CheckCircle },
   { id: "floors", label: "Floors", icon: Layers },
   { id: "sitemap", label: "Site Map", icon: Map },
+  { id: "photos", label: "Photos", icon: Camera },
 ];
 
 export default function SidePanel({
@@ -143,6 +146,9 @@ export default function SidePanel({
                 : (unit, assignment) => onUpdateUnit(unit, { assignment })
             }
           />
+        )}
+        {activeTab === "photos" && (
+          <PhotoPanel isReadOnly={isReadOnly} />
         )}
         {activeTab === "mayday" && (
           <MaydayCommand onActiveChange={setMaydayActive} />
