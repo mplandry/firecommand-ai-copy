@@ -107,11 +107,17 @@ export default function IncidentsDashboard() {
   const { data: unitCounts = {} } = useQuery({
     queryKey: ['unit-counts'],
     queryFn: async () => {
-      const allUnits = await base44.entities.Unit.list('-created_date', 500);
-      return allUnits.reduce((acc, u) => {
-        acc[u.incident_id] = (acc[u.incident_id] || 0) + (u.personnel_count || 1);
-        return acc;
-      }, {});
+      const [allUnits, activeIncs] = await Promise.all([
+        base44.entities.Unit.list('-created_date', 500),
+        base44.entities.Incident.filter({ status: 'active' }),
+      ]);
+      const activeIds = new Set(activeIncs.map(i => i.id));
+      return allUnits
+        .filter(u => activeIds.has(u.incident_id))
+        .reduce((acc, u) => {
+          acc[u.incident_id] = (acc[u.incident_id] || 0) + (u.personnel_count || 1);
+          return acc;
+        }, {});
     },
   });
 
