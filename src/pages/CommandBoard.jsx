@@ -451,6 +451,23 @@ export default function CommandBoard() {
         </div>
       )}
 
+      {/* ── MAYDAY Banner ── */}
+      {units.some(u => u.status === 'mayday') && (
+        <div className="shrink-0 bg-red-600 border-b border-red-700 px-4 py-2 flex items-center gap-3 animate-pulse font-mono font-bold text-white">
+          <span className="text-lg">🚨</span>
+          <span className="tracking-widest text-sm uppercase">MAYDAY ACTIVE</span>
+          <span className="text-red-200 font-normal text-xs">
+            {units.filter(u => u.status === 'mayday').map(u => u.unit_name).join(', ')}
+          </span>
+          <button
+            onClick={() => setShowSidePanel(true)}
+            className="ml-auto text-xs font-bold underline underline-offset-2 text-red-100 hover:text-white whitespace-nowrap"
+          >
+            Open MAYDAY →
+          </button>
+        </div>
+      )}
+
       {/* ── Radio Input Bar ── */}
       {!isReadOnly && (
         <div className="shrink-0 px-3 py-2.5 bg-secondary/40 border-b border-border/50">

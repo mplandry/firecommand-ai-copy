@@ -42,7 +42,7 @@ export default function SidePanel({
   const [maydayActive, setMaydayActive] = useState(false);
   const navigate = useNavigate();
   const { incidentId } = useParams();
-  const { specialUnits } = useDepartment();
+  const { specialUnits, dept } = useDepartment();
 
   // Track the most recent radio log timestamp to reset PAR timer
   const lastRadioLogTime = useMemo(() => {
@@ -160,9 +160,15 @@ export default function SidePanel({
         {activeTab === "photos" && (
           <PhotoPanel isReadOnly={isReadOnly} />
         )}
-        {activeTab === "mayday" && (
-          <MaydayCommand onActiveChange={setMaydayActive} />
-        )}
+        {/* Always mounted to preserve LIPS/checklist state across tab switches */}
+        <div className={activeTab === "mayday" ? "" : "hidden"}>
+          <MaydayCommand
+            onActiveChange={setMaydayActive}
+            units={units}
+            onUpdateUnit={isReadOnly ? null : onUpdateUnit}
+            deptName={dept?.name || 'Fire Department'}
+          />
+        </div>
       </div>
     </div>
   );

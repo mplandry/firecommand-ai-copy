@@ -60,8 +60,9 @@ const NOTES_FIELDS = [
   { id: 12, label: "Heads-Up Display", isHUD: true },
 ];
 
-const UNITS = ["E1", "E2", "E3", "E4", "S5", "R6", "E7", "E8", "L1", "L2"];
-const RIT_UNITS = ["RIT 1", "RIT 2", "RIT 3", "RIT 4", "RIT 5", "RIT 6"];
+// Fallback static lists used only when no incident units are passed in
+const FALLBACK_UNITS = ["E1", "E2", "E3", "E4", "S5", "R6", "E7", "E8", "L1", "L2"];
+const FALLBACK_RIT   = ["RIT 1", "RIT 2", "RIT 3", "RIT 4", "RIT 5", "RIT 6"];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -572,7 +573,14 @@ function BoardTab({
   onFireLocation,
   boardNotes,
   onBoardNotes,
+  incidentUnits = [],
 }) {
+  // Use real incident units if available, else fall back to static list
+  const unitNames = incidentUnits.length > 0
+    ? incidentUnits.filter(u => !['available','out_of_service'].includes(u.status)).map(u => u.unit_name)
+    : FALLBACK_UNITS;
+  const ritNames = incidentUnits.filter(u => u.assignment === 'rit').map(u => u.unit_name);
+  const displayRit = ritNames.length > 0 ? ritNames : FALLBACK_RIT;
   function cellInput(value, onChange, placeholder = "", width = 72) {
     return (
       <input
@@ -671,7 +679,7 @@ function BoardTab({
             </tr>
           </thead>
           <tbody>
-            {UNITS.map((unit) => {
+            {unitNames.map((unit) => {
               const d = unitData[unit] || {};
               return (
                 <tr
@@ -762,7 +770,7 @@ function BoardTab({
             </tr>
           </thead>
           <tbody>
-            {RIT_UNITS.map((rit) => {
+            {displayRit.map((rit) => {
               const d = ritData[rit] || {};
               return (
                 <tr
@@ -979,7 +987,7 @@ function BoardTab({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function MaydayCommand({ onActiveChange } = {}) {
+export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit, deptName = 'Fire Department' } = {}) {
   const [activeTab, setActiveTab] = useState("checklist");
   const [isActive, setIsActive] = useState(false);
   const [maydayTime, setMaydayTime] = useState(null);
@@ -999,6 +1007,8 @@ export default function MaydayCommand({ onActiveChange } = {}) {
   const [fireLocation, setFireLocation] = useState("");
   const [boardNotes, setBoardNotes] = useState("");
   const [showReset, setShowReset] = useState(false);
+  const [showUnitPicker, setShowUnitPicker] = useState(false);
+  const [maydayUnit, setMaydayUnit] = useState(null); // the unit in distress
   const intervalRef = useRef(null);
 
   // ── Timer ──
@@ -1018,13 +1028,35 @@ export default function MaydayCommand({ onActiveChange } = {}) {
 
   // ── Activate MAYDAY ──
   function activateMayday() {
+    setShowUnitPicker(true); // prompt for which unit is in distress
+  }
+
+  function confirmActivate(unit) {
+    setShowUnitPicker(false);
+    setMaydayUnit(unit || null);
     setIsActive(true);
     setMaydayTime(now24());
     setElapsed(0);
+
+    if (unit) {
+      // Mark unit as MAYDAY in the DB
+      onUpdateUnit?.(unit, { status: 'mayday' });
+      // Auto-populate LIPS with last known info
+      const loc = [unit.floor, unit.assignment].filter(Boolean).join(' / ') || 'Unknown';
+      setLips(p => ({
+        ...p,
+        location: p.location || loc,
+        identification: p.identification || unit.unit_name,
+      }));
+    }
   }
 
   // ── Reset ──
   function resetAll() {
+    // Restore mayday unit to on_scene
+    if (maydayUnit) {
+      onUpdateUnit?.(maydayUnit, { status: 'on_scene' });
+    }
     setIsActive(false);
     setMaydayTime(null);
     setElapsed(0);
@@ -1037,6 +1069,7 @@ export default function MaydayCommand({ onActiveChange } = {}) {
     setDownFF({ L: "", I: "", P: "", S: "" });
     setFireLocation("");
     setBoardNotes("");
+    setMaydayUnit(null);
     setShowReset(false);
   }
 
@@ -1074,11 +1107,19 @@ export default function MaydayCommand({ onActiveChange } = {}) {
   // ── Status bar color ──
   const statusBg = isActive ? "#dc2626" : "#1f2937";
 
+  // Units available to select as the MAYDAY unit (on scene / working)
+  const pickableUnits = units.filter(u =>
+    ['on_scene','working','par','dispatched','responding','staging'].includes(u.status)
+  );
+
   return (
     <div
       style={{
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        background: "#fff",
+        background: "#ffffff",
+        color: "#111111",
+        borderRadius: 8,
+        overflow: "hidden",
       }}
     >
       {/* ════ STATUS HEADER ════ */}
@@ -1109,7 +1150,7 @@ export default function MaydayCommand({ onActiveChange } = {}) {
                 textTransform: "uppercase",
               }}
             >
-              Waltham Fire Department — Fire Command AI
+              {deptName} — Fire Command AI
             </div>
             <div
               style={{
@@ -1123,6 +1164,13 @@ export default function MaydayCommand({ onActiveChange } = {}) {
             </div>
             {isActive && (
               <div style={{ marginTop: 8 }}>
+                {maydayUnit && (
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#fca5a5", marginBottom: 4, letterSpacing: 0.3 }}>
+                    ▼ {maydayUnit.unit_name}
+                    {maydayUnit.floor ? ` — Floor ${maydayUnit.floor}` : ''}
+                    {maydayUnit.assignment ? ` / ${maydayUnit.assignment.replace(/_/g,' ').toUpperCase()}` : ''}
+                  </div>
+                )}
                 {/* Big elapsed timer */}
                 <div
                   style={{
@@ -1265,9 +1313,63 @@ export default function MaydayCommand({ onActiveChange } = {}) {
             onFireLocation={setFireLocation}
             boardNotes={boardNotes}
             onBoardNotes={setBoardNotes}
+            incidentUnits={units}
           />
         )}
       </div>
+
+      {/* ════ UNIT PICKER MODAL — shown before MAYDAY activates ════ */}
+      {showUnitPicker && (
+        <div
+          style={{
+            position: "fixed", inset: 0,
+            background: "rgba(0,0,0,.65)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div style={{ background: "#fff", borderRadius: 14, padding: 24, maxWidth: 400, width: "90%", boxShadow: "0 10px 40px rgba(0,0,0,.3)" }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#dc2626", marginBottom: 4 }}>🚨 MAYDAY — Which unit?</div>
+            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>
+              Select the unit declaring MAYDAY, or skip if unknown.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto", marginBottom: 16 }}>
+              {pickableUnits.length > 0 ? pickableUnits.map(u => (
+                <button
+                  key={u.id}
+                  onClick={() => confirmActivate(u)}
+                  style={{
+                    padding: "10px 14px", borderRadius: 8, border: "2px solid #fca5a5",
+                    background: "#fff7f7", cursor: "pointer", textAlign: "left",
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>{u.unit_name}</span>
+                  <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                    {u.floor ? `Floor ${u.floor} · ` : ''}{u.assignment?.replace(/_/g,' ') || u.status}
+                  </span>
+                </button>
+              )) : (
+                <p style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic" }}>No on-scene units found</p>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => confirmActivate(null)}
+                style={{ flex: 1, padding: 12, borderRadius: 8, border: "1.5px solid #d1d5db", background: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", color: "#374151" }}
+              >
+                Skip — Unit Unknown
+              </button>
+              <button
+                onClick={() => setShowUnitPicker(false)}
+                style={{ padding: "12px 16px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#f9fafb", fontWeight: 600, fontSize: 13, cursor: "pointer", color: "#6b7280" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ════ RESET CONFIRM MODAL ════ */}
       {showReset && (
