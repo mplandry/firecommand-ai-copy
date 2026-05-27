@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2, LifeBuoy, LogOut } from 'lucide-react';
+import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2, LifeBuoy, LogOut, MicOff } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useDepartment } from '@/hooks/useDepartment';
 import { ADMIN_EMAIL, SUPPORT_EMAIL, APP_NAME } from '@/lib/appConfig';
@@ -58,8 +58,20 @@ export default function IncidentsDashboard() {
   const [attachingPhoto, setAttachingPhoto] = useState(null); // { file, preview }
   const [uploading, setUploading] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
+  const [micBlocked, setMicBlocked] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  // Request mic permission on dashboard load — before any incident starts
+  React.useEffect(() => {
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        stream.getTracks().forEach(t => t.stop());
+        setMicBlocked(false);
+      })
+      .catch(() => setMicBlocked(true));
+  }, []);
 
   const activeIncidents = [];  // will be populated from query below
 
@@ -191,6 +203,13 @@ export default function IncidentsDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Mic blocked warning */}
+      {micBlocked && (
+        <div className="bg-amber-500/20 border-b border-amber-500/40 px-4 py-2 flex items-center gap-2 text-xs font-mono text-amber-300">
+          <MicOff className="w-4 h-4 shrink-0" />
+          Microphone access is blocked — radio voice input won't work during incidents. Allow mic in your browser settings and reload.
+        </div>
+      )}
       {/* Top Nav */}
       <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
