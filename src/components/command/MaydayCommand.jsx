@@ -588,8 +588,8 @@ function BoardTab({
   onUnitChange,
   ritData,
   onRitChange,
-  downFF,
-  onDownFF,
+  lips,
+  onLipsChange,
   fireLocation,
   onFireLocation,
   boardNotes,
@@ -907,11 +907,11 @@ function BoardTab({
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
         >
           {[
-            ["L", "Location"],
-            ["I", "Identification"],
-            ["P", "Problem"],
-            ["S", "Solution"],
-          ].map(([letter, label]) => (
+            ["L", "Location", "location"],
+            ["I", "Identification", "identification"],
+            ["P", "Problem", "problem"],
+            ["S", "Solution", "solution"],
+          ].map(([letter, label, key]) => (
             <div key={letter}>
               <label
                 style={{
@@ -926,8 +926,8 @@ function BoardTab({
               </label>
               <input
                 type='text'
-                value={downFF[letter] || ""}
-                onChange={(e) => onDownFF(letter, e.target.value)}
+                value={lips?.[key] || ""}
+                onChange={(e) => onLipsChange(key, e.target.value)}
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
@@ -936,6 +936,7 @@ function BoardTab({
                   border: "1.5px solid #fca5a5",
                   fontSize: 13,
                   fontFamily: "inherit",
+                  background: lips?.[key] ? "#fff7f7" : "#fff",
                 }}
               />
             </div>
@@ -1024,7 +1025,6 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
   const [ritTimes, setRitTimes] = useState({});
   const [unitData, setUnitData] = useState({});
   const [ritData, setRitData] = useState({});
-  const [downFF, setDownFF] = useState({ L: "", I: "", P: "", S: "" });
   const [fireLocation, setFireLocation] = useState("");
   const [boardNotes, setBoardNotes] = useState("");
   const [showReset, setShowReset] = useState(false);
@@ -1108,7 +1108,6 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
     setRitTimes({});
     setUnitData({});
     setRitData({});
-    setDownFF({ L: "", I: "", P: "", S: "" });
     setFireLocation("");
     setBoardNotes("");
     setMaydayUnit(null);
@@ -1391,8 +1390,8 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
             onUnitChange={handleUnitChange}
             ritData={ritData}
             onRitChange={handleRitChange}
-            downFF={downFF}
-            onDownFF={(k, v) => setDownFF((p) => ({ ...p, [k]: v }))}
+            lips={lips}
+            onLipsChange={(key, val) => setLips((p) => ({ ...p, [key]: val }))}
             fireLocation={fireLocation}
             onFireLocation={setFireLocation}
             boardNotes={boardNotes}
