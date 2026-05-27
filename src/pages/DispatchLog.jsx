@@ -209,7 +209,7 @@ export default function DispatchLog() {
 
         if (bestMatch && topScore >= 20) {
           // Stage a known unit
-          updateUnit.mutate({ id: bestMatch.id, data: { alarm_level: level, status: 'staging' } });
+          updateUnit.mutate({ id: bestMatch.id, data: { alarm_level: level, status: 'staging', assignment: 'staging' } });
           logUnitDispatch(bestMatch.unit_name, level, null);
         } else {
           // New / mutual aid unit — create as staging
@@ -228,7 +228,7 @@ export default function DispatchLog() {
             unit_type: detectedType,
             alarm_level: level,
             status: 'staging',
-            assignment: 'unassigned',
+            assignment: 'staging',
             is_mutual_aid: MA_TOWNS.test(transcript),
           });
           logUnitDispatch(transcript, level, null);
@@ -704,7 +704,7 @@ export default function DispatchLog() {
                               <button
                                 key={u.id}
                                 onClick={() => {
-                                  updateUnit.mutate({ id: u.id, data: { alarm_level: level, status: 'staging' } });
+                                  updateUnit.mutate({ id: u.id, data: { alarm_level: level, status: 'staging', assignment: 'staging' } });
                                   logUnitDispatch(u.unit_name, level, incident?.address);
                                 }}
                                 className="text-xs font-mono px-2.5 py-1 rounded border border-amber-500/30 bg-amber-500/5 text-amber-400/70 hover:border-amber-500/60 hover:bg-amber-500/15 hover:text-amber-300 transition-colors"
