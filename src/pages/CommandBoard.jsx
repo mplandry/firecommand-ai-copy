@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen, Radio, Pencil } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen, Radio, Pencil, MicOff } from 'lucide-react';
 import { DragDropContext } from '@hello-pangea/dnd';
 import { useTheme } from '@/lib/ThemeContext';
 import IncidentHeader from '@/components/command/IncidentHeader';
@@ -35,7 +35,21 @@ export default function CommandBoard() {
   const [showRosterUpload, setShowRosterUpload] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [bottomSide, setBottomSide] = useState('division_a'); // Alpha is default front/address side
+  const [micBlocked, setMicBlocked] = useState(false);
   const queryClient = useQueryClient();
+
+  // Request mic permission immediately when the board loads so there's no
+  // popup mid-incident. If already granted the browser resolves instantly.
+  React.useEffect(() => {
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        // Permission granted — release the stream immediately (Speech API manages its own)
+        stream.getTracks().forEach(t => t.stop());
+        setMicBlocked(false);
+      })
+      .catch(() => setMicBlocked(true));
+  }, []);
 
   const { data: incident, isLoading: loadingIncident } = useQuery({
     queryKey: ['incident', incidentId],
@@ -344,6 +358,14 @@ export default function CommandBoard() {
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
+
+      {/* ── Mic blocked warning ── */}
+      {micBlocked && (
+        <div className="shrink-0 bg-amber-500/20 border-b border-amber-500/40 px-4 py-2 flex items-center gap-2 text-xs font-mono text-amber-300">
+          <MicOff className="w-4 h-4 shrink-0" />
+          Microphone access is blocked — radio input won't work. Allow mic access in your browser settings and reload.
+        </div>
+      )}
 
       {/* ── Top Command Bar ── */}
       <header className="shrink-0 bg-card/90 backdrop-blur border-b border-border/60 px-3 py-2 flex items-center gap-2">
