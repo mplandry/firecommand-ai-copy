@@ -8,6 +8,9 @@ import { Mic, MicOff, Loader2 } from 'lucide-react';
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+// Known out-of-town prefixes and full names for MA auto-detection
+const MA_PATTERNS = /^(ARL|BEL|BOW|BRI|BRK|CAM|CHE|CON|DED|EVE|FRA|HOL|HOP|LEX|LIN|MAL|MED|MIL|NAT|NED|NEW|NOR|NWN|QUI|REA|SOM|STO|SUD|WAT|WEL|WES|WOB|WOR|arlington|belmont|boston|cambridge|chelsea|concord|dedham|everett|framingham|lexington|lincoln|malden|medford|medfield|millis|natick|needham|newton|norwood|quincy|reading|somerville|stoneham|sudbury|watertown|wellesley|weston|woburn|worcester)\b/i;
+
 const defaultPersonnel = {
   engine: 3, truck: 3, rescue: 3, squad: 3,
   deputy: 1, medic: 2, tanker: 3, brush: 3,
@@ -68,6 +71,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
     floor: '',
     personnel_count: 3,
     officer: '',
+    is_mutual_aid: false,
   });
   const [isListening, setIsListening] = useState(false);
   const [micError, setMicError] = useState('');
@@ -76,7 +80,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
   const handleCreate = () => {
     if (!form.unit_name.trim()) return;
     onCreate(form);
-    setForm({ unit_name: '', unit_type: 'engine', status: 'dispatched', assignment: 'unassigned', floor: '', personnel_count: 3, officer: '' });
+    setForm({ unit_name: '', unit_type: 'engine', status: 'dispatched', assignment: 'unassigned', floor: '', personnel_count: 3, officer: '', is_mutual_aid: false });
   };
 
   const toggleMic = () => {
@@ -106,9 +110,11 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
       const raw = event.results[0][0].transcript;
       const cleaned = cleanUnitName(raw);
       const detectedType = detectUnitType(cleaned);
+      const detectedMA = MA_PATTERNS.test(cleaned);
       setForm(f => ({
         ...f,
         unit_name: cleaned,
+        is_mutual_aid: detectedMA || f.is_mutual_aid,
         ...(detectedType ? {
           unit_type: detectedType,
           personnel_count: defaultPersonnel[detectedType] ?? f.personnel_count,
@@ -130,7 +136,11 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
             <div className="flex gap-2">
               <Input
                 value={form.unit_name}
-                onChange={(e) => setForm({ ...form, unit_name: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const detectedMA = MA_PATTERNS.test(val);
+                  setForm(f => ({ ...f, unit_name: val, is_mutual_aid: detectedMA || f.is_mutual_aid }));
+                }}
                 placeholder="e.g. Engine 2, ARL Ladder 1"
                 className="bg-secondary font-mono"
               />
@@ -149,6 +159,19 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
             </div>
             {micError && <p className="text-xs text-red-400 font-mono mt-1">{micError}</p>}
             {isListening && <p className="text-xs text-primary font-mono mt-1 animate-pulse">Listening… say the unit name</p>}
+            {/* Mutual Aid toggle */}
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, is_mutual_aid: !f.is_mutual_aid }))}
+              className={`mt-2 flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs font-mono transition-colors ${
+                form.is_mutual_aid
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                  : 'bg-secondary border-border text-muted-foreground hover:border-amber-500/40 hover:text-amber-400'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${form.is_mutual_aid ? 'bg-amber-400' : 'bg-muted-foreground/40'}`} />
+              {form.is_mutual_aid ? 'Mutual Aid' : 'Mark as Mutual Aid'}
+            </button>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

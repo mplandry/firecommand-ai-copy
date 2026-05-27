@@ -47,9 +47,10 @@ export default function UnitCard({ unit, onEdit, deptPrefix = 'WAL' }) {
   const isRehab = unit.status === 'rehab';
   const isOnScene = unit.status === 'on_scene';
 
-  // Mutual aid: unit name starts with 2-4 uppercase letters that aren't the home prefix
+  // Mutual aid: explicit flag OR unit name starts with a different dept prefix
   const mutualAidMatch = unit.unit_name?.match(/^([A-Z]{2,4})\s/);
-  const isMutualAid = mutualAidMatch && mutualAidMatch[1].toUpperCase() !== deptPrefix.toUpperCase();
+  const isMutualAid = unit.is_mutual_aid ||
+    (mutualAidMatch && mutualAidMatch[1].toUpperCase() !== deptPrefix.toUpperCase());
 
   // Use rehab_time for rehab timer, on_scene_time (or updated_date) for working/on_scene/mayday
   const workingAnchor = unit.on_scene_time || unit.updated_date;

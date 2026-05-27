@@ -183,6 +183,22 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
               className="bg-secondary font-mono text-sm"
             />
           </div>
+          {/* Mutual Aid toggle */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, is_mutual_aid: !f.is_mutual_aid }))}
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs font-mono transition-colors ${
+                form.is_mutual_aid
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                  : 'bg-secondary border-border text-muted-foreground hover:border-amber-500/40 hover:text-amber-400'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${form.is_mutual_aid ? 'bg-amber-400' : 'bg-muted-foreground/40'}`} />
+              {form.is_mutual_aid ? 'Mutual Aid' : 'Mark as Mutual Aid'}
+            </button>
+          </div>
+
           <div className="flex gap-2">
             {form.air_time ? (
               <>
