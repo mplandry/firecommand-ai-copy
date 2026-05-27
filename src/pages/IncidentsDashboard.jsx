@@ -167,6 +167,30 @@ export default function IncidentsDashboard() {
             console.log('[Unit OK]', u?.unit_name, '->', r.value?.id);
           }
         });
+
+        // Create dispatch log entries — one per unit, stamped at incident start time
+        const dispatchedUnits = _template.units.filter(u => u.status === 'dispatched');
+        const dispatchTime = incidentData.started_at || new Date().toISOString();
+        const alarmLabel = {
+          '1st_alarm': '1ST ALARM', '2nd_alarm': '2ND ALARM', '3rd_alarm': '3RD ALARM',
+          '4th_alarm': '4TH ALARM', '5th_alarm': '5TH ALARM',
+          'task_force': 'TASK FORCE', 'strike_team': 'STRIKE TEAM',
+        }[incidentData.alarm_level] || '1ST ALARM';
+
+        await Promise.allSettled(
+          dispatchedUnits.map(u =>
+            base44.entities.RadioLog.create({
+              incident_id: incident.id,
+              message: `${u.unit_name} — DISPATCHED (${alarmLabel}) to ${incidentData.address}`,
+              timestamp: dispatchTime,
+              from_unit: 'DISPATCH',
+              to_unit: u.unit_name,
+              priority: 'routine',
+              parsed_action: `${u.unit_name} dispatched`,
+              auto_applied: true,
+            })
+          )
+        );
       }
       return incident;
     },
