@@ -143,7 +143,14 @@ export default function SidePanel({
             onMoveUnit={
               isReadOnly
                 ? null
-                : (unit, assignment) => onUpdateUnit(unit, { assignment })
+                : (unit, assignment) => {
+                    const data = { assignment };
+                    if (assignment === 'rehab' && unit.status !== 'rehab') {
+                      data.status = 'rehab';
+                      data.rehab_time = new Date().toISOString();
+                    }
+                    onUpdateUnit(unit, data);
+                  }
             }
           />
         )}

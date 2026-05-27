@@ -110,6 +110,15 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
                 const extra = {};
                 if (v === 'roof') extra.floor = 'Roof';
                 else if (form.assignment === 'roof' && v !== 'roof') extra.floor = '';
+                // Auto-set status when dragged to rehab
+                if (v === 'rehab' && form.status !== 'rehab') {
+                  extra.status = 'rehab';
+                  extra.rehab_time = new Date().toISOString();
+                }
+                // Clear rehab_time when leaving rehab
+                if (v !== 'rehab' && form.assignment === 'rehab') {
+                  extra.rehab_time = null;
+                }
                 setForm({ ...form, assignment: v, ...extra });
               }}>
                 <SelectTrigger className="bg-secondary font-mono text-xs">
