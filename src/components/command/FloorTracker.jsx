@@ -59,7 +59,13 @@ export default function FloorTracker({ units, onUpdateUnit, specialUnits = [] })
     const targetFloor = destination.droppableId === '__none__' ? '' : destination.droppableId;
     const unit = units.find(u => u.id === draggableId);
     if (unit && unit.floor !== targetFloor) {
-      onUpdateUnit(unit, { floor: targetFloor });
+      const updateData = { floor: targetFloor };
+      // Auto-set working when assigned to a floor
+      if (targetFloor && !['available', 'out_of_service', 'rehab', 'mayday'].includes(unit.status)) {
+        updateData.status = 'working';
+        if (!unit.on_scene_time) updateData.on_scene_time = new Date().toISOString();
+      }
+      onUpdateUnit(unit, updateData);
     }
   };
 

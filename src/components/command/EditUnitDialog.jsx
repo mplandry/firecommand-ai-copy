@@ -93,7 +93,10 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
                 const autoAssign = getAutoAssignment(v, form.assignment);
                 const extra = {};
                 if (autoAssign) extra.assignment = autoAssign;
-                if (v === 'rehab' && form.status !== 'rehab') extra.rehab_time = new Date().toISOString();
+                if (v === 'rehab' && form.status !== 'rehab') {
+                  extra.rehab_time = new Date().toISOString();
+                  extra.floor = ''; // clear floor when going to rehab
+                }
                 if ((v === 'on_scene' || v === 'working') && !form.on_scene_time) extra.on_scene_time = new Date().toISOString();
                 setForm({ ...form, status: v, ...extra });
               }}>
@@ -114,10 +117,17 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
                 if (v === 'roof')  extra.floor = 'Roof';
                 else if (v === 'attic') extra.floor = 'Attic';
                 else if ((form.assignment === 'roof' || form.assignment === 'attic') && v !== 'roof' && v !== 'attic') extra.floor = '';
-                // Auto-set status when dragged to rehab
+                // Auto-set working when assigned to an active zone
+                const activeZones = ['division_a','division_b','division_c','division_d','roof','attic','interior','rit','ventilation','search','water_supply','medical','exposure'];
+                if (activeZones.includes(v) && !['working','par','mayday'].includes(form.status)) {
+                  extra.status = 'working';
+                  if (!form.on_scene_time) extra.on_scene_time = new Date().toISOString();
+                }
+                // Auto-set status when assigned to rehab, and clear floor
                 if (v === 'rehab' && form.status !== 'rehab') {
                   extra.status = 'rehab';
                   extra.rehab_time = new Date().toISOString();
+                  extra.floor = '';
                 }
                 // Clear rehab_time when leaving rehab
                 if (v !== 'rehab' && form.assignment === 'rehab') {
@@ -168,6 +178,11 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
               else if (floor && (form.assignment === 'roof' || form.assignment === 'attic')) extra.assignment = 'interior';
               // Floor cleared from Roof: reset assignment
               else if (!floor && form.floor === 'Roof' && form.assignment === 'roof') extra.assignment = 'unassigned';
+              // Auto-set working when a floor is assigned
+              if (floor && !['working','par','mayday'].includes(form.status)) {
+                extra.status = 'working';
+                if (!form.on_scene_time) extra.on_scene_time = new Date().toISOString();
+              }
               setForm({ ...form, ...extra });
             }}>
               <SelectTrigger className="bg-secondary font-mono text-xs">
