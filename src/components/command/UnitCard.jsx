@@ -153,7 +153,7 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
 
         {/* Notes row — only shown when notes exist */}
         {unit.notes && (
-          <div className="text-[10px] font-mono text-muted-foreground/70 truncate italic pb-1">
+          <div className="text-[10px] font-mono text-muted-foreground truncate italic pb-1">
             {unit.notes}
           </div>
         )}
