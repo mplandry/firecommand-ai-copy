@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2, LifeBuoy } from 'lucide-react';
+import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2, LifeBuoy, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useDepartment } from '@/hooks/useDepartment';
 import { ADMIN_EMAIL, SUPPORT_EMAIL, APP_NAME } from '@/lib/appConfig';
@@ -49,7 +49,7 @@ const typeLabels = {
 };
 
 export default function IncidentsDashboard() {
-  const { userEmail } = useAuth();
+  const { userEmail, logout } = useAuth();
   const { apparatusGroups, allUnits } = useDepartment();
   const [showNew, setShowNew] = useState(false);
   const [closingIncident, setClosingIncident] = useState(null);
@@ -232,6 +232,9 @@ export default function IncidentsDashboard() {
               <Settings className="w-4 h-4" /> Settings
             </Button>
           </Link>
+          <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5 text-muted-foreground hover:text-red-400" title="Sign out">
+            <LogOut className="w-4 h-4" />
+          </Button>
           <Button onClick={() => setShowNew(true)} className="gap-2">
             <Plus className="w-4 h-4" /> New Incident
           </Button>
