@@ -210,6 +210,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
               const floor = v === 'none' ? '' : v;
               const extra = { floor };
               if (floor === 'Roof') extra.assignment = 'roof';
+              else if (floor === 'Attic') extra.assignment = 'interior';
               else if (floor && form.assignment === 'roof') extra.assignment = 'interior';
               else if (!floor && form.floor === 'Roof' && form.assignment === 'roof') extra.assignment = 'unassigned';
               setForm({ ...form, ...extra });

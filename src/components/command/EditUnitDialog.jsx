@@ -160,6 +160,8 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
               const extra = { floor };
               // Floor → Roof: sync assignment to roof
               if (floor === 'Roof') extra.assignment = 'roof';
+              // Floor → Attic: sync assignment to interior
+              else if (floor === 'Attic') extra.assignment = 'interior';
               // Floor → specific level while on roof assignment: move to interior
               else if (floor && form.assignment === 'roof') extra.assignment = 'interior';
               // Floor cleared from Roof: reset assignment
