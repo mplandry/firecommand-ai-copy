@@ -21,6 +21,13 @@ const divisionConfig = {
   unassigned:   { label: 'UNASSIGNED', sub: 'UNITS',    accent: 'border-t-slate-600',  dot: 'bg-slate-600',  count: 'text-slate-500' },
 };
 
+const STATION_GROUPS = [
+  { label: 'CENTRAL ST.', units: ['WAL Engine 2', 'WAL Rescue 1', 'WAL Tower 1'] },
+  { label: 'MOODY ST.',   units: ['WAL Engine 1', 'WAL Squad 5', 'WAL Ladder 2'] },
+];
+const LOW_PRIORITY_UNITS = ['WAL Moody Boat', 'WAL Central Boat', 'WAL RTV'];
+const ALL_STATION_UNITS = STATION_GROUPS.flatMap(g => g.units);
+
 export default function DivisionColumn({ assignment, units, onEditUnit, onUpdateUnit, allUnits = [] }) {
   const cfg = divisionConfig[assignment] || divisionConfig.unassigned;
   const isEmpty = units.length === 0;
@@ -75,22 +82,83 @@ export default function DivisionColumn({ assignment, units, onEditUnit, onUpdate
                   <span className="text-xs font-mono text-muted-foreground/30 tracking-wider">CLEAR</span>
                 )}
               </div>
-            ) : (
-              units.map((unit, index) => (
-                <Draggable key={unit.id} draggableId={unit.id} index={index} isDragDisabled={!onEditUnit}>
-                  {(dragProvided, dragSnapshot) => (
-                    <div
-                      ref={dragProvided.innerRef}
-                      {...dragProvided.draggableProps}
-                      {...dragProvided.dragHandleProps}
-                      className={`transition-opacity duration-150 ${dragSnapshot.isDragging ? 'opacity-80 shadow-2xl' : ''}`}
-                    >
-                      <UnitCard unit={unit} onEdit={onEditUnit} />
-                    </div>
-                  )}
-                </Draggable>
-              ))
-            )}
+            ) : (() => {
+              // For unassigned: render with station group labels; otherwise plain list
+              if (assignment !== 'unassigned') {
+                return units.map((unit, index) => (
+                  <Draggable key={unit.id} draggableId={unit.id} index={index} isDragDisabled={!onEditUnit}>
+                    {(dp, ds) => (
+                      <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
+                        className={`transition-opacity duration-150 ${ds.isDragging ? 'opacity-80 shadow-2xl' : ''}`}>
+                        <UnitCard unit={unit} onEdit={onEditUnit} />
+                      </div>
+                    )}
+                  </Draggable>
+                ));
+              }
+
+              const elements = [];
+              let dragIdx = 0;
+
+              const renderUnit = (unit) => {
+                const idx = dragIdx++;
+                return (
+                  <Draggable key={unit.id} draggableId={unit.id} index={idx} isDragDisabled={!onEditUnit}>
+                    {(dp, ds) => (
+                      <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
+                        className={`transition-opacity duration-150 ${ds.isDragging ? 'opacity-80 shadow-2xl' : ''}`}>
+                        <UnitCard unit={unit} onEdit={onEditUnit} />
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              };
+
+              const stationLabel = (label) => (
+                <div key={`lbl-${label}`} className="px-1 pt-2 pb-0.5">
+                  <span className="text-[9px] font-mono font-bold text-muted-foreground/40 uppercase tracking-widest block border-b border-border/20 pb-0.5">
+                    {label}
+                  </span>
+                </div>
+              );
+
+              // Render each station group
+              STATION_GROUPS.forEach(group => {
+                const groupUnits = group.units
+                  .map(name => units.find(u => u.unit_name === name))
+                  .filter(Boolean);
+                if (groupUnits.length === 0) return;
+                elements.push(stationLabel(group.label));
+                groupUnits.forEach(u => elements.push(renderUnit(u)));
+              });
+
+              // Other units not in any station group and not low priority — sorted by number
+              const otherUnits = units
+                .filter(u =>
+                  !ALL_STATION_UNITS.includes(u.unit_name) &&
+                  !LOW_PRIORITY_UNITS.includes(u.unit_name)
+                )
+                .sort((a, b) => {
+                  const numA = parseInt((a.unit_name.match(/\d+/) || [0])[0]);
+                  const numB = parseInt((b.unit_name.match(/\d+/) || [0])[0]);
+                  return numA - numB;
+                });
+              if (otherUnits.length > 0) {
+                elements.push(stationLabel('OTHER'));
+                otherUnits.forEach(u => elements.push(renderUnit(u)));
+              }
+
+              // Low priority at very bottom
+              const lowUnits = LOW_PRIORITY_UNITS
+                .map(name => units.find(u => u.unit_name === name))
+                .filter(Boolean);
+              if (lowUnits.length > 0) {
+                elements.push(stationLabel('WATER / SPECIAL'));
+                lowUnits.forEach(u => elements.push(renderUnit(u)));
+              }
+
+              return elements;
+            })()}
             {provided.placeholder}
           </div>
         )}
