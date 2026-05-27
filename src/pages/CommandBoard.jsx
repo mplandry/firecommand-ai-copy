@@ -532,13 +532,13 @@ export default function CommandBoard() {
               <div className="flex flex-col items-center gap-2">
                 {/* Top */}
                 <div className="w-full max-w-xs">
-                <DivisionColumn assignment={topSide} units={units.filter(u => u.assignment === topSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
+                <DivisionColumn assignment={topSide} units={units.filter(u => u.assignment === topSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
                 </div>
 
                 {/* Middle row */}
                 <div className="w-full flex items-stretch gap-2">
                 <div className="flex-1">
-                  <DivisionColumn assignment={leftSide} units={units.filter(u => u.assignment === leftSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
+                  <DivisionColumn assignment={leftSide} units={units.filter(u => u.assignment === leftSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
                 </div>
 
                   {/* Structure box */}
@@ -558,13 +558,13 @@ export default function CommandBoard() {
                   </div>
 
                   <div className="flex-1">
-                    <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
+                    <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
                   </div>
                 </div>
 
                 {/* Bottom (front/address side) */}
                 <div className="w-full max-w-xs">
-                  <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
+                  <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
                 </div>
               </div>
             );
@@ -583,6 +583,7 @@ export default function CommandBoard() {
                 )}
                 onEditUnit={isReadOnly ? null : setEditingUnit}
                 onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })}
+                onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })}
                 allUnits={units}
                 stationGroups={stationGroups}
                 specialUnits={specialUnits}

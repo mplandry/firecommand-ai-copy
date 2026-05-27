@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Users, AlertTriangle, Wind, ChevronRight } from 'lucide-react';
+import { Clock, Users, AlertTriangle, Wind, X } from 'lucide-react';
 
 const statusConfig = {
   dispatched:    { bar: 'bg-yellow-500',  bg: 'bg-yellow-500/10',  text: 'text-yellow-400',  label: 'DISPATCHED' },
@@ -37,7 +37,7 @@ function useElapsed(timestamp) {
   return elapsed;
 }
 
-export default function UnitCard({ unit, onEdit, deptPrefix = 'WAL' }) {
+export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix = 'WAL' }) {
   const airElapsed = useElapsed(unit.air_time);
   const entryElapsed = useElapsed(unit.on_scene_time);
   const cfg = statusConfig[unit.status] || statusConfig.dispatched;
@@ -83,6 +83,17 @@ export default function UnitCard({ unit, onEdit, deptPrefix = 'WAL' }) {
     >
       {/* Status bar accent — amber for mutual aid */}
       <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${isMutualAid ? 'bg-amber-500' : cfg.bar} rounded-l-lg`} />
+
+      {/* Quick-clear assignment button — visible on hover */}
+      {onClearAssignment && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onClearAssignment(unit); }}
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded flex items-center justify-center bg-secondary/80 hover:bg-destructive/80 text-muted-foreground hover:text-white"
+          title="Clear assignment"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
 
       <div className="pl-4 pr-3 py-2 h-full flex flex-col justify-between">
         {/* Top row: type badge + name + status */}

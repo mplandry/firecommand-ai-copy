@@ -30,7 +30,7 @@ const DEFAULT_STATION_GROUPS = [
 const DEFAULT_LOW_PRIORITY = ['WAL Moody Boat', 'WAL Central Boat', 'WAL RTV'];
 
 export default function DivisionColumn({
-  assignment, units, onEditUnit, onUpdateUnit, allUnits = [],
+  assignment, units, onEditUnit, onUpdateUnit, onClearAssignment, allUnits = [],
   stationGroups = DEFAULT_STATION_GROUPS,
   specialUnits  = DEFAULT_LOW_PRIORITY,
   deptPrefix    = 'WAL',
@@ -96,7 +96,7 @@ export default function DivisionColumn({
                     {(dp, ds) => (
                       <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
                         className={`transition-opacity duration-150 ${ds.isDragging ? 'opacity-80 shadow-2xl' : ''}`}>
-                        <UnitCard unit={unit} onEdit={onEditUnit} deptPrefix={deptPrefix} />
+                        <UnitCard unit={unit} onEdit={onEditUnit} onClearAssignment={onClearAssignment} deptPrefix={deptPrefix} />
                       </div>
                     )}
                   </Draggable>
@@ -113,7 +113,7 @@ export default function DivisionColumn({
                     {(dp, ds) => (
                       <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
                         className={`transition-opacity duration-150 ${ds.isDragging ? 'opacity-80 shadow-2xl' : ''}`}>
-                        <UnitCard unit={unit} onEdit={onEditUnit} deptPrefix={deptPrefix} />
+                        <UnitCard unit={unit} onEdit={onEditUnit} onClearAssignment={onClearAssignment} deptPrefix={deptPrefix} />
                       </div>
                     )}
                   </Draggable>
