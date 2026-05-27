@@ -206,7 +206,13 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
           </div>
           <div>
             <Label className="text-xs font-mono">Floor / Level</Label>
-            <Select value={form.floor || 'none'} onValueChange={(v) => setForm({ ...form, floor: v === 'none' ? '' : v })}>
+            <Select value={form.floor || 'none'} onValueChange={(v) => {
+              const floor = v === 'none' ? '' : v;
+              const extra = { floor };
+              if (floor === 'Roof') extra.assignment = 'roof';
+              if (floor !== 'Roof' && form.floor === 'Roof' && form.assignment === 'roof') extra.assignment = 'unassigned';
+              setForm({ ...form, ...extra });
+            }}>
               <SelectTrigger className="bg-secondary font-mono text-xs">
                 <SelectValue placeholder="No floor assigned" />
               </SelectTrigger>

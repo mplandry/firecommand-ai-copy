@@ -155,7 +155,15 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
           </div>
           <div>
             <Label className="text-xs font-mono">Floor / Level</Label>
-            <Select value={form.floor || 'none'} onValueChange={(v) => setForm({ ...form, floor: v === 'none' ? '' : v })}>
+            <Select value={form.floor || 'none'} onValueChange={(v) => {
+              const floor = v === 'none' ? '' : v;
+              const extra = { floor };
+              // Sync: selecting Roof floor → set assignment to roof
+              if (floor === 'Roof') extra.assignment = 'roof';
+              // Sync: clearing floor away from Roof → clear roof assignment
+              if (floor !== 'Roof' && form.floor === 'Roof' && form.assignment === 'roof') extra.assignment = 'unassigned';
+              setForm({ ...form, ...extra });
+            }}>
               <SelectTrigger className="bg-secondary font-mono text-xs">
                 <SelectValue placeholder="No floor assigned" />
               </SelectTrigger>
