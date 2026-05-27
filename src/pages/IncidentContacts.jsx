@@ -5,7 +5,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Pencil, Phone, Mail, Home, FileText, Users, Eye, Heart, Building2, Camera, X, Ambulance, Car } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Pencil, Phone, Mail, Home, FileText, Users, Eye, Heart, Building2, Camera, X, Ambulance, Car, Radio, Clock } from 'lucide-react';
 import CameraCapture from '@/components/shared/CameraCapture';
 
 const CATEGORIES = [
@@ -56,7 +56,7 @@ const CATEGORIES = [
     color: 'text-amber-400',
     bgColor: 'bg-amber-500/10',
     roles: ['Spouse', 'Child', 'Parent', 'Sibling', 'Occupant', 'Pet'],
-    fields: ['name', 'role', 'dob', 'phone', 'notes'],
+    fields: ['name', 'role', 'dob', 'phone', 'accounted_for', 'total_occupants', 'notes'],
     emptyText: 'No family or occupant info logged.',
   },
   {
@@ -68,6 +68,16 @@ const CATEGORIES = [
     roles: ['Witness', 'Neighbor', 'Bystander', 'Caller'],
     fields: ['name', 'role', 'phone', 'notes'],
     emptyText: 'No witnesses logged.',
+  },
+  {
+    key: 'mutual_aid',
+    label: 'Mutual Aid',
+    icon: Radio,
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-500/10',
+    roles: ['Engine Company', 'Ladder Company', 'Rescue', 'Battalion Chief', 'Hazmat', 'Technical Rescue', 'Liaison Officer', 'Other'],
+    fields: ['agency', 'name', 'role', 'unit_sent', 'phone', 'notes'],
+    emptyText: 'No mutual aid logged.',
   },
   {
     key: 'relief',
@@ -91,9 +101,13 @@ function initForm(categoryKey) {
     name: '', agency: '', role: '', phone: '', email: '',
     policy_number: '', notes: '', category: categoryKey,
     // Injury fields
-    dob: '', injury_type: '', transported_to: '',
+    dob: '', injury_type: '', transported_to: '', refused_transport: false,
     // Vehicle fields
     make: '', model: '', year: '', vin: '', plate: '', plate_state: '', insurance_company: '',
+    // Family / Occupants
+    accounted_for: '', total_occupants: '',
+    // Mutual Aid
+    unit_sent: '',
   };
 }
 
@@ -248,10 +262,48 @@ function ContactForm({ categoryKey, initial, onSave, onCancel }) {
           </div>
         )}
 
+        {/* Unit sent — mutual aid */}
+        {hasField('unit_sent') && (
+          <div className="col-span-2">
+            <label className="text-xs text-muted-foreground mb-1 block">Unit(s) Sent</label>
+            <Input value={form.unit_sent} onChange={set('unit_sent')} placeholder="e.g. E4, L2, BC1" className="h-8 text-sm font-mono" />
+          </div>
+        )}
+
+        {/* Occupant count — family/occupants */}
+        {hasField('accounted_for') && (
+          <>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Accounted For</label>
+              <Input type="number" min={0} value={form.accounted_for} onChange={set('accounted_for')} placeholder="0" className="h-8 text-sm font-mono" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Total Occupants</label>
+              <Input type="number" min={0} value={form.total_occupants} onChange={set('total_occupants')} placeholder="0" className="h-8 text-sm font-mono" />
+            </div>
+          </>
+        )}
+
+        {/* Refused transport — injuries */}
+        {hasField('injury_type') && (
+          <div className="col-span-2 flex items-center gap-2 py-1">
+            <input
+              type="checkbox"
+              id="refused_transport_chk"
+              checked={form.refused_transport || false}
+              onChange={(e) => setForm(f => ({ ...f, refused_transport: e.target.checked }))}
+              className="w-4 h-4 accent-primary cursor-pointer"
+            />
+            <label htmlFor="refused_transport_chk" className="text-sm font-mono text-foreground cursor-pointer select-none">
+              Patient refused transport
+            </label>
+          </div>
+        )}
+
         {/* Notes */}
         <div className="col-span-2">
           <label className="text-xs text-muted-foreground mb-1 block">Notes</label>
-          <Input value={form.notes} onChange={set('notes')} placeholder="e.g. Refused transport, minor laceration, airbags deployed..." className="h-8 text-sm font-mono" />
+          <Input value={form.notes} onChange={set('notes')} placeholder="Additional notes..." className="h-8 text-sm font-mono" />
         </div>
       </div>
 
@@ -261,6 +313,18 @@ function ContactForm({ categoryKey, initial, onSave, onCancel }) {
       </div>
     </div>
   );
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function formatLogTime(dt) {
+  if (!dt) return null;
+  const d = new Date(dt);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  return isToday
+    ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+      d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 // ── ContactCard ───────────────────────────────────────────────────────────────
@@ -283,7 +347,7 @@ function ContactCard({ contact, onEdit, onDelete }) {
         <span className={`text-xs font-mono font-bold ${cat.color}`}>{initials}</span>
       </div>
       <div className="flex-1 min-w-0">
-        {/* Name + role + org */}
+        {/* Name + role + org + timestamp */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono font-semibold text-foreground text-sm">{displayName}</span>
           {contact.role && (
@@ -292,6 +356,11 @@ function ContactCard({ contact, onEdit, onDelete }) {
           {contact.name && contact.agency && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Building2 className="w-3 h-3" /> {contact.agency}
+            </span>
+          )}
+          {contact.created_date && (
+            <span className="text-[10px] font-mono text-muted-foreground/50 flex items-center gap-0.5 ml-auto shrink-0">
+              <Clock className="w-3 h-3" />{formatLogTime(contact.created_date)}
             </span>
           )}
         </div>
@@ -303,7 +372,25 @@ function ContactCard({ contact, onEdit, onDelete }) {
 
         {/* Injury info */}
         {contact.injury_type && (
-          <p className="text-xs text-red-400 mt-0.5 font-mono">⚕ {contact.injury_type}{contact.transported_to ? ` · Transported to ${contact.transported_to}` : ''}</p>
+          <p className="text-xs text-red-400 mt-0.5 font-mono">
+            ⚕ {contact.injury_type}
+            {contact.transported_to ? ` · Transported to ${contact.transported_to}` : ''}
+          </p>
+        )}
+        {contact.refused_transport && (
+          <p className="text-xs text-orange-400 font-mono mt-0.5">⚠ Refused transport</p>
+        )}
+
+        {/* Occupant count */}
+        {(contact.accounted_for !== '' && contact.accounted_for != null) || (contact.total_occupants !== '' && contact.total_occupants != null) ? (
+          <p className="text-xs text-amber-400 font-mono mt-0.5">
+            👥 {contact.accounted_for ?? '?'} / {contact.total_occupants ?? '?'} occupants accounted for
+          </p>
+        ) : null}
+
+        {/* Mutual Aid unit sent */}
+        {contact.unit_sent && (
+          <p className="text-xs text-cyan-400 font-mono mt-0.5">🚒 Units: {contact.unit_sent}</p>
         )}
 
         {/* Vehicle info */}
