@@ -5,7 +5,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Mic, MicOff, GripVertical } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Mic, MicOff, GripVertical, RotateCcw } from 'lucide-react';
 import RadioInput from '@/components/command/RadioInput';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useDepartment } from '@/hooks/useDepartment';
@@ -353,7 +353,7 @@ export default function DispatchLog() {
   });
 
   // Units in the incident with no alarm level yet — available/unassigned pool
-  const unalarmedUnits = units.filter(u => !u.alarm_level && u.assignment === 'unassigned');
+  const unalarmedUnits = units.filter(u => (!u.alarm_level || u.alarm_level === '') && u.assignment === 'unassigned');
 
   const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
@@ -657,13 +657,27 @@ export default function DispatchLog() {
                                 </SelectContent>
                               </Select>
                               <span className={`text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap ${
-                                unit.status === 'on_scene' ? 'bg-green-500/20 text-green-400' :
-                                unit.status === 'mayday' ? 'bg-red-500/20 text-red-400' :
-                                unit.status === 'rehab' ? 'bg-yellow-500/20 text-yellow-400' :
+                                unit.status === 'on_scene'  ? 'bg-green-500/20 text-green-400' :
+                                unit.status === 'staging'   ? 'bg-amber-500/20 text-amber-400' :
+                                unit.status === 'mayday'    ? 'bg-red-500/20 text-red-400' :
+                                unit.status === 'rehab'     ? 'bg-yellow-500/20 text-yellow-400' :
+                                unit.status === 'available' ? 'bg-slate-500/20 text-slate-400' :
                                 'bg-blue-500/20 text-blue-400'
                               }`}>
                                 {unit.status}
                               </span>
+                              {/* Return to unassigned pool — only for staging/dispatched/available, not on_scene/working */}
+                              {!['on_scene','working','par','mayday','rehab'].includes(unit.status) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  title="Return to unassigned pool"
+                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => updateUnit.mutate({ id: unit.id, data: { alarm_level: null, status: 'available' } })}
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="ghost"
