@@ -74,7 +74,7 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
       className={`
         relative rounded-lg cursor-grab active:cursor-grabbing select-none overflow-hidden
         border transition-all duration-150
-        hover:shadow-lg hover:shadow-black/20 group h-[68px]
+        hover:shadow-lg hover:shadow-black/20 group ${unit.notes ? 'min-h-[68px]' : 'h-[68px]'}
         ${cfg.bg}
         ${isMayday    ? 'animate-pulse-red border-red-500/60 ring-1 ring-red-500/60' :
           rehabWarning ? 'animate-pulse border-violet-400/80 ring-1 ring-violet-400/50' :
@@ -96,7 +96,7 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
         </button>
       )}
 
-      <div className="pl-4 pr-7 py-2 h-full flex flex-col justify-between">
+      <div className="pl-4 pr-7 py-2 flex flex-col justify-between gap-1">
         {/* Top row: type badge + name + status */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -150,6 +150,13 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
             <span className="text-xs text-red-300 font-bold tracking-wider animate-pulse">MAYDAY</span>
           )}
         </div>
+
+        {/* Notes row — only shown when notes exist */}
+        {unit.notes && (
+          <div className="text-[10px] font-mono text-muted-foreground/70 truncate italic pb-1">
+            {unit.notes}
+          </div>
+        )}
       </div>
     </div>
   );
