@@ -95,7 +95,7 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
         </button>
       )}
 
-      <div className="pl-4 pr-3 py-2 h-full flex flex-col justify-between">
+      <div className="pl-4 pr-7 py-2 h-full flex flex-col justify-between">
         {/* Top row: type badge + name + status */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
