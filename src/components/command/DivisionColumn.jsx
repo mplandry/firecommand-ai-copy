@@ -32,6 +32,7 @@ export default function DivisionColumn({
   assignment, units, onEditUnit, onUpdateUnit, allUnits = [],
   stationGroups = DEFAULT_STATION_GROUPS,
   specialUnits  = DEFAULT_LOW_PRIORITY,
+  deptPrefix    = 'WAL',
 }) {
   const cfg = divisionConfig[assignment] || divisionConfig.unassigned;
   const isEmpty = units.length === 0;
@@ -94,7 +95,7 @@ export default function DivisionColumn({
                     {(dp, ds) => (
                       <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
                         className={`transition-opacity duration-150 ${ds.isDragging ? 'opacity-80 shadow-2xl' : ''}`}>
-                        <UnitCard unit={unit} onEdit={onEditUnit} />
+                        <UnitCard unit={unit} onEdit={onEditUnit} deptPrefix={deptPrefix} />
                       </div>
                     )}
                   </Draggable>
@@ -111,7 +112,7 @@ export default function DivisionColumn({
                     {(dp, ds) => (
                       <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
                         className={`transition-opacity duration-150 ${ds.isDragging ? 'opacity-80 shadow-2xl' : ''}`}>
-                        <UnitCard unit={unit} onEdit={onEditUnit} />
+                        <UnitCard unit={unit} onEdit={onEditUnit} deptPrefix={deptPrefix} />
                       </div>
                     )}
                   </Draggable>

@@ -37,7 +37,7 @@ function useElapsed(timestamp) {
   return elapsed;
 }
 
-export default function UnitCard({ unit, onEdit }) {
+export default function UnitCard({ unit, onEdit, deptPrefix = 'WAL' }) {
   const airElapsed = useElapsed(unit.air_time);
   const entryElapsed = useElapsed(unit.on_scene_time);
   const cfg = statusConfig[unit.status] || statusConfig.dispatched;
@@ -46,6 +46,10 @@ export default function UnitCard({ unit, onEdit }) {
   const isWorking = unit.status === 'working' || unit.status === 'par';
   const isRehab = unit.status === 'rehab';
   const isOnScene = unit.status === 'on_scene';
+
+  // Mutual aid: unit name starts with 2-4 uppercase letters that aren't the home prefix
+  const mutualAidMatch = unit.unit_name?.match(/^([A-Z]{2,4})\s/);
+  const isMutualAid = mutualAidMatch && mutualAidMatch[1].toUpperCase() !== deptPrefix.toUpperCase();
 
   // Use rehab_time for rehab timer, on_scene_time (or updated_date) for working/on_scene/mayday
   const workingAnchor = unit.on_scene_time || unit.updated_date;
@@ -70,11 +74,12 @@ export default function UnitCard({ unit, onEdit }) {
         ${cfg.bg}
         ${isMayday    ? 'animate-pulse-red border-red-500/60 ring-1 ring-red-500/60' :
           rehabWarning ? 'animate-pulse border-violet-400/80 ring-1 ring-violet-400/50' :
+          isMutualAid  ? 'border-amber-500/50 ring-1 ring-amber-500/20' :
                          'border-border/60 hover:border-border'}
       `}
     >
-      {/* Status bar accent */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cfg.bar} rounded-l-lg`} />
+      {/* Status bar accent — amber for mutual aid */}
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${isMutualAid ? 'bg-amber-500' : cfg.bar} rounded-l-lg`} />
 
       <div className="pl-4 pr-3 py-2 h-full flex flex-col justify-between">
         {/* Top row: type badge + name + status */}
@@ -86,6 +91,9 @@ export default function UnitCard({ unit, onEdit }) {
             <span className="font-mono font-bold text-sm text-foreground truncate">
               {unit.unit_name}
             </span>
+            {isMutualAid && (
+              <span className="text-[10px] font-mono font-bold px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">MA</span>
+            )}
           </div>
           <span className={`text-xs font-mono font-semibold tracking-wider shrink-0 ${
             rehabWarning ? 'text-violet-300 font-bold' : cfg.text
