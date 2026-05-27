@@ -1,13 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Mic, GripVertical } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Mic, MicOff, GripVertical } from 'lucide-react';
 import RadioInput from '@/components/command/RadioInput';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+const MA_TOWNS = /^(arlington|belmont|boston|cambridge|chelsea|concord|dedham|everett|framingham|lexington|lincoln|malden|medford|millis|natick|needham|newton|norwood|quincy|reading|somerville|stoneham|sudbury|watertown|wellesley|weston|woburn|worcester|arl|bel|cam|con|ded|eve|fra|lex|lin|mal|med|nat|ned|new|nor|qui|rea|som|sto|sud|wat|wel|wes|wob|wor|arm)\s/i;
+
+function detectUnitType(name) {
+  const n = name.toLowerCase();
+  if (/ladder|truck|latter|tiller/.test(n)) return 'truck';
+  if (/engine|pumper/.test(n))             return 'engine';
+  if (/rescue/.test(n))                    return 'rescue';
+  if (/squad/.test(n))                     return 'squad';
+  if (/medic|amb|ems/.test(n))             return 'medic';
+  if (/tanker|tender/.test(n))             return 'tanker';
+  if (/brush/.test(n))                     return 'brush';
+  if (/hazmat|haz/.test(n))               return 'hazmat';
+  if (/chief|deputy|car|battalion/.test(n)) return 'deputy';
+  return 'engine';
+}
+
+function cleanUnitName(text) {
+  return text
+    .replace(/\blatter\b/gi, 'Ladder').replace(/\bladder\b/gi, 'Ladder')
+    .replace(/\blater\b/gi, 'Ladder').replace(/\bengine\b/gi, 'Engine')
+    .replace(/\brescue\b/gi, 'Rescue').replace(/\bmedic\b/gi, 'Medic')
+    .replace(/\btanker\b/gi, 'Tanker').replace(/\bbattalion\b/gi, 'Battalion')
+    .replace(/\bone\b/gi, '1').replace(/\btwo\b/gi, '2').replace(/\bthree\b/gi, '3')
+    .replace(/\bfour\b/gi, '4').replace(/\bfive\b/gi, '5').replace(/\bsix\b/gi, '6')
+    .replace(/\bseven\b/gi, '7').replace(/\beight\b/gi, '8').replace(/\bnine\b/gi, '9')
+    .replace(/\bniner\b/gi, '9').replace(/\btree\b/gi, '3').replace(/\bfower\b/gi, '4')
+    .trim();
+}
 
 const alarmLevels = [
   '1st_alarm', '2nd_alarm', '3rd_alarm', '4th_alarm', '5th_alarm', 'task_force', 'strike_team'
@@ -27,18 +58,42 @@ const unitTypes = [
   'engine', 'truck', 'rescue', 'squad', 'deputy', 'medic', 'tanker', 'brush', 'hazmat', 'other'
 ];
 
+// Detect alarm level from free text — catches "strike second", "2nd alarm", "third alarm", etc.
+function detectAlarmLevel(text) {
+  const t = text.toLowerCase();
+  if (/5th|fifth|five.?alarm/.test(t))  return '5th_alarm';
+  if (/4th|fourth|four.?alarm/.test(t)) return '4th_alarm';
+  if (/3rd|third|three.?alarm/.test(t)) return '3rd_alarm';
+  if (/2nd|second|two.?alarm|strike/.test(t)) return '2nd_alarm';
+  if (/task.?force/.test(t)) return 'task_force';
+  if (/strike.?team/.test(t)) return 'strike_team';
+  return null;
+}
+
 export default function DispatchLog() {
   const { incidentId } = useParams();
   const queryClient = useQueryClient();
   const [editingFields, setEditingFields] = useState({});
   const [newUnitId, setNewUnitId] = useState(null);
   const [listening, setListening] = useState(null);
+  const [pickerLevel, setPickerLevel] = useState(null); // which level has the unassigned picker open
+  const [newUnitName, setNewUnitName] = useState('');
+  const [newUnitMic, setNewUnitMic] = useState(false);
+  const newUnitInputRef = useRef(null);
+  const newUnitRecogRef = useRef(null);
+  // Tracks the alarm level that will be applied to the next unit(s) added via
+  // the top RadioInput or per-level Voice button. Defaults to 1st alarm and
+  // bumps automatically when an alarm upgrade is spoken or typed.
+  const [activeLevel, setActiveLevel] = useState('1st_alarm');
 
   const handleMicInput = (level) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) { alert('Speech recognition not supported in this browser'); return; }
 
     if (listening === level) return; // already listening
+
+    // Tapping a specific level's Voice button sets that as the active level
+    setActiveLevel(level);
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -56,10 +111,12 @@ export default function DispatchLog() {
         const numberWords = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10 };
         let transcript = raw.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/gi,
           m => numberWords[m.toLowerCase()]);
+        // Fix "latter/ladde" mishears
+        transcript = transcript.replace(/\blatter\b/gi, 'Ladder').replace(/\bladder\b/gi, 'Ladder');
 
         const lower = transcript.toLowerCase();
         let detectedType = 'engine';
-        if (/truck|ladder|tiller/.test(lower)) detectedType = 'truck';
+        if (/truck|ladder|tiller|latter/.test(lower)) detectedType = 'truck';
         else if (/rescue/.test(lower)) detectedType = 'rescue';
         else if (/medic|ems|amb/.test(lower)) detectedType = 'medic';
         else if (/squad/.test(lower)) detectedType = 'squad';
@@ -83,6 +140,11 @@ export default function DispatchLog() {
     select: (data) => data?.[0] || null,
     enabled: !!incidentId,
   });
+
+  // Sync active level with the incident's current alarm level on load
+  useEffect(() => {
+    if (incident?.alarm_level) setActiveLevel(incident.alarm_level);
+  }, [incident?.alarm_level]);
 
   const { data: units = [] } = useQuery({
     queryKey: ['units', incidentId],
@@ -112,6 +174,13 @@ export default function DispatchLog() {
   });
 
   const handleRadioTransmission = async (message, parsed) => {
+    // Check for alarm level upgrade — bump activeLevel first so new units get the right tag
+    const upgradedLevel = parsed.upgrade_alarm || detectAlarmLevel(message);
+    if (upgradedLevel) {
+      setActiveLevel(upgradedLevel);
+    }
+    const levelForNewUnits = upgradedLevel || activeLevel;
+
     // Create new units from radio transmission
     if (parsed.new_units?.length > 0) {
       for (const newUnit of parsed.new_units) {
@@ -120,7 +189,7 @@ export default function DispatchLog() {
           createUnit.mutate({
             unit_name: newUnit.unit_name,
             unit_type: newUnit.unit_type || 'engine',
-            alarm_level: '1st_alarm',
+            alarm_level: levelForNewUnits,
             status: newUnit.status || 'dispatched',
             assignment: newUnit.assignment || 'unassigned',
             ...(newUnit.notes ? { notes: newUnit.notes } : {}),
@@ -180,8 +249,25 @@ export default function DispatchLog() {
         <div className="space-y-6">
           <div className="bg-card/40 rounded-lg border border-border/60 p-4">
             <div className="mb-2">
-              <h2 className="font-mono font-bold text-foreground text-sm mb-2">Radio Input</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-mono font-bold text-foreground text-sm">Radio Input</h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Next units →</span>
+                  <select
+                    value={activeLevel}
+                    onChange={(e) => setActiveLevel(e.target.value)}
+                    className="text-xs font-mono font-bold rounded border border-primary/40 bg-primary/10 text-primary px-2 py-1 cursor-pointer"
+                  >
+                    {alarmLevels.map(l => (
+                      <option key={l} value={l}>{alarmLabels[l]}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <RadioInput incidentId={incidentId} units={units} onTransmission={handleRadioTransmission} />
+              <p className="text-[10px] font-mono text-muted-foreground/50 mt-1.5">
+                Say "strike second alarm", "3rd alarm companies", etc. to switch levels automatically
+              </p>
             </div>
           </div>
 
@@ -207,7 +293,7 @@ export default function DispatchLog() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => createUnit.mutate({ unit_name: 'New Unit', unit_type: 'engine', alarm_level: level })}
+                      onClick={() => setPickerLevel(pickerLevel === level ? null : level)}
                       className="gap-1"
                     >
                       <Plus className="w-4 h-4" />
@@ -215,6 +301,120 @@ export default function DispatchLog() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Unit picker panel */}
+                {pickerLevel === level && (() => {
+                  const available = units.filter(u =>
+                    u.assignment === 'unassigned' && u.alarm_level !== level
+                  );
+                  const isMutualAid = MA_TOWNS.test(newUnitName);
+
+                  const submitNewUnit = () => {
+                    const name = newUnitName.trim();
+                    if (!name) return;
+                    createUnit.mutate({
+                      unit_name: name,
+                      unit_type: detectUnitType(name),
+                      alarm_level: level,
+                      status: 'dispatched',
+                      assignment: 'unassigned',
+                      is_mutual_aid: MA_TOWNS.test(name),
+                    });
+                    setNewUnitName('');
+                    setPickerLevel(null);
+                  };
+
+                  const toggleMic = () => {
+                    if (newUnitMic) {
+                      newUnitRecogRef.current?.stop();
+                      setNewUnitMic(false);
+                      return;
+                    }
+                    if (!SpeechRecognition) return;
+                    const r = new SpeechRecognition();
+                    r.lang = 'en-US';
+                    r.interimResults = false;
+                    r.maxAlternatives = 1;
+                    r.onstart = () => setNewUnitMic(true);
+                    r.onend = () => setNewUnitMic(false);
+                    r.onerror = () => setNewUnitMic(false);
+                    r.onresult = (e) => {
+                      const raw = e.results[0][0].transcript;
+                      const cleaned = cleanUnitName(raw);
+                      setNewUnitName(cleaned);
+                      setTimeout(() => newUnitInputRef.current?.focus(), 100);
+                    };
+                    newUnitRecogRef.current = r;
+                    r.start();
+                  };
+
+                  return (
+                    <div className="border-b border-border/60 bg-secondary/20 px-4 py-3 space-y-3">
+
+                      {/* Existing unassigned units */}
+                      {available.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-1.5">From unassigned on board</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {available.map(u => (
+                              <button
+                                key={u.id}
+                                onClick={() => {
+                                  updateUnit.mutate({ id: u.id, data: { alarm_level: level } });
+                                  setPickerLevel(null);
+                                }}
+                                className="text-xs font-mono px-2.5 py-1 rounded border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                              >
+                                {u.unit_name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* New / mutual aid unit input */}
+                      <div>
+                        <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-1.5">Add mutual aid or new unit</p>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              ref={newUnitInputRef}
+                              value={newUnitName}
+                              onChange={e => setNewUnitName(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') submitNewUnit(); if (e.key === 'Escape') { setPickerLevel(null); setNewUnitName(''); }}}
+                              placeholder="e.g. Newton Engine 5, ARL Ladder 1"
+                              className={`font-mono text-sm h-9 ${isMutualAid ? 'border-amber-500/50 bg-amber-500/5' : 'bg-secondary'}`}
+                              autoFocus
+                            />
+                            {isMutualAid && (
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded">MA</span>
+                            )}
+                          </div>
+                          {SpeechRecognition && (
+                            <button
+                              type="button"
+                              onClick={toggleMic}
+                              className={`shrink-0 w-9 h-9 rounded-md border flex items-center justify-center transition-colors ${
+                                newUnitMic
+                                  ? 'bg-red-500/20 border-red-500/60 text-red-400 animate-pulse'
+                                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              {newUnitMic ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                            </button>
+                          )}
+                          <Button size="sm" className="h-9 shrink-0" onClick={submitNewUnit} disabled={!newUnitName.trim()}>
+                            Add
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-9 shrink-0 text-muted-foreground" onClick={() => { setPickerLevel(null); setNewUnitName(''); }}>
+                            Cancel
+                          </Button>
+                        </div>
+                        {newUnitMic && <p className="text-xs font-mono text-primary animate-pulse mt-1">Listening… say the unit name</p>}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <Droppable droppableId={level}>
                   {(provided, snapshot) => (
