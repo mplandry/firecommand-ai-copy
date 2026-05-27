@@ -71,10 +71,44 @@ function detectAlarmLevel(text) {
   return null;
 }
 
+// Normalize spoken unit names: "engine one" → "Engine 1", "latter" → "Ladder", etc.
+const NUMBER_WORDS_DISPATCH = {
+  zero:'0',one:'1',two:'2',three:'3',four:'4',five:'5',
+  six:'6',seven:'7',eight:'8',nine:'9',ten:'10',
+  eleven:'11',twelve:'12',niner:'9',fower:'4',tree:'3',
+};
+function normalizeUnitSpeech(raw) {
+  let s = raw.trim();
+  s = s.replace(/\blatter\b/gi, 'Ladder').replace(/\bladder\b/gi, 'Ladder').replace(/\blater\b/gi, 'Ladder');
+  s = s.replace(/\binjury\b/gi, 'Engine').replace(/\bindian\b/gi, 'Engine');
+  s = s.replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|niner|fower|tree)\b/gi,
+    m => NUMBER_WORDS_DISPATCH[m.toLowerCase()] || m);
+  s = s.replace(/\b\w/g, c => c.toUpperCase());
+  return s.trim();
+}
+
+// Score how well a spoken phrase matches a unit name
+function unitSpeechScore(input, unitName) {
+  const a = input.toLowerCase().trim();
+  const b = unitName.toLowerCase().trim();
+  if (a === b) return 100;
+  if (b.includes(a) || a.includes(b)) return 80;
+  const aS = a.replace(/^(wal|wall)\s*/i, '');
+  const bS = b.replace(/^(wal|wall)\s*/i, '');
+  if (aS && bS && (bS.includes(aS) || aS.includes(bS))) return 70;
+  const aToks = new Set(a.split(/\s+/));
+  const bToks = b.split(/\s+/);
+  const overlap = bToks.filter(t => aToks.has(t)).length;
+  return overlap * 20;
+}
+
 export default function DispatchLog() {
   const { incidentId } = useParams();
   const queryClient = useQueryClient();
   const { allUnits: deptUnits, apparatusGroups } = useDepartment();
+  const levelRefs = useRef({});     // DOM refs for each alarm level section
+  const unitsRef  = useRef([]);     // always-current units list for async mic handlers
+  const stagingRecogRef = useRef(null); // recognition instance for per-level staging mic
   const [editingFields, setEditingFields] = useState({});
   const [newUnitId, setNewUnitId] = useState(null);
   const [listening, setListening] = useState(null);
@@ -88,51 +122,121 @@ export default function DispatchLog() {
   // bumps automatically when an alarm upgrade is spoken or typed.
   const [activeLevel, setActiveLevel] = useState('1st_alarm');
 
+  // Keep units ref always current so async mic handlers don't use stale closures
+  const { data: _units } = useQuery({ queryKey: ['units', incidentId], enabled: false });
+  // (actual units query is declared below — we just need the ref update)
+
+  // Auto-scroll to the active alarm level section when it changes
+  useEffect(() => {
+    const el = levelRefs.current[activeLevel];
+    if (el) {
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+  }, [activeLevel]);
+
+  // Stop any staging mic when activeLevel changes (user struck a new alarm)
+  const stopStagingMic = () => {
+    if (stagingRecogRef.current) {
+      try { stagingRecogRef.current.stop(); } catch {}
+      stagingRecogRef.current = null;
+    }
+    setListening(null);
+  };
+
+  const setActiveLevelAndScroll = (level) => {
+    stopStagingMic();
+    setActiveLevel(level);
+  };
+
+  // Continuous per-level staging mic — listens for unit names, stages them one by one
   const handleMicInput = (level) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) { alert('Speech recognition not supported in this browser'); return; }
 
-    if (listening === level) return; // already listening
+    // Second tap = stop
+    if (listening === level) {
+      stopStagingMic();
+      return;
+    }
 
-    // Tapping a specific level's Voice button sets that as the active level
+    stopStagingMic();
     setActiveLevel(level);
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 3;
 
     recognition.onstart = () => setListening(level);
-    recognition.onend = () => setListening(null);
-    recognition.onerror = () => setListening(null);
+    recognition.onend = () => { stagingRecogRef.current = null; setListening(null); };
+    recognition.onerror = () => { stagingRecogRef.current = null; setListening(null); };
 
     recognition.onresult = (event) => {
-      const raw = event.results[0]?.[0]?.transcript?.trim();
-      if (raw) {
-        // Normalize spoken unit name: "Engine one" → "Engine 1", etc.
-        const numberWords = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10 };
-        let transcript = raw.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/gi,
-          m => numberWords[m.toLowerCase()]);
-        // Fix "latter/ladde" mishears
-        transcript = transcript.replace(/\blatter\b/gi, 'Ladder').replace(/\bladder\b/gi, 'Ladder');
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results[i].isFinal) continue;
 
-        const lower = transcript.toLowerCase();
-        let detectedType = 'engine';
-        if (/truck|ladder|tiller|latter/.test(lower)) detectedType = 'truck';
-        else if (/rescue/.test(lower)) detectedType = 'rescue';
-        else if (/medic|ems|amb/.test(lower)) detectedType = 'medic';
-        else if (/squad/.test(lower)) detectedType = 'squad';
-        else if (/tanker/.test(lower)) detectedType = 'tanker';
-        else if (/hazmat/.test(lower)) detectedType = 'hazmat';
-        else if (/brush|wildland/.test(lower)) detectedType = 'brush';
-        else if (/deputy|chief|battalion/.test(lower)) detectedType = 'deputy';
+        // Try all alternatives, pick the one that best matches a known unit
+        let bestTranscript = event.results[i][0].transcript;
+        let bestScore = 0;
+        const currentUnits = unitsRef.current;
+        for (let j = 0; j < event.results[i].length; j++) {
+          const t = event.results[i][j].transcript;
+          const norm = normalizeUnitSpeech(t);
+          for (const u of currentUnits) {
+            const s = Math.max(unitSpeechScore(norm, u.unit_name), unitSpeechScore(t, u.unit_name));
+            if (s > bestScore) { bestScore = s; bestTranscript = t; }
+          }
+        }
 
-        // Capitalize first letter of each word (e.g. "engine 1" → "Engine 1")
-        const unitName = transcript.replace(/\b\w/g, c => c.toUpperCase());
-        createUnit.mutate({ unit_name: unitName, unit_type: detectedType, alarm_level: level, status: 'dispatched', assignment: 'unassigned' });
+        const transcript = normalizeUnitSpeech(bestTranscript);
+
+        // Check for alarm level upgrade
+        const upgraded = detectAlarmLevel(transcript);
+        if (upgraded) {
+          setActiveLevel(upgraded);
+          continue;
+        }
+
+        // Try to match against unalarmed units in the incident
+        const unalarmed = currentUnits.filter(u => !u.alarm_level && u.assignment === 'unassigned');
+        let bestMatch = null;
+        let topScore = 0;
+        for (const u of unalarmed) {
+          const s = Math.max(unitSpeechScore(transcript, u.unit_name), unitSpeechScore(bestTranscript, u.unit_name));
+          if (s > topScore) { topScore = s; bestMatch = u; }
+        }
+
+        if (bestMatch && topScore >= 20) {
+          // Stage a known unit
+          updateUnit.mutate({ id: bestMatch.id, data: { alarm_level: level, status: 'staging' } });
+          logUnitDispatch(bestMatch.unit_name, level, null);
+        } else {
+          // New / mutual aid unit — create as staging
+          const lower = transcript.toLowerCase();
+          let detectedType = 'engine';
+          if (/truck|ladder/.test(lower)) detectedType = 'truck';
+          else if (/rescue/.test(lower)) detectedType = 'rescue';
+          else if (/medic|ems/.test(lower)) detectedType = 'medic';
+          else if (/squad/.test(lower)) detectedType = 'squad';
+          else if (/tanker/.test(lower)) detectedType = 'tanker';
+          else if (/hazmat/.test(lower)) detectedType = 'hazmat';
+          else if (/brush/.test(lower)) detectedType = 'brush';
+          else if (/deputy|chief|battalion/.test(lower)) detectedType = 'deputy';
+          createUnit.mutate({
+            unit_name: transcript,
+            unit_type: detectedType,
+            alarm_level: level,
+            status: 'staging',
+            assignment: 'unassigned',
+            is_mutual_aid: MA_TOWNS.test(transcript),
+          });
+          logUnitDispatch(transcript, level, null);
+        }
       }
     };
 
+    stagingRecogRef.current = recognition;
     recognition.start();
   };
 
@@ -153,6 +257,9 @@ export default function DispatchLog() {
     queryFn: () => base44.entities.Unit.filter({ incident_id: incidentId }),
     enabled: !!incidentId,
   });
+
+  // Keep unitsRef current for async mic handlers
+  useEffect(() => { unitsRef.current = units; }, [units]);
 
   const updateUnit = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Unit.update(id, data),
@@ -279,7 +386,7 @@ export default function DispatchLog() {
                   <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Next units →</span>
                   <select
                     value={activeLevel}
-                    onChange={(e) => setActiveLevel(e.target.value)}
+                    onChange={(e) => setActiveLevelAndScroll(e.target.value)}
                     className="text-xs font-mono font-bold rounded border border-primary/40 bg-primary/10 text-primary px-2 py-1 cursor-pointer"
                   >
                     {alarmLevels.map(l => (
@@ -297,22 +404,30 @@ export default function DispatchLog() {
 
           <DragDropContext onDragEnd={handleDragEnd}>
             {alarmLevels.map(level => (
-              <div key={level} className="rounded-lg border border-border/60 bg-card/40 overflow-hidden">
-                <div className="bg-secondary/60 border-b border-border/60 px-4 py-3 flex items-center justify-between">
+              <div
+                key={level}
+                ref={el => { levelRefs.current[level] = el; }}
+                className={`rounded-lg border bg-card/40 overflow-hidden transition-all ${
+                  level === activeLevel ? 'border-primary/50 shadow-lg shadow-primary/10' : 'border-border/60'
+                }`}
+              >
+                <div className={`border-b border-border/60 px-4 py-3 flex items-center justify-between ${
+                  level === activeLevel ? 'bg-primary/10' : 'bg-secondary/60'
+                }`}>
                   <div>
-                    <h2 className="font-mono font-bold text-foreground text-lg">{alarmLabels[level]}</h2>
-                    <p className="text-xs text-muted-foreground mt-1">{unitsByAlarm[level].length} units</p>
+                    <h2 className={`font-mono font-bold text-lg ${level === activeLevel ? 'text-primary' : 'text-foreground'}`}>{alarmLabels[level]}</h2>
+                    <p className="text-xs text-muted-foreground mt-1">{unitsByAlarm[level].length} units{level === activeLevel ? ' — active level' : ''}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       variant={listening === level ? 'default' : 'outline'}
                       onClick={() => handleMicInput(level)}
-                      className="gap-1.5"
+                      className={`gap-1.5 ${listening === level ? 'bg-red-500 hover:bg-red-600 border-red-500' : ''}`}
                       disabled={listening !== null && listening !== level}
                     >
                       <Mic className={`w-4 h-4 ${listening === level ? 'animate-pulse' : ''}`} />
-                      {listening === level ? 'Listening...' : 'Voice'}
+                      {listening === level ? '⏹ Stop' : '🎙 Stage Units'}
                     </Button>
                     <Button
                       size="sm"
@@ -566,17 +681,19 @@ export default function DispatchLog() {
 
                       {/* Unalarmed pool — show at bottom of active alarm level only */}
                       {level === activeLevel && unalarmedUnits.length > 0 && (
-                        <div className="pt-2 border-t border-border/40 mt-2">
-                          <p className="text-[9px] font-mono font-bold text-muted-foreground/50 uppercase tracking-widest mb-1.5">Available — tap to add to {alarmLabels[level]}</p>
+                        <div className="pt-2 border-t border-amber-500/20 mt-2">
+                          <p className="text-[9px] font-mono font-bold text-amber-400/70 uppercase tracking-widest mb-1.5">
+                            Tap or say to stage → {alarmLabels[level]}
+                          </p>
                           <div className="flex flex-wrap gap-1.5">
                             {unalarmedUnits.map(u => (
                               <button
                                 key={u.id}
                                 onClick={() => {
-                                  updateUnit.mutate({ id: u.id, data: { alarm_level: level, status: 'dispatched' } });
+                                  updateUnit.mutate({ id: u.id, data: { alarm_level: level, status: 'staging' } });
                                   logUnitDispatch(u.unit_name, level, incident?.address);
                                 }}
-                                className="text-xs font-mono px-2.5 py-1 rounded border border-border/50 bg-secondary/40 text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition-colors"
+                                className="text-xs font-mono px-2.5 py-1 rounded border border-amber-500/30 bg-amber-500/5 text-amber-400/70 hover:border-amber-500/60 hover:bg-amber-500/15 hover:text-amber-300 transition-colors"
                               >
                                 {u.unit_name}
                               </button>

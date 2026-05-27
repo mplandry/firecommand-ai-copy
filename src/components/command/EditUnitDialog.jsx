@@ -39,6 +39,7 @@ const assignments = [
 const statuses = [
   { value: 'dispatched', label: 'Dispatched' },
   { value: 'responding', label: 'Responding' },
+  { value: 'staging', label: 'Staging' },
   { value: 'on_scene', label: 'On Scene' },
   { value: 'working', label: 'Working' },
   { value: 'par', label: 'PAR' },
