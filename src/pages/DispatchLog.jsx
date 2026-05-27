@@ -105,7 +105,7 @@ function unitSpeechScore(input, unitName) {
 export default function DispatchLog() {
   const { incidentId } = useParams();
   const queryClient = useQueryClient();
-  const { allUnits: deptUnits, apparatusGroups } = useDepartment();
+  const { allUnits: deptUnits, apparatusGroups, specialUnits } = useDepartment();
   const levelRefs = useRef({});     // DOM refs for each alarm level section
   const unitsRef  = useRef([]);     // always-current units list for async mic handlers
   const stagingRecogRef = useRef(null); // recognition instance for per-level staging mic
@@ -353,7 +353,21 @@ export default function DispatchLog() {
   });
 
   // Units in the incident with no alarm level yet — available/unassigned pool
-  const unalarmedUnits = units.filter(u => (!u.alarm_level || u.alarm_level === '') && u.assignment === 'unassigned');
+  // Exclude boats, RTV, and any configured special apparatus
+  const ALWAYS_EXCLUDE_POOL = /\b(boat|rtv)\b/i;
+  const unalarmedUnits = units.filter(u => {
+    if ((!u.alarm_level || u.alarm_level === '') && u.assignment === 'unassigned') {
+      const uName = u.unit_name?.toLowerCase().trim() || '';
+      if (ALWAYS_EXCLUDE_POOL.test(uName)) return false;
+      if (specialUnits.some(sName => {
+        const s = sName.toLowerCase().trim();
+        const sStripped = s.replace(/^[a-z]{2,5}\s+/, '');
+        return uName === s || uName === sStripped || uName.endsWith(sStripped);
+      })) return false;
+      return true;
+    }
+    return false;
+  });
 
   const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
