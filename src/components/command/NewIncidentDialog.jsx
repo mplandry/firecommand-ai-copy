@@ -6,24 +6,45 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 
-// Full Waltham apparatus roster
-const WAL_APPARATUS = [
-  { unit_name: 'WAL C2',          unit_type: 'deputy',  personnel_count: 2 },
-  { unit_name: 'WAL Engine 1',    unit_type: 'engine',  personnel_count: 4 },
-  { unit_name: 'WAL Engine 2',    unit_type: 'engine',  personnel_count: 4 },
-  { unit_name: 'WAL Engine 3',    unit_type: 'engine',  personnel_count: 4 },
-  { unit_name: 'WAL Engine 4',    unit_type: 'engine',  personnel_count: 4 },
-  { unit_name: 'WAL Squad 5',     unit_type: 'squad',   personnel_count: 4 },
-  { unit_name: 'WAL Engine 7',    unit_type: 'engine',  personnel_count: 4 },
-  { unit_name: 'WAL Engine 8',    unit_type: 'engine',  personnel_count: 4 },
-  { unit_name: 'WAL Rescue 1',    unit_type: 'rescue',  personnel_count: 4 },
-  { unit_name: 'WAL Tower 1',     unit_type: 'truck',   personnel_count: 4 },
-  { unit_name: 'WAL Ladder 2',    unit_type: 'truck',   personnel_count: 4 },
-  { unit_name: 'WAL Ladder 3',    unit_type: 'truck',   personnel_count: 4 },
-  { unit_name: 'WAL Moody Boat',  unit_type: 'other',   personnel_count: 2 },
-  { unit_name: 'WAL Central Boat',unit_type: 'other',   personnel_count: 2 },
-  { unit_name: 'WAL RTV',         unit_type: 'other',   personnel_count: 2 },
+// Full Waltham apparatus roster — grouped by station
+const WAL_APPARATUS_GROUPS = [
+  {
+    label: 'MOODY ST.',
+    units: [
+      { unit_name: 'WAL C2',           unit_type: 'deputy',  personnel_count: 2 },
+      { unit_name: 'WAL Engine 1',     unit_type: 'engine',  personnel_count: 3 },
+      { unit_name: 'WAL Squad 5',      unit_type: 'squad',   personnel_count: 3 },
+      { unit_name: 'WAL Ladder 2',     unit_type: 'truck',   personnel_count: 3 },
+    ],
+  },
+  {
+    label: 'CENTRAL ST.',
+    units: [
+      { unit_name: 'WAL Engine 2',     unit_type: 'engine',  personnel_count: 3 },
+      { unit_name: 'WAL Rescue 1',     unit_type: 'rescue',  personnel_count: 4 },
+      { unit_name: 'WAL Tower 1',      unit_type: 'truck',   personnel_count: 3 },
+    ],
+  },
+  {
+    label: 'OTHER',
+    units: [
+      { unit_name: 'WAL Engine 3',     unit_type: 'engine',  personnel_count: 3 },
+      { unit_name: 'WAL Engine 4',     unit_type: 'engine',  personnel_count: 3 },
+      { unit_name: 'WAL Engine 7',     unit_type: 'engine',  personnel_count: 3 },
+      { unit_name: 'WAL Engine 8',     unit_type: 'engine',  personnel_count: 3 },
+      { unit_name: 'WAL Ladder 3',     unit_type: 'truck',   personnel_count: 3 },
+    ],
+  },
+  {
+    label: 'WATER / SPECIAL',
+    units: [
+      { unit_name: 'WAL Moody Boat',   unit_type: 'other',   personnel_count: 2 },
+      { unit_name: 'WAL Central Boat', unit_type: 'other',   personnel_count: 2 },
+      { unit_name: 'WAL RTV',          unit_type: 'other',   personnel_count: 2 },
+    ],
+  },
 ];
+const WAL_APPARATUS = WAL_APPARATUS_GROUPS.flatMap(g => g.units);
 
 const TYPE_COLOR = {
   engine:  'text-red-400 border-red-500/40 bg-red-500/10',
@@ -171,25 +192,34 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
                 </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {WAL_APPARATUS.map((u) => {
-                const selected = selectedUnits.includes(u.unit_name);
-                const colorClass = TYPE_COLOR[u.unit_type] || TYPE_COLOR.other;
-                return (
-                  <button
-                    key={u.unit_name}
-                    type="button"
-                    onClick={() => toggleUnit(u.unit_name)}
-                    className={`text-[11px] font-mono px-2 py-1 rounded border transition-all ${
-                      selected
-                        ? colorClass
-                        : 'text-muted-foreground border-border/40 bg-secondary/30 hover:border-border'
-                    }`}
-                  >
-                    {u.unit_name.replace('WAL ', '')}
-                  </button>
-                );
-              })}
+            <div className="space-y-2">
+              {WAL_APPARATUS_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <div className="text-[9px] font-mono font-bold text-muted-foreground/60 tracking-widest uppercase mb-1 pl-0.5">
+                    {group.label}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {group.units.map((u) => {
+                      const selected = selectedUnits.includes(u.unit_name);
+                      const colorClass = TYPE_COLOR[u.unit_type] || TYPE_COLOR.other;
+                      return (
+                        <button
+                          key={u.unit_name}
+                          type="button"
+                          onClick={() => toggleUnit(u.unit_name)}
+                          className={`text-[11px] font-mono px-2 py-1 rounded border transition-all ${
+                            selected
+                              ? colorClass
+                              : 'text-muted-foreground border-border/40 bg-secondary/30 hover:border-border'
+                          }`}
+                        >
+                          {u.unit_name.replace('WAL ', '')}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
             {selectedUnits.length > 0 && (
               <p className="text-[10px] font-mono text-muted-foreground mt-1.5">
