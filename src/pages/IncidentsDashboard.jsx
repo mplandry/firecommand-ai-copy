@@ -181,12 +181,12 @@ export default function IncidentsDashboard() {
           dispatchedUnits.map(u =>
             base44.entities.RadioLog.create({
               incident_id: incident.id,
-              message: `${u.unit_name} — DISPATCHED (${alarmLabel}) to ${incidentData.address}`,
+              message: `${u.unit_name} — DISPATCHED (${alarmLabel}) → ${incidentData.address}`,
               timestamp: dispatchTime,
               from_unit: 'DISPATCH',
               to_unit: u.unit_name,
               priority: 'routine',
-              parsed_action: `${u.unit_name} dispatched`,
+              parsed_action: `${u.unit_name} dispatched to ${incidentData.address}`,
               auto_applied: true,
             })
           )
