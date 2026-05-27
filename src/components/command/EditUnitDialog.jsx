@@ -158,10 +158,12 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
             <Select value={form.floor || 'none'} onValueChange={(v) => {
               const floor = v === 'none' ? '' : v;
               const extra = { floor };
-              // Sync: selecting Roof floor → set assignment to roof
+              // Floor → Roof: sync assignment to roof
               if (floor === 'Roof') extra.assignment = 'roof';
-              // Sync: clearing floor away from Roof → clear roof assignment
-              if (floor !== 'Roof' && form.floor === 'Roof' && form.assignment === 'roof') extra.assignment = 'unassigned';
+              // Floor → specific level while on roof assignment: move to interior
+              else if (floor && form.assignment === 'roof') extra.assignment = 'interior';
+              // Floor cleared from Roof: reset assignment
+              else if (!floor && form.floor === 'Roof' && form.assignment === 'roof') extra.assignment = 'unassigned';
               setForm({ ...form, ...extra });
             }}>
               <SelectTrigger className="bg-secondary font-mono text-xs">
