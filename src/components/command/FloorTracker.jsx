@@ -31,10 +31,19 @@ export default function FloorTracker({ units, onUpdateUnit, specialUnits = [] })
   const [expanded, setExpanded] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
-  // Exclude water/special apparatus that never enter a building
-  const floorUnits = units.filter(u =>
-    !specialUnits.some(name => name.toLowerCase() === u.unit_name?.toLowerCase())
-  );
+  // Exclude water/special apparatus that never enter a building.
+  // Match on full name OR strip dept prefix so "WAL Moody Boat" matches "Moody Boat" too.
+  // Also hardcode known non-building units as a safety net.
+  const ALWAYS_EXCLUDE = /\b(boat|rtv)\b/i;
+  const floorUnits = units.filter(u => {
+    const uName = u.unit_name?.toLowerCase().trim() || '';
+    if (ALWAYS_EXCLUDE.test(uName)) return false;
+    return !specialUnits.some(sName => {
+      const s = sName.toLowerCase().trim();
+      const sStripped = s.replace(/^[a-z]{2,5}\s+/, ''); // strip prefix like "wal "
+      return uName === s || uName === sStripped || uName.endsWith(sStripped);
+    });
+  });
 
   // Group by floor — also catch attic-assigned units whose floor may be 'Attic'
   const byFloor = {};
