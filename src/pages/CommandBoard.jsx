@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen, Radio } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen, Radio, Pencil } from 'lucide-react';
 import { DragDropContext } from '@hello-pangea/dnd';
 import { useTheme } from '@/lib/ThemeContext';
 import IncidentHeader from '@/components/command/IncidentHeader';
@@ -13,6 +13,7 @@ import RadioInput from '@/components/command/RadioInput';
 import EditUnitDialog from '@/components/command/EditUnitDialog';
 import AddUnitDialog from '@/components/command/AddUnitDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
+import EditIncidentDialog from '@/components/command/EditIncidentDialog';
 import ExportIncidentPDF from '@/components/command/ExportIncidentPDF';
 import ConnectionStatus from '@/components/command/ConnectionStatus';
 import SidePanel from '@/components/command/SidePanel';
@@ -28,6 +29,7 @@ export default function CommandBoard() {
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
   const [showClose, setShowClose] = useState(false);
+  const [showEditIncident, setShowEditIncident] = useState(false);
   const [showRosterUpload, setShowRosterUpload] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [bottomSide, setBottomSide] = useState('division_a'); // Alpha is default front/address side
@@ -355,6 +357,17 @@ export default function CommandBoard() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-1 shrink-0">
+          {!isReadOnly && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowEditIncident(true)}
+              className="h-10 w-10 text-muted-foreground hover:text-foreground"
+              title="Edit Incident"
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -600,6 +613,15 @@ export default function CommandBoard() {
             open={showClose}
             onClose={() => setShowClose(false)}
             onConfirm={(notes) => closeIncident.mutate({ notes })}
+          />
+          <EditIncidentDialog
+            incident={incident}
+            open={showEditIncident}
+            onClose={() => setShowEditIncident(false)}
+            onSave={(data) => {
+              updateIncident.mutate(data, { onSuccess: () => setShowEditIncident(false) });
+            }}
+            isSaving={updateIncident.isPending}
           />
         </>
       )}
