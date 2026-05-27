@@ -18,7 +18,7 @@ const defaultPersonnel = {
 function detectUnitType(name) {
   const n = name.toLowerCase();
   if (/engine|eng/.test(n))                    return 'engine';
-  if (/truck|ladder|lad/.test(n))              return 'truck';
+  if (/truck|ladder|lad|latter|later/.test(n)) return 'truck';
   if (/rescue|res/.test(n))                    return 'rescue';
   if (/squad/.test(n))                         return 'squad';
   if (/medic|amb|ems/.test(n))                 return 'medic';
@@ -32,11 +32,30 @@ function detectUnitType(name) {
 // Clean up common speech-to-text mishears for unit names
 function cleanUnitName(text) {
   return text
+    // Unit type mishears
+    .replace(/\blatter\b/gi, 'Ladder')
+    .replace(/\bladder\b/gi, 'Ladder')
+    .replace(/\blater\b/gi, 'Ladder')
+    .replace(/\blater\b/gi, 'Ladder')
+    .replace(/\bengine\b/gi, 'Engine')
+    .replace(/\brescue\b/gi, 'Rescue')
+    .replace(/\bmedic\b/gi, 'Medic')
+    .replace(/\btanker\b/gi, 'Tanker')
+    .replace(/\bbattalion\b/gi, 'Battalion')
+    // Spoken numbers → digits
+    .replace(/\bone\b/gi, '1')
+    .replace(/\btwo\b/gi, '2')
+    .replace(/\bthree\b/gi, '3')
+    .replace(/\bfour\b/gi, '4')
+    .replace(/\bfive\b/gi, '5')
+    .replace(/\bsix\b/gi, '6')
+    .replace(/\bseven\b/gi, '7')
+    .replace(/\beight\b/gi, '8')
+    .replace(/\bnine\b/gi, '9')
     .replace(/\bniner\b/gi, '9')
     .replace(/\btree\b/gi, '3')
     .replace(/\bfower\b/gi, '4')
     .replace(/\bto\b/gi, '2')
-    .replace(/\bfor\b/gi, '4')
     .trim();
 }
 
