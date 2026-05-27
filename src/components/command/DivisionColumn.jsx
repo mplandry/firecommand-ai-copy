@@ -23,7 +23,7 @@ const divisionConfig = {
 
 const STATION_GROUPS = [
   { label: 'CENTRAL ST.', units: ['WAL Engine 2', 'WAL Rescue 1', 'WAL Tower 1'] },
-  { label: 'MOODY ST.',   units: ['WAL Engine 1', 'WAL Squad 5', 'WAL Ladder 2'] },
+  { label: 'MOODY ST.',   units: ['WAL C2', 'WAL Engine 1', 'WAL Squad 5', 'WAL Ladder 2'] },
 ];
 const LOW_PRIORITY_UNITS = ['WAL Moody Boat', 'WAL Central Boat', 'WAL RTV'];
 const ALL_STATION_UNITS = STATION_GROUPS.flatMap(g => g.units);
