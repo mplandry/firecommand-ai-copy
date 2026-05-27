@@ -1,50 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-
-// Full Waltham apparatus roster — grouped by station
-const WAL_APPARATUS_GROUPS = [
-  {
-    label: 'MOODY ST.',
-    units: [
-      { unit_name: 'WAL C2',           unit_type: 'deputy',  personnel_count: 2 },
-      { unit_name: 'WAL Engine 1',     unit_type: 'engine',  personnel_count: 3 },
-      { unit_name: 'WAL Squad 5',      unit_type: 'squad',   personnel_count: 3 },
-      { unit_name: 'WAL Ladder 2',     unit_type: 'truck',   personnel_count: 3 },
-    ],
-  },
-  {
-    label: 'CENTRAL ST.',
-    units: [
-      { unit_name: 'WAL Engine 2',     unit_type: 'engine',  personnel_count: 3 },
-      { unit_name: 'WAL Rescue 1',     unit_type: 'rescue',  personnel_count: 4 },
-      { unit_name: 'WAL Tower 1',      unit_type: 'truck',   personnel_count: 3 },
-    ],
-  },
-  {
-    label: 'OTHER',
-    units: [
-      { unit_name: 'WAL Engine 3',     unit_type: 'engine',  personnel_count: 3 },
-      { unit_name: 'WAL Engine 4',     unit_type: 'engine',  personnel_count: 3 },
-      { unit_name: 'WAL Engine 7',     unit_type: 'engine',  personnel_count: 3 },
-      { unit_name: 'WAL Engine 8',     unit_type: 'engine',  personnel_count: 3 },
-      { unit_name: 'WAL Ladder 3',     unit_type: 'truck',   personnel_count: 3 },
-    ],
-  },
-  {
-    label: 'WATER / SPECIAL',
-    units: [
-      { unit_name: 'WAL Moody Boat',   unit_type: 'other',   personnel_count: 2 },
-      { unit_name: 'WAL Central Boat', unit_type: 'other',   personnel_count: 2 },
-      { unit_name: 'WAL RTV',          unit_type: 'other',   personnel_count: 2 },
-    ],
-  },
-];
-const WAL_APPARATUS = WAL_APPARATUS_GROUPS.flatMap(g => g.units);
 
 const TYPE_COLOR = {
   engine:  'text-red-400 border-red-500/40 bg-red-500/10',
@@ -58,9 +18,17 @@ const TYPE_COLOR = {
 
 const EMPTY_FORM = { address: '', incident_type: 'structure_fire', alarm_level: '1st_alarm', ic_name: '', command_name: '' };
 
-export default function NewIncidentDialog({ open, onClose, onCreate, isCreating = false, createError = null }) {
+export default function NewIncidentDialog({
+  open, onClose, onCreate, isCreating = false, createError = null,
+  apparatusGroups = [], allUnits = [],
+}) {
   const [form, setForm] = useState(EMPTY_FORM);
-  const [selectedUnits, setSelectedUnits] = useState(WAL_APPARATUS.map(u => u.unit_name));
+  const [selectedUnits, setSelectedUnits] = useState([]);
+
+  // When apparatus list loads (or dialog opens), default-select all units
+  useEffect(() => {
+    if (open) setSelectedUnits(allUnits.map(u => u.unit_name));
+  }, [open, allUnits]);
 
   const toggleUnit = (unitName) => {
     setSelectedUnits(prev =>
@@ -73,7 +41,7 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
     const commandName = form.command_name || form.address.split(' ').slice(0, 2).join(' ') + ' Command';
 
     const onSceneTime = new Date().toISOString();
-    const units = WAL_APPARATUS.map(u =>
+    const units = allUnits.map(u =>
       selectedUnits.includes(u.unit_name)
         ? { ...u, assignment: 'unassigned', status: 'dispatched' }
         : { ...u, assignment: 'division_a', status: 'on_scene', on_scene_time: onSceneTime }
@@ -86,13 +54,11 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
       started_at: new Date().toISOString(),
       _template: units.length > 0 ? { units } : null,
     });
-    // Note: form is reset when dialog closes (handleClose), not here
-    // so the user can see what they entered while the API call is in flight
   };
 
   const handleClose = () => {
     setForm(EMPTY_FORM);
-    setSelectedUnits(WAL_APPARATUS.map(u => u.unit_name));
+    setSelectedUnits(allUnits.map(u => u.unit_name));
     onClose();
   };
 
@@ -177,7 +143,7 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedUnits(WAL_APPARATUS.map(u => u.unit_name))}
+                  onClick={() => setSelectedUnits(allUnits.map(u => u.unit_name))}
                   className="text-[10px] font-mono text-primary hover:text-primary/80 transition-colors"
                 >
                   All
@@ -193,7 +159,7 @@ export default function NewIncidentDialog({ open, onClose, onCreate, isCreating 
               </div>
             </div>
             <div className="space-y-2">
-              {WAL_APPARATUS_GROUPS.map((group) => (
+              {apparatusGroups.map((group) => (
                 <div key={group.label}>
                   <div className="text-[9px] font-mono font-bold text-muted-foreground/60 tracking-widest uppercase mb-1 pl-0.5">
                     {group.label}

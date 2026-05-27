@@ -21,14 +21,18 @@ const divisionConfig = {
   unassigned:   { label: 'UNASSIGNED', sub: 'UNITS',    accent: 'border-t-slate-600',  dot: 'bg-slate-600',  count: 'text-slate-500' },
 };
 
-const STATION_GROUPS = [
-  { label: 'CENTRAL ST.', units: ['WAL Engine 2', 'WAL Rescue 1', 'WAL Tower 1'] },
+// Waltham fallback defaults (used when dept config not yet loaded)
+const DEFAULT_STATION_GROUPS = [
   { label: 'MOODY ST.',   units: ['WAL C2', 'WAL Engine 1', 'WAL Squad 5', 'WAL Ladder 2'] },
+  { label: 'CENTRAL ST.', units: ['WAL Engine 2', 'WAL Rescue 1', 'WAL Tower 1'] },
 ];
-const LOW_PRIORITY_UNITS = ['WAL Moody Boat', 'WAL Central Boat', 'WAL RTV'];
-const ALL_STATION_UNITS = STATION_GROUPS.flatMap(g => g.units);
+const DEFAULT_LOW_PRIORITY = ['WAL Moody Boat', 'WAL Central Boat', 'WAL RTV'];
 
-export default function DivisionColumn({ assignment, units, onEditUnit, onUpdateUnit, allUnits = [] }) {
+export default function DivisionColumn({
+  assignment, units, onEditUnit, onUpdateUnit, allUnits = [],
+  stationGroups = DEFAULT_STATION_GROUPS,
+  specialUnits  = DEFAULT_LOW_PRIORITY,
+}) {
   const cfg = divisionConfig[assignment] || divisionConfig.unassigned;
   const isEmpty = units.length === 0;
   const isRITEmpty = assignment === 'rit' && isEmpty;
@@ -122,8 +126,10 @@ export default function DivisionColumn({ assignment, units, onEditUnit, onUpdate
                 </div>
               );
 
+              const allStationUnits = stationGroups.flatMap(g => g.units);
+
               // Render each station group
-              STATION_GROUPS.forEach(group => {
+              stationGroups.forEach(group => {
                 const groupUnits = group.units
                   .map(name => units.find(u => u.unit_name === name))
                   .filter(Boolean);
@@ -132,11 +138,11 @@ export default function DivisionColumn({ assignment, units, onEditUnit, onUpdate
                 groupUnits.forEach(u => elements.push(renderUnit(u)));
               });
 
-              // Other units not in any station group and not low priority — sorted by number
+              // Other units not in any station group and not special — sorted by number
               const otherUnits = units
                 .filter(u =>
-                  !ALL_STATION_UNITS.includes(u.unit_name) &&
-                  !LOW_PRIORITY_UNITS.includes(u.unit_name)
+                  !allStationUnits.includes(u.unit_name) &&
+                  !specialUnits.includes(u.unit_name)
                 )
                 .sort((a, b) => {
                   const numA = parseInt((a.unit_name.match(/\d+/) || [0])[0]);
@@ -148,8 +154,8 @@ export default function DivisionColumn({ assignment, units, onEditUnit, onUpdate
                 otherUnits.forEach(u => elements.push(renderUnit(u)));
               }
 
-              // Low priority at very bottom
-              const lowUnits = LOW_PRIORITY_UNITS
+              // Special / low-priority at very bottom
+              const lowUnits = specialUnits
                 .map(name => units.find(u => u.unit_name === name))
                 .filter(Boolean);
               if (lowUnits.length > 0) {

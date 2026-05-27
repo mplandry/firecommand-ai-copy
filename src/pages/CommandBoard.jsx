@@ -9,6 +9,7 @@ import { useTheme } from '@/lib/ThemeContext';
 import IncidentHeader from '@/components/command/IncidentHeader';
 import RosterUploadDialog from '@/components/command/RosterUploadDialog';
 import DivisionColumn from '@/components/command/DivisionColumn';
+import { useDepartment } from '@/hooks/useDepartment';
 import RadioInput from '@/components/command/RadioInput';
 import EditUnitDialog from '@/components/command/EditUnitDialog';
 import AddUnitDialog from '@/components/command/AddUnitDialog';
@@ -29,6 +30,7 @@ export default function CommandBoard() {
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
   const [showClose, setShowClose] = useState(false);
+  const { stationGroups, specialUnits } = useDepartment();
   const [showEditIncident, setShowEditIncident] = useState(false);
   const [showRosterUpload, setShowRosterUpload] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
@@ -505,13 +507,13 @@ export default function CommandBoard() {
               <div className="flex flex-col items-center gap-2">
                 {/* Top */}
                 <div className="w-full max-w-xs">
-                <DivisionColumn assignment={topSide} units={units.filter(u => u.assignment === topSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} />
+                <DivisionColumn assignment={topSide} units={units.filter(u => u.assignment === topSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} />
                 </div>
 
                 {/* Middle row */}
                 <div className="w-full flex items-stretch gap-2">
                 <div className="flex-1">
-                  <DivisionColumn assignment={leftSide} units={units.filter(u => u.assignment === leftSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} />
+                  <DivisionColumn assignment={leftSide} units={units.filter(u => u.assignment === leftSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} />
                 </div>
 
                   {/* Structure box */}
@@ -531,13 +533,13 @@ export default function CommandBoard() {
                   </div>
 
                   <div className="flex-1">
-                    <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} />
+                    <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} />
                   </div>
                 </div>
 
                 {/* Bottom (front/address side) */}
                 <div className="w-full max-w-xs">
-                  <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} />
+                  <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} />
                 </div>
               </div>
             );
@@ -553,6 +555,8 @@ export default function CommandBoard() {
                 onEditUnit={isReadOnly ? null : setEditingUnit}
                 onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })}
                 allUnits={units}
+                stationGroups={stationGroups}
+                specialUnits={specialUnits}
               />
             ))}
           </div>
