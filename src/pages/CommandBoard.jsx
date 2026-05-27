@@ -286,14 +286,16 @@ export default function CommandBoard() {
     const updateData = { assignment: newAssignment };
 
     // Auto-status when dragged onto active tactical zones
-    const workingZones = ['division_a', 'division_b', 'division_c', 'division_d', 'roof', 'interior', 'ventilation', 'search', 'water_supply', 'medical', 'exposure'];
+    const workingZones = ['division_a', 'division_b', 'division_c', 'division_d', 'roof', 'attic', 'interior', 'ventilation', 'search', 'water_supply', 'medical', 'exposure'];
     const onSceneZones = ['staging'];
 
-    // Auto-set floor when dragged to roof assignment
+    // Auto-set floor when dragged to roof or attic assignment
     if (newAssignment === 'roof') {
       updateData.floor = 'Roof';
-    } else if (unit.floor === 'Roof' && newAssignment !== 'roof') {
-      // Clear roof floor when moved away from roof assignment
+    } else if (newAssignment === 'attic') {
+      updateData.floor = 'Attic';
+    } else if ((unit.floor === 'Roof' || unit.floor === 'Attic') && newAssignment !== 'roof' && newAssignment !== 'attic') {
+      // Clear roof/attic floor when moved away
       updateData.floor = '';
     }
 
@@ -569,7 +571,7 @@ export default function CommandBoard() {
 
           {/* ── Operational Groups ── */}
           <div className="grid grid-cols-2 gap-2">
-            {['roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
+            {['roof', 'attic', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
               <DivisionColumn
                 key={assignment}
                 assignment={assignment}

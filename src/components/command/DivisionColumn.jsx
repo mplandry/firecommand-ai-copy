@@ -9,6 +9,7 @@ const divisionConfig = {
   division_c:   { label: 'CHARLIE',    sub: '',         accent: 'border-t-green-500',  dot: 'bg-green-500',  count: 'text-green-400' },
   division_d:   { label: 'DELTA',      sub: '',         accent: 'border-t-yellow-500', dot: 'bg-yellow-500', count: 'text-yellow-400' },
   roof:         { label: 'ROOF',       sub: '',         accent: 'border-t-orange-500', dot: 'bg-orange-500', count: 'text-orange-400' },
+  attic:        { label: 'ATTIC',      sub: '',         accent: 'border-t-amber-700',  dot: 'bg-amber-700',  count: 'text-amber-600' },
   interior:     { label: 'INTERIOR',   sub: 'OPS',      accent: 'border-t-red-400',    dot: 'bg-red-400',    count: 'text-red-400' },
   rit:          { label: 'RIT',        sub: 'IRIC',     accent: 'border-t-red-700',    dot: 'bg-red-700',    count: 'text-red-500' },
   rehab:        { label: 'REHAB',      sub: 'SECTOR',   accent: 'border-t-violet-500', dot: 'bg-violet-500', count: 'text-violet-400' },

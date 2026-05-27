@@ -25,6 +25,7 @@ const assignments = [
   { value: 'division_c', label: 'Charlie' },
   { value: 'division_d', label: 'Delta' },
   { value: 'roof', label: 'Roof' },
+  { value: 'attic', label: 'Attic' },
   { value: 'interior', label: 'Interior' },
   { value: 'rit', label: 'RIT / IRIC' },
   { value: 'rehab', label: 'Rehab' },
@@ -110,8 +111,9 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
               <Label className="text-xs font-mono">Assignment</Label>
               <Select value={form.assignment} onValueChange={(v) => {
                 const extra = {};
-                if (v === 'roof') extra.floor = 'Roof';
-                else if (form.assignment === 'roof' && v !== 'roof') extra.floor = '';
+                if (v === 'roof')  extra.floor = 'Roof';
+                else if (v === 'attic') extra.floor = 'Attic';
+                else if ((form.assignment === 'roof' || form.assignment === 'attic') && v !== 'roof' && v !== 'attic') extra.floor = '';
                 // Auto-set status when dragged to rehab
                 if (v === 'rehab' && form.status !== 'rehab') {
                   extra.status = 'rehab';
@@ -160,10 +162,10 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
               const extra = { floor };
               // Floor → Roof: sync assignment to roof
               if (floor === 'Roof') extra.assignment = 'roof';
-              // Floor → Attic: sync assignment to interior
-              else if (floor === 'Attic') extra.assignment = 'interior';
-              // Floor → specific level while on roof assignment: move to interior
-              else if (floor && form.assignment === 'roof') extra.assignment = 'interior';
+              // Floor → Attic: sync assignment to attic
+              else if (floor === 'Attic') extra.assignment = 'attic';
+              // Floor → specific level while on roof/attic assignment: move to interior
+              else if (floor && (form.assignment === 'roof' || form.assignment === 'attic')) extra.assignment = 'interior';
               // Floor cleared from Roof: reset assignment
               else if (!floor && form.floor === 'Roof' && form.assignment === 'roof') extra.assignment = 'unassigned';
               setForm({ ...form, ...extra });
