@@ -308,6 +308,7 @@ export default function CommandBoard() {
     } else if (newAssignment === 'rehab') {
       updateData.status = 'rehab';
       updateData.rehab_time = now;
+      updateData.floor = ''; // clear floor when going to rehab
     } else if (newAssignment === 'rit') {
       updateData.status = 'working';
       if (!unit.on_scene_time) updateData.on_scene_time = now;
