@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trash2, AlertTriangle } from 'lucide-react';
 import { getAutoAssignment } from '@/lib/statusAssignment';
 
 const alarmLevels = [
@@ -48,9 +49,10 @@ const statuses = [
 
 export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }) {
   const [form, setForm] = useState({});
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    if (unit) setForm({ ...unit });
+    if (unit) { setForm({ ...unit }); setConfirmDelete(false); }
   }, [unit]);
 
   if (!unit) return null;
@@ -226,14 +228,44 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
             </Button>
           </div>
         </div>
+        {/* Delete confirmation banner */}
+        {confirmDelete && (
+          <div className="mx-1 mb-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2.5 flex items-center gap-3">
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <p className="text-xs font-mono text-red-300 flex-1">
+              Remove <span className="font-bold text-red-200">{unit.unit_name}</span> from this incident?
+            </p>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => { onDelete(unit.id); onClose(); }}>
+                Remove
+              </Button>
+            </div>
+          </div>
+        )}
+
         <DialogFooter className="flex justify-between">
-          <Button variant="destructive" size="sm" onClick={() => {
-            const updated = { ...form, assignment: 'unassigned', status: 'available', rehab_time: null };
-            onSave(updated);
-            onClose();
-          }}>
-            ✕ Clear Assignment
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="destructive" size="sm" onClick={() => {
+              const updated = { ...form, assignment: 'unassigned', status: 'available', rehab_time: null };
+              onSave(updated);
+              onClose();
+            }}>
+              ✕ Clear Assignment
+            </Button>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmDelete(true)}
+                className="text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={() => onSave(form)}>Save Changes</Button>
