@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Send } from 'lucide-react';
 import UnitCard from './UnitCard';
+import { base44 } from '@/api/base44Client';
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -90,11 +91,23 @@ export default function RITQuickInput({ units, onAssignUnit }) {
 
   const matchedUnit = input.trim().length > 0 ? findMatch(input) : null;
 
+  const saveCorrection = (rawInput, unit) => {
+    base44.entities.TerminologyCorrection.create({
+      raw_phrase: rawInput,
+      correct_unit: unit.unit_name,
+      correct_assignment: 'rit',
+      correct_status: 'working',
+      correct_summary: `RIT mic: "${rawInput}" → ${unit.unit_name} assigned to RIT`,
+      confirmed: true,
+    }).catch(() => {});
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
     if (matchedUnit) {
+      saveCorrection(input, matchedUnit);
       onAssignUnit(matchedUnit.id);
       setInput('');
       setNoMatch(false);
@@ -158,7 +171,7 @@ export default function RITQuickInput({ units, onAssignUnit }) {
       {matchedUnit && (
         <div
           className="cursor-pointer opacity-90 hover:opacity-100 transition-opacity"
-          onClick={() => { onAssignUnit(matchedUnit.id); setInput(''); }}
+          onClick={() => { saveCorrection(input, matchedUnit); onAssignUnit(matchedUnit.id); setInput(''); }}
           title="Click to assign to RIT"
         >
           <UnitCard unit={matchedUnit} />

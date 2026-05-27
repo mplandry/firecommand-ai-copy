@@ -240,6 +240,15 @@ export default function DispatchLog() {
           if (['working','on_scene'].includes(spokenStatus)) assignData.on_scene_time = new Date().toISOString();
           updateUnit.mutate({ id: bestMatch.id, data: assignData });
           logUnitDispatch(bestMatch.unit_name, level, null);
+          // Save to terminology corrections so AI learns this unit's spoken form
+          base44.entities.TerminologyCorrection.create({
+            raw_phrase: bestTranscript,
+            correct_unit: bestMatch.unit_name,
+            correct_assignment: spokenAssignment || 'staging',
+            correct_status: spokenStatus,
+            correct_summary: `Dispatch mic: "${bestTranscript}" → ${bestMatch.unit_name}${spokenAssignment ? ` / ${spokenAssignment}` : ''}`,
+            confirmed: true,
+          }).catch(() => {});
         } else {
           // New / mutual aid unit — create as staging
           const lower = transcript.toLowerCase();

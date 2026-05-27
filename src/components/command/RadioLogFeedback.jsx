@@ -23,7 +23,17 @@ export default function RadioLogFeedback({ log }) {
   });
 
   const handleThumbsUp = async () => {
-    // Mark as confirmed correct — no correction needed
+    // Save confirmed-correct entry so AI keeps this mapping in future parses
+    if (log.message) {
+      base44.entities.TerminologyCorrection.create({
+        raw_phrase: log.message,
+        correct_unit: log.from_unit || null,
+        correct_assignment: log.assignment || null,
+        correct_status: log.status || null,
+        correct_summary: log.parsed_action || null,
+        confirmed: true,
+      }).catch(() => {});
+    }
     setSaved(true);
   };
 
