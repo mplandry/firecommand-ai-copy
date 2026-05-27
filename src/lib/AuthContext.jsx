@@ -39,6 +39,10 @@ function SignupScreen({ onSignup, onGoLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPw, setShowPw] = useState(false);
+  // OTP verification step
+  const [otpStep, setOtpStep] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [resending, setResending] = useState(false);
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -55,6 +59,26 @@ function SignupScreen({ onSignup, onGoLogin }) {
     return null;
   };
 
+  const finishSignup = async (token) => {
+    storeToken(token);
+    storeEmail(form.email.trim());
+    base44.auth.setToken(token);
+    // Save extended profile to Registration entity
+    try {
+      await base44.entities.Registration.create({
+        first_name:       form.first_name.trim(),
+        last_name:        form.last_name.trim(),
+        email:            form.email.trim(),
+        phone:            form.phone.trim(),
+        fire_department:  form.fire_department.trim(),
+        role:             form.role,
+      });
+    } catch (_) {
+      console.warn('Could not save registration profile:', _);
+    }
+    onSignup(token, form.email.trim(), `${form.first_name.trim()} ${form.last_name.trim()}`);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const err = validate();
@@ -62,42 +86,52 @@ function SignupScreen({ onSignup, onGoLogin }) {
     setLoading(true);
     setError('');
     try {
-      // Create the base44 account
       const result = await base44.auth.register({
         email: form.email.trim(),
         password: form.password,
         full_name: `${form.first_name.trim()} ${form.last_name.trim()}`,
       });
-      const token = result?.access_token || result?.token || result;
-      if (!token || typeof token !== 'string') {
-        setError('Signup failed — unexpected response. Please try again.');
-        setLoading(false);
+      // If register returned a token directly, we're done
+      const token = result?.access_token || result?.token;
+      if (token && typeof token === 'string') {
+        await finishSignup(token);
         return;
       }
-      storeToken(token);
-      storeEmail(form.email.trim());
-      base44.auth.setToken(token);
-
-      // Save extended profile to Registration entity
-      try {
-        await base44.entities.Registration.create({
-          first_name:       form.first_name.trim(),
-          last_name:        form.last_name.trim(),
-          email:            form.email.trim(),
-          phone:            form.phone.trim(),
-          fire_department:  form.fire_department.trim(),
-          role:             form.role,
-        });
-      } catch (_) {
-        // Non-fatal — account was created, profile save failed
-        console.warn('Could not save registration profile:', _);
-      }
-
-      onSignup(token, form.email.trim(), `${form.first_name.trim()} ${form.last_name.trim()}`);
+      // Otherwise base44 sent an OTP to the email — show verification step
+      setOtpStep(true);
     } catch (err) {
       setError(err?.message || 'Signup failed. The email may already be in use.');
     }
     setLoading(false);
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp.trim()) { setError('Please enter the verification code.'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      const result = await base44.auth.verifyOtp({ email: form.email.trim(), otpCode: otp.trim() });
+      const token = result?.access_token || result?.token;
+      if (!token || typeof token !== 'string') {
+        setError('Verification failed — unexpected response. Please try again.');
+        setLoading(false);
+        return;
+      }
+      await finishSignup(token);
+    } catch (err) {
+      setError(err?.message || 'Invalid or expired code. Please try again.');
+    }
+    setLoading(false);
+  };
+
+  const handleResendOtp = async () => {
+    setResending(true);
+    setError('');
+    try {
+      await base44.auth.resendOtp(form.email.trim());
+    } catch (_) {}
+    setResending(false);
   };
 
   const field = (label, key, props = {}) => (
@@ -114,18 +148,75 @@ function SignupScreen({ onSignup, onGoLogin }) {
     </div>
   );
 
+  const header = (
+    <div className="flex flex-col items-center gap-3 mb-6">
+      <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center">
+        <Flame className="w-7 h-7 text-primary" />
+      </div>
+      <div className="text-center">
+        <h1 className="text-2xl font-mono font-bold text-foreground tracking-wide">FIREGROUND COMMAND</h1>
+        <p className="text-sm text-muted-foreground font-mono mt-1">
+          {otpStep ? 'Verify your email' : 'Create your account'}
+        </p>
+      </div>
+    </div>
+  );
+
+  // ── OTP verification screen ──
+  if (otpStep) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          {header}
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <p className="text-xs font-mono text-muted-foreground text-center">
+              A verification code was sent to <span className="text-foreground">{form.email}</span>. Enter it below to activate your account.
+            </p>
+            <div>
+              <label className="block text-xs font-mono text-muted-foreground mb-1.5">
+                Verification Code <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                placeholder="Enter code from email"
+                autoFocus
+                className="w-full h-10 px-3 rounded-md border border-border bg-secondary text-sm font-mono text-foreground tracking-widest placeholder:text-muted-foreground placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs font-mono text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-mono font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</> : 'Verify & Continue'}
+            </button>
+
+            <p className="text-center text-xs font-mono text-muted-foreground">
+              Didn't get the code?{' '}
+              <button type="button" onClick={handleResendOtp} disabled={resending} className="text-primary hover:underline disabled:opacity-50">
+                {resending ? 'Sending…' : 'Resend'}
+              </button>
+            </p>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Registration form ──
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center gap-3 mb-6">
-          <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center">
-            <Flame className="w-7 h-7 text-primary" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-mono font-bold text-foreground tracking-wide">FIREGROUND COMMAND</h1>
-            <p className="text-sm text-muted-foreground font-mono mt-1">Create your account</p>
-          </div>
-        </div>
+        {header}
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
