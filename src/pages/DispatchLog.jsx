@@ -220,24 +220,40 @@ export default function DispatchLog() {
           spokenAssignment = 'staging'; spokenStatus = 'staging';
         }
 
-        // Try to match against unalarmed units in the incident
-        const unalarmed = currentUnits.filter(u => !u.alarm_level && u.assignment === 'unassigned');
+        // Strip context/filler words from the transcript to isolate the unit name
+        // e.g. "Engine 1 Is At The Hydrant" → "Engine 1"
+        const CONTEXT_STRIP = /\b(is|at|the|on|going|to|for|take|will|going to|has|been|are|a|an|in|with|by|and|hydrant|water supply|supply line|lay in|on water|rit|rapid intervention|iric|rehab|exposure|search|rescue|ventilat|medical|ems group|staging|division|alpha|bravo|charlie|delta|roof|attic|interior)\b/gi;
+        const unitOnlyTranscript = transcript.replace(CONTEXT_STRIP, ' ').replace(/\s+/g, ' ').trim();
+        const unitOnlyRaw = bestTranscript.replace(CONTEXT_STRIP, ' ').replace(/\s+/g, ' ').trim();
+
+        // When an explicit assignment is voiced, search ALL incident units (not just unalarmed)
+        // so you can reassign a unit that's already staged or on scene
+        const searchPool = spokenAssignment
+          ? currentUnits.filter(u => !['available','out_of_service'].includes(u.status))
+          : currentUnits.filter(u => !u.alarm_level && u.assignment === 'unassigned');
+
         let bestMatch = null;
         let topScore = 0;
-        for (const u of unalarmed) {
-          const s = Math.max(unitSpeechScore(transcript, u.unit_name), unitSpeechScore(bestTranscript, u.unit_name));
+        for (const u of searchPool) {
+          const s = Math.max(
+            unitSpeechScore(unitOnlyTranscript, u.unit_name),
+            unitSpeechScore(unitOnlyRaw, u.unit_name),
+            unitSpeechScore(transcript, u.unit_name),
+            unitSpeechScore(bestTranscript, u.unit_name),
+          );
           if (s > topScore) { topScore = s; bestMatch = u; }
         }
 
         if (bestMatch && topScore >= 20) {
-          // Stage a known unit
+          // Update the matched unit — if it already has an alarm_level keep it, else tag with current level
           const assignData = {
-            alarm_level: level,
+            alarm_level: bestMatch.alarm_level || level,
             status: spokenStatus,
             assignment: spokenAssignment || 'staging',
           };
           if (spokenStatus === 'rehab') assignData.rehab_time = new Date().toISOString();
-          if (['working','on_scene'].includes(spokenStatus)) assignData.on_scene_time = new Date().toISOString();
+          if (['working','on_scene'].includes(spokenStatus) && !bestMatch.on_scene_time)
+            assignData.on_scene_time = new Date().toISOString();
           updateUnit.mutate({ id: bestMatch.id, data: assignData });
           logUnitDispatch(bestMatch.unit_name, level, null);
           // Save to terminology corrections so AI learns this unit's spoken form
