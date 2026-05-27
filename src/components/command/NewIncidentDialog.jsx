@@ -41,13 +41,14 @@ export default function NewIncidentDialog({
     const commandName = form.command_name || form.address.split(' ').slice(0, 2).join(' ') + ' Command';
 
     const onSceneTime = new Date().toISOString();
-    // Only create units for selected apparatus — tag them with the chosen alarm level
+    // Units picked at incident creation are already going — on scene, Alpha side, 1st alarm
     const units = allUnits
       .filter(u => selectedUnits.includes(u.unit_name))
       .map(u => ({
         ...u,
-        assignment: 'unassigned',
-        status: 'dispatched',
+        assignment: 'division_a',
+        status: 'on_scene',
+        on_scene_time: onSceneTime,
         alarm_level: form.alarm_level || '1st_alarm',
       }));
 
@@ -193,7 +194,7 @@ export default function NewIncidentDialog({
             </div>
             {selectedUnits.length > 0 && (
               <p className="text-[10px] font-mono text-muted-foreground mt-1.5">
-                {selectedUnits.length} unit{selectedUnits.length !== 1 ? 's' : ''} selected — dispatched, unassigned
+                {selectedUnits.length} unit{selectedUnits.length !== 1 ? 's' : ''} selected — on scene, Alpha side, {form.alarm_level?.replace('_', ' ') || '1st alarm'}
               </p>
             )}
           </div>

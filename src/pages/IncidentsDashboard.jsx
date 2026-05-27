@@ -169,7 +169,7 @@ export default function IncidentsDashboard() {
         });
 
         // Create dispatch log entries — one per unit, stamped at incident start time
-        const dispatchedUnits = _template.units.filter(u => u.status === 'dispatched');
+        const onSceneUnits = _template.units.filter(u => u.status === 'on_scene');
         const dispatchTime = incidentData.started_at || new Date().toISOString();
         const alarmLabel = {
           '1st_alarm': '1ST ALARM', '2nd_alarm': '2ND ALARM', '3rd_alarm': '3RD ALARM',
@@ -178,15 +178,15 @@ export default function IncidentsDashboard() {
         }[incidentData.alarm_level] || '1ST ALARM';
 
         await Promise.allSettled(
-          dispatchedUnits.map(u =>
+          onSceneUnits.map(u =>
             base44.entities.RadioLog.create({
               incident_id: incident.id,
-              message: `${u.unit_name} — DISPATCHED (${alarmLabel}) → ${incidentData.address}`,
+              message: `${u.unit_name} — ON SCENE (${alarmLabel}) → ${incidentData.address}`,
               timestamp: dispatchTime,
-              from_unit: 'DISPATCH',
-              to_unit: u.unit_name,
+              from_unit: u.unit_name,
+              to_unit: 'COMMAND',
               priority: 'routine',
-              parsed_action: `${u.unit_name} dispatched to ${incidentData.address}`,
+              parsed_action: `${u.unit_name} on scene at ${incidentData.address}`,
               auto_applied: true,
             })
           )
