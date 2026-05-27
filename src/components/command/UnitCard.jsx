@@ -58,17 +58,19 @@ export default function UnitCard({ unit, onEdit }) {
 
   const activeMinutes = timerAnchor ? Math.max(0, (Date.now() - new Date(timerAnchor).getTime()) / 60000) : 0;
   const entryWarning = isWorking && activeMinutes >= 20;
-  const rehabWarning = isRehab && activeMinutes >= 15;
+  const rehabWarning = isRehab && activeMinutes >= 20;
 
   return (
     <div
       onClick={() => onEdit?.(unit)}
       className={`
         relative rounded-lg cursor-grab active:cursor-grabbing select-none overflow-hidden
-        border border-border/60 hover:border-border transition-all duration-150
+        border transition-all duration-150
         hover:shadow-lg hover:shadow-black/20 group h-[68px]
         ${cfg.bg}
-        ${isMayday ? 'animate-pulse-red ring-1 ring-red-500/60' : ''}
+        ${isMayday    ? 'animate-pulse-red border-red-500/60 ring-1 ring-red-500/60' :
+          rehabWarning ? 'animate-pulse border-violet-400/80 ring-1 ring-violet-400/50' :
+                         'border-border/60 hover:border-border'}
       `}
     >
       {/* Status bar accent */}
@@ -85,8 +87,10 @@ export default function UnitCard({ unit, onEdit }) {
               {unit.unit_name}
             </span>
           </div>
-          <span className={`text-xs font-mono font-semibold tracking-wider shrink-0 ${cfg.text}`}>
-            {cfg.label}
+          <span className={`text-xs font-mono font-semibold tracking-wider shrink-0 ${
+            rehabWarning ? 'text-violet-300 font-bold' : cfg.text
+          }`}>
+            {rehabWarning ? '⚠ REHAB' : cfg.label}
           </span>
         </div>
 
@@ -110,10 +114,10 @@ export default function UnitCard({ unit, onEdit }) {
           )}
           {(isWorking || isRehab || isOnScene || isMayday) && activeElapsed && (
             <span className={`flex items-center gap-1 text-xs font-mono font-bold ml-auto ${
-              isMayday ? 'text-red-400' :
-              rehabWarning ? 'text-violet-300' :
+              isMayday     ? 'text-red-400' :
+              rehabWarning ? 'text-violet-200 drop-shadow-[0_0_4px_rgba(167,139,250,0.8)]' :
               entryWarning ? 'text-orange-400' :
-              isRehab ? 'text-violet-400' :
+              isRehab      ? 'text-violet-400' :
               'text-muted-foreground'
             }`}>
               <Clock className="w-3.5 h-3.5" />{activeElapsed}
