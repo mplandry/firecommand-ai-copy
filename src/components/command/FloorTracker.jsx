@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const FLOOR_ORDER = [
   'Roof',
+  'Attic',
   '8th Floor', '7th Floor', '6th Floor', '5th Floor',
   '4th Floor', '3rd Floor', '2nd Floor', '1st Floor',
   'Basement',
@@ -24,16 +25,22 @@ const statusColors = {
 };
 
 // Only show floors that have units OR the always-visible base floors
-const BASE_FLOORS = ['Roof', '2nd Floor', '1st Floor', 'Basement'];
+const BASE_FLOORS = ['Roof', 'Attic', '2nd Floor', '1st Floor', 'Basement'];
 
-export default function FloorTracker({ units, onUpdateUnit }) {
+export default function FloorTracker({ units, onUpdateUnit, specialUnits = [] }) {
   const [expanded, setExpanded] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
-  // Group by floor
+  // Exclude water/special apparatus that never enter a building
+  const floorUnits = units.filter(u =>
+    !specialUnits.some(name => name.toLowerCase() === u.unit_name?.toLowerCase())
+  );
+
+  // Group by floor — also catch attic-assigned units whose floor may be 'Attic'
   const byFloor = {};
-  units.forEach(u => {
-    const floor = u.floor?.trim() || null;
+  floorUnits.forEach(u => {
+    // If no explicit floor but assigned to attic, treat as Attic floor
+    const floor = u.floor?.trim() || (u.assignment === 'attic' ? 'Attic' : null);
     if (floor) {
       if (!byFloor[floor]) byFloor[floor] = [];
       byFloor[floor].push(u);
@@ -104,7 +111,7 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                       style={{ height: 64 }}
                     >
                       <span className={`text-xs font-mono font-bold tracking-wider pr-2 whitespace-nowrap ${
-                        isRoof || isBasement ? 'text-amber-400/80' : 'text-cyan-400/70'
+                        isRoof || isBasement || floor === 'Attic' ? 'text-amber-400/80' : 'text-cyan-400/70'
                       }`}>
                         {floor === '1st Floor' ? '1F' :
                          floor === '2nd Floor' ? '2F' :
@@ -115,6 +122,7 @@ export default function FloorTracker({ units, onUpdateUnit }) {
                          floor === '7th Floor' ? '7F' :
                          floor === '8th Floor' ? '8F' :
                          floor === 'Basement'  ? 'BSM' :
+                         floor === 'Attic'     ? 'ATTC' :
                          floor.substring(0, 4).toUpperCase()}
                       </span>
                     </div>

@@ -11,6 +11,7 @@ import FloorTracker from '@/components/command/FloorTracker';
 import SiteMap from '@/components/command/SiteMap';
 import RadioLogPanel from '@/components/command/RadioLogPanel';
 import MaydayCommand from '@/components/command/MaydayCommand';
+import { useDepartment } from '@/hooks/useDepartment';
 
 const TABS = [
   { id: 'ic',       label: 'IC Summary', icon: ShieldCheck },
@@ -25,6 +26,7 @@ export default function IncidentPanel() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') || 'ic';
+  const { specialUnits } = useDepartment();
 
   const { data: units = [] } = useQuery({
     queryKey: ['units', incidentId],
@@ -147,6 +149,7 @@ export default function IncidentPanel() {
             <FloorTracker
               units={units}
               onUpdateUnit={(unit, data) => updateUnit(unit, data)}
+              specialUnits={specialUnits}
             />
           </div>
         )}

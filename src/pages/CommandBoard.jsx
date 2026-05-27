@@ -571,11 +571,15 @@ export default function CommandBoard() {
 
           {/* ── Operational Groups ── */}
           <div className="grid grid-cols-2 gap-2">
-            {['roof', 'attic', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
+            {['roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
               <DivisionColumn
                 key={assignment}
                 assignment={assignment}
-                units={units.filter(u => u.assignment === assignment)}
+                units={units.filter(u =>
+                  assignment === 'interior'
+                    ? (u.assignment === 'interior' || u.assignment === 'attic')
+                    : u.assignment === assignment
+                )}
                 onEditUnit={isReadOnly ? null : setEditingUnit}
                 onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })}
                 allUnits={units}

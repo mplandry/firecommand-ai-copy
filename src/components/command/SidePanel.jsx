@@ -10,6 +10,7 @@ import {
   Camera,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useDepartment } from "@/hooks/useDepartment";
 import ICAccountabilitySummary from "./ICAccountabilitySummary";
 import StructureTactical from "./StructureTactical";
 import PARTracker from "./PARTracker";
@@ -41,6 +42,7 @@ export default function SidePanel({
   const [maydayActive, setMaydayActive] = useState(false);
   const navigate = useNavigate();
   const { incidentId } = useParams();
+  const { specialUnits } = useDepartment();
 
   // Track the most recent radio log timestamp to reset PAR timer
   const lastRadioLogTime = useMemo(() => {
@@ -134,6 +136,7 @@ export default function SidePanel({
           <FloorTracker
             units={units}
             onUpdateUnit={isReadOnly ? null : onUpdateUnit}
+            specialUnits={specialUnits}
           />
         )}
         {activeTab === "sitemap" && (
