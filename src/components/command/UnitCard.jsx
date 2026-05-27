@@ -47,10 +47,12 @@ export default function UnitCard({ unit, onEdit, deptPrefix = 'WAL' }) {
   const isRehab = unit.status === 'rehab';
   const isOnScene = unit.status === 'on_scene';
 
-  // Mutual aid: explicit flag OR unit name starts with a different dept prefix
-  const mutualAidMatch = unit.unit_name?.match(/^([A-Z]{2,4})\s/);
-  const isMutualAid = unit.is_mutual_aid ||
-    (mutualAidMatch && mutualAidMatch[1].toUpperCase() !== deptPrefix.toUpperCase());
+  // Mutual aid: explicit flag, OR short prefix (ARL, NEW…), OR full town name at start
+  const MA_TOWNS = /^(arlington|belmont|boston|cambridge|chelsea|concord|dedham|everett|framingham|lexington|lincoln|malden|medford|millis|natick|needham|newton|norwood|quincy|reading|somerville|stoneham|sudbury|watertown|wellesley|weston|woburn|worcester|arl|bel|cam|con|ded|eve|fra|lex|lin|mal|med|nat|ned|new|nor|qui|rea|som|sto|sud|wat|wel|wes|wob|wor)\s/i;
+  const prefixMatch = unit.unit_name?.match(/^([A-Z]{2,5})\s/);
+  const isMutualAid = unit.is_mutual_aid
+    || MA_TOWNS.test(unit.unit_name || '')
+    || (prefixMatch && prefixMatch[1].toUpperCase() !== deptPrefix.toUpperCase());
 
   // Use rehab_time for rehab timer, on_scene_time (or updated_date) for working/on_scene/mayday
   const workingAnchor = unit.on_scene_time || unit.updated_date;
