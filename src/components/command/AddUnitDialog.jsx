@@ -227,6 +227,7 @@ export default function AddUnitDialog({ open, onClose, onCreate }) {
                 <SelectItem value="6th Floor">6th Floor</SelectItem>
                 <SelectItem value="7th Floor">7th Floor</SelectItem>
                 <SelectItem value="8th Floor">8th Floor</SelectItem>
+                <SelectItem value="Attic">Attic</SelectItem>
                 <SelectItem value="Roof">Roof</SelectItem>
               </SelectContent>
             </Select>
