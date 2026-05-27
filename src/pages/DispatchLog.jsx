@@ -245,6 +245,9 @@ export default function DispatchLog() {
     unitsByAlarm[level] = units.filter(u => u.alarm_level === level);
   });
 
+  // Units in the incident with no alarm level yet — available/unassigned pool
+  const unalarmedUnits = units.filter(u => !u.alarm_level && u.assignment === 'unassigned');
+
   const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
@@ -325,16 +328,8 @@ export default function DispatchLog() {
 
                 {/* Unit picker panel */}
                 {pickerLevel === level && (() => {
-                  // Units already in this incident (any alarm level)
-                  const inIncidentNames = new Set(units.map(u => u.unit_name.toLowerCase()));
-
-                  // Dept units not yet in the incident — grouped by station
-                  const remainingGroups = apparatusGroups
-                    .map(g => ({
-                      ...g,
-                      units: g.units.filter(u => !inIncidentNames.has(u.unit_name.toLowerCase())),
-                    }))
-                    .filter(g => g.units.length > 0);
+                  // All dept units are already in the incident — picker is for mutual aid only
+                  const remainingGroups = [];
 
                   const isMutualAid = MA_TOWNS.test(newUnitName);
 
@@ -415,9 +410,7 @@ export default function DispatchLog() {
                           ))}
                         </div>
                       )}
-                      {remainingGroups.length === 0 && (
-                        <p className="text-xs font-mono text-muted-foreground/60 italic">All dept units already on this incident</p>
-                      )}
+{/* dept units are now pre-populated — picker is mutual aid / new unit only */}
 
                       {/* New / mutual aid unit input */}
                       <div>
@@ -570,6 +563,27 @@ export default function DispatchLog() {
                       ))}
 
                       {provided.placeholder}
+
+                      {/* Unalarmed pool — show at bottom of active alarm level only */}
+                      {level === activeLevel && unalarmedUnits.length > 0 && (
+                        <div className="pt-2 border-t border-border/40 mt-2">
+                          <p className="text-[9px] font-mono font-bold text-muted-foreground/50 uppercase tracking-widest mb-1.5">Available — tap to add to {alarmLabels[level]}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {unalarmedUnits.map(u => (
+                              <button
+                                key={u.id}
+                                onClick={() => {
+                                  updateUnit.mutate({ id: u.id, data: { alarm_level: level, status: 'dispatched' } });
+                                  logUnitDispatch(u.unit_name, level, incident?.address);
+                                }}
+                                className="text-xs font-mono px-2.5 py-1 rounded border border-border/50 bg-secondary/40 text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition-colors"
+                              >
+                                {u.unit_name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <Button
                         size="sm"

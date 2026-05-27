@@ -41,16 +41,29 @@ export default function NewIncidentDialog({
     const commandName = form.command_name || form.address.split(' ').slice(0, 2).join(' ') + ' Command';
 
     const onSceneTime = new Date().toISOString();
-    // Units picked at incident creation are already going — on scene, Alpha side, 1st alarm
-    const units = allUnits
+    const alarmLevel = form.alarm_level || '1st_alarm';
+
+    // Selected units: on scene, Alpha side, 1st alarm
+    const pickedUnits = allUnits
       .filter(u => selectedUnits.includes(u.unit_name))
       .map(u => ({
         ...u,
         assignment: 'division_a',
         status: 'on_scene',
         on_scene_time: onSceneTime,
-        alarm_level: form.alarm_level || '1st_alarm',
+        alarm_level: alarmLevel,
       }));
+
+    // Remaining units: available/unassigned, no alarm level yet — visible on board & dispatch log
+    const remainingUnits = allUnits
+      .filter(u => !selectedUnits.includes(u.unit_name))
+      .map(u => ({
+        ...u,
+        assignment: 'unassigned',
+        status: 'available',
+      }));
+
+    const units = [...pickedUnits, ...remainingUnits];
 
     onCreate({
       ...form,
