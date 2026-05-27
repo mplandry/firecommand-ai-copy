@@ -25,10 +25,10 @@ export default function NewIncidentDialog({
   const [form, setForm] = useState(EMPTY_FORM);
   const [selectedUnits, setSelectedUnits] = useState([]);
 
-  // When apparatus list loads (or dialog opens), default-select all units
+  // Start with nothing selected — user picks who is actually responding
   useEffect(() => {
-    if (open) setSelectedUnits(allUnits.map(u => u.unit_name));
-  }, [open, allUnits]);
+    if (open) setSelectedUnits([]);
+  }, [open]);
 
   const toggleUnit = (unitName) => {
     setSelectedUnits(prev =>
@@ -63,7 +63,7 @@ export default function NewIncidentDialog({
 
   const handleClose = () => {
     setForm(EMPTY_FORM);
-    setSelectedUnits(allUnits.map(u => u.unit_name));
+    setSelectedUnits([]);
     onClose();
   };
 
