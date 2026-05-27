@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus, Trash2, Mic, MicOff, GripVertical } from 'lucide-react';
 import RadioInput from '@/components/command/RadioInput';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useDepartment } from '@/hooks/useDepartment';
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -73,6 +74,7 @@ function detectAlarmLevel(text) {
 export default function DispatchLog() {
   const { incidentId } = useParams();
   const queryClient = useQueryClient();
+  const { allUnits: deptUnits, apparatusGroups } = useDepartment();
   const [editingFields, setEditingFields] = useState({});
   const [newUnitId, setNewUnitId] = useState(null);
   const [listening, setListening] = useState(null);
@@ -172,6 +174,25 @@ export default function DispatchLog() {
       queryClient.refetchQueries({ queryKey: ['units', incidentId] });
     },
   });
+
+  // Log a dispatch entry for a unit added at a specific alarm level
+  const logUnitDispatch = (unitName, level, address) => {
+    const ALARM_LOG_LABELS = {
+      '1st_alarm': '1ST ALARM', '2nd_alarm': '2ND ALARM', '3rd_alarm': '3RD ALARM',
+      '4th_alarm': '4TH ALARM', '5th_alarm': '5TH ALARM',
+      'task_force': 'TASK FORCE', 'strike_team': 'STRIKE TEAM',
+    };
+    base44.entities.RadioLog.create({
+      incident_id: incidentId,
+      message: `${unitName} — DISPATCHED (${ALARM_LOG_LABELS[level] || level.toUpperCase()}) → ${address || ''}`,
+      timestamp: new Date().toISOString(),
+      from_unit: unitName,
+      to_unit: 'COMMAND',
+      priority: 'routine',
+      parsed_action: `${unitName} dispatched at ${alarmLabels[level] || level}`,
+      auto_applied: true,
+    }).catch(() => {}); // non-blocking
+  };
 
   const handleRadioTransmission = async (message, parsed) => {
     // Check for alarm level upgrade — bump activeLevel first so new units get the right tag
@@ -304,10 +325,31 @@ export default function DispatchLog() {
 
                 {/* Unit picker panel */}
                 {pickerLevel === level && (() => {
-                  const available = units.filter(u =>
-                    u.assignment === 'unassigned' && u.alarm_level !== level
-                  );
+                  // Units already in this incident (any alarm level)
+                  const inIncidentNames = new Set(units.map(u => u.unit_name.toLowerCase()));
+
+                  // Dept units not yet in the incident — grouped by station
+                  const remainingGroups = apparatusGroups
+                    .map(g => ({
+                      ...g,
+                      units: g.units.filter(u => !inIncidentNames.has(u.unit_name.toLowerCase())),
+                    }))
+                    .filter(g => g.units.length > 0);
+
                   const isMutualAid = MA_TOWNS.test(newUnitName);
+
+                  const addDeptUnit = (deptUnit) => {
+                    createUnit.mutate({
+                      unit_name: deptUnit.unit_name,
+                      unit_type: deptUnit.unit_type,
+                      personnel_count: deptUnit.personnel_count,
+                      alarm_level: level,
+                      status: 'dispatched',
+                      assignment: 'unassigned',
+                    });
+                    logUnitDispatch(deptUnit.unit_name, level, incident?.address);
+                    setPickerLevel(null);
+                  };
 
                   const submitNewUnit = () => {
                     const name = newUnitName.trim();
@@ -320,6 +362,7 @@ export default function DispatchLog() {
                       assignment: 'unassigned',
                       is_mutual_aid: MA_TOWNS.test(name),
                     });
+                    logUnitDispatch(name, level, incident?.address);
                     setNewUnitName('');
                     setPickerLevel(null);
                   };
@@ -351,25 +394,29 @@ export default function DispatchLog() {
                   return (
                     <div className="border-b border-border/60 bg-secondary/20 px-4 py-3 space-y-3">
 
-                      {/* Existing unassigned units */}
-                      {available.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-1.5">From unassigned on board</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {available.map(u => (
-                              <button
-                                key={u.id}
-                                onClick={() => {
-                                  updateUnit.mutate({ id: u.id, data: { alarm_level: level } });
-                                  setPickerLevel(null);
-                                }}
-                                className="text-xs font-mono px-2.5 py-1 rounded border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                              >
-                                {u.unit_name}
-                              </button>
-                            ))}
-                          </div>
+                      {/* Remaining dept units, grouped by station */}
+                      {remainingGroups.length > 0 && (
+                        <div className="space-y-2">
+                          {remainingGroups.map(group => (
+                            <div key={group.label}>
+                              <p className="text-[9px] font-mono font-bold text-muted-foreground/50 uppercase tracking-widest mb-1">{group.label}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {group.units.map(u => (
+                                  <button
+                                    key={u.unit_name}
+                                    onClick={() => addDeptUnit(u)}
+                                    className="text-xs font-mono px-2.5 py-1 rounded border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                  >
+                                    {u.unit_name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
+                      )}
+                      {remainingGroups.length === 0 && (
+                        <p className="text-xs font-mono text-muted-foreground/60 italic">All dept units already on this incident</p>
                       )}
 
                       {/* New / mutual aid unit input */}
