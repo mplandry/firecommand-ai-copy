@@ -105,7 +105,7 @@ function Badge({ count, max }) {
 
 // ─── Tab: IC Tactical Checklist ──────────────────────────────────────────────
 
-function ChecklistTab({ checked, onToggle, onGoLIPS }) {
+function ChecklistTab({ checked, onToggle, onGoLIPS, onDeployRIT, ritDeployTime }) {
   const done = Object.values(checked).filter(Boolean).length;
   return (
     <div>
@@ -227,6 +227,27 @@ function ChecklistTab({ checked, onToggle, onGoLIPS }) {
                   }}
                 >
                   Open LIPS →
+                </button>
+              )}
+              {item.id === 6 && onDeployRIT && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeployRIT();
+                  }}
+                  style={{
+                    marginLeft: 10,
+                    fontSize: 11,
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                    border: "1px solid #dc2626",
+                    background: isChecked ? "#fee2e2" : "#fff7f7",
+                    color: "#dc2626",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                  }}
+                >
+                  {ritDeployTime ? `Deployed ${ritDeployTime} ✓` : "Deploy RIT + Backfill →"}
                 </button>
               )}
             </div>
@@ -1009,6 +1030,9 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
   const [showReset, setShowReset] = useState(false);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
   const [maydayUnit, setMaydayUnit] = useState(null); // the unit in distress
+  const [ritDeployTime, setRitDeployTime] = useState(null); // when RIT was deployed
+  const [showRITBackfill, setShowRITBackfill] = useState(false); // backfill picker
+  const [backfillRIT, setBackfillRIT] = useState(null); // unit assigned as backfill RIT
   const intervalRef = useRef(null);
 
   // ── Timer ──
@@ -1051,6 +1075,24 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
     }
   }
 
+  // ── Deploy RIT ──
+  function handleDeployRIT() {
+    // Mark all current RIT units as working/deployed
+    const ritUnits = units.filter(u => u.assignment === 'rit');
+    ritUnits.forEach(u => onUpdateUnit?.(u, { status: 'working', on_scene_time: new Date().toISOString() }));
+    setRitDeployTime(now24());
+    // Auto-check item #6
+    setChecklist(p => ({ ...p, 6: true }));
+    // Open backfill picker
+    setShowRITBackfill(true);
+  }
+
+  function handleBackfillRIT(unit) {
+    setShowRITBackfill(false);
+    setBackfillRIT(unit);
+    if (unit) onUpdateUnit?.(unit, { assignment: 'rit', status: 'working', on_scene_time: new Date().toISOString() });
+  }
+
   // ── Reset ──
   function resetAll() {
     // Restore mayday unit to on_scene
@@ -1070,6 +1112,9 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
     setFireLocation("");
     setBoardNotes("");
     setMaydayUnit(null);
+    setRitDeployTime(null);
+    setBackfillRIT(null);
+    setShowRITBackfill(false);
     setShowReset(false);
   }
 
@@ -1278,6 +1323,43 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
         ))}
       </div>
 
+      {/* ════ LIPS BANNER — always visible on all tabs when MAYDAY is active ════ */}
+      {isActive && (lips.location || lips.identification || lips.problem || lips.solution) && (
+        <div style={{
+          margin: "0 16px",
+          marginTop: 12,
+          padding: "10px 14px",
+          borderRadius: 8,
+          background: "#7f1d1d",
+          border: "1px solid #fca5a5",
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: "#fca5a5", marginBottom: 6, textTransform: "uppercase" }}>
+            ▼ LIPS — Downed Firefighter
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+            {[["L","location"],["I","identification"],["P","problem"],["S","solution"]].map(([letter, key]) =>
+              lips[key] ? (
+                <div key={key} style={{ fontSize: 12 }}>
+                  <strong style={{ color: "#fca5a5" }}>{letter}:</strong>{" "}
+                  <span style={{ color: "#fff" }}>{lips[key]}</span>
+                </div>
+              ) : null
+            )}
+          </div>
+          {ritDeployTime && (
+            <div style={{ marginTop: 6, fontSize: 11, color: "#fca5a5", fontWeight: 700 }}>
+              🚒 RIT Deployed {ritDeployTime}{backfillRIT ? ` · Backfill: ${backfillRIT.unit_name}` : " · No backfill assigned"}
+            </div>
+          )}
+          <button
+            onClick={() => setActiveTab("lips")}
+            style={{ marginTop: 6, fontSize: 10, color: "#fca5a5", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 700, textDecoration: "underline" }}
+          >
+            Edit LIPS →
+          </button>
+        </div>
+      )}
+
       {/* ════ TAB CONTENT ════ */}
       <div style={{ padding: "20px 20px 40px" }}>
         {activeTab === "checklist" && (
@@ -1285,6 +1367,8 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
             checked={checklist}
             onToggle={toggleCheck}
             onGoLIPS={() => setActiveTab("lips")}
+            onDeployRIT={isActive ? handleDeployRIT : null}
+            ritDeployTime={ritDeployTime}
           />
         )}
         {activeTab === "lips" && (
@@ -1367,6 +1451,50 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════ RIT BACKFILL PICKER ════ */}
+      {showRITBackfill && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 24, maxWidth: 400, width: "90%", boxShadow: "0 10px 40px rgba(0,0,0,.3)" }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#1d4ed8", marginBottom: 4 }}>
+              🚒 Assign Backfill RIT
+            </div>
+            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 14px" }}>
+              RIT has been deployed. Select a unit to backfill as the new RIT team.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 280, overflowY: "auto", marginBottom: 14 }}>
+              {units
+                .filter(u => u.assignment !== 'rit' && u.status !== 'mayday' && ['staging','on_scene','working','par'].includes(u.status))
+                .map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => handleBackfillRIT(u)}
+                    style={{
+                      padding: "10px 14px", borderRadius: 8, border: "2px solid #bfdbfe",
+                      background: "#eff6ff", cursor: "pointer", textAlign: "left",
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>{u.unit_name}</span>
+                    <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                      {u.assignment?.replace(/_/g,' ') || u.status}
+                    </span>
+                  </button>
+                ))
+              }
+              {units.filter(u => u.assignment !== 'rit' && u.status !== 'mayday' && ['staging','on_scene','working','par'].includes(u.status)).length === 0 && (
+                <p style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic" }}>No available units for backfill</p>
+              )}
+            </div>
+            <button
+              onClick={() => handleBackfillRIT(null)}
+              style={{ width: "100%", padding: 12, borderRadius: 8, border: "1.5px solid #d1d5db", background: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", color: "#374151" }}
+            >
+              Skip — Assign Later
+            </button>
           </div>
         </div>
       )}
