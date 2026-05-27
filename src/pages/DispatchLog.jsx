@@ -198,6 +198,28 @@ export default function DispatchLog() {
           continue;
         }
 
+        // Detect assignment from spoken context (e.g. "on the hydrant", "RIT", "rehab")
+        const tLower = transcript.toLowerCase();
+        let spokenAssignment = null;
+        let spokenStatus = 'staging';
+        if (/hydrant|water supply|supply line|lay in|on water/.test(tLower)) {
+          spokenAssignment = 'water_supply'; spokenStatus = 'working';
+        } else if (/\brit\b|rapid intervention|iric/.test(tLower)) {
+          spokenAssignment = 'rit'; spokenStatus = 'working';
+        } else if (/rehab/.test(tLower)) {
+          spokenAssignment = 'rehab'; spokenStatus = 'rehab';
+        } else if (/exposure/.test(tLower)) {
+          spokenAssignment = 'exposure'; spokenStatus = 'working';
+        } else if (/search|rescue/.test(tLower)) {
+          spokenAssignment = 'search'; spokenStatus = 'working';
+        } else if (/ventilat/.test(tLower)) {
+          spokenAssignment = 'ventilation'; spokenStatus = 'working';
+        } else if (/medical|ems group/.test(tLower)) {
+          spokenAssignment = 'medical'; spokenStatus = 'working';
+        } else if (/staging/.test(tLower)) {
+          spokenAssignment = 'staging'; spokenStatus = 'staging';
+        }
+
         // Try to match against unalarmed units in the incident
         const unalarmed = currentUnits.filter(u => !u.alarm_level && u.assignment === 'unassigned');
         let bestMatch = null;
@@ -209,7 +231,14 @@ export default function DispatchLog() {
 
         if (bestMatch && topScore >= 20) {
           // Stage a known unit
-          updateUnit.mutate({ id: bestMatch.id, data: { alarm_level: level, status: 'staging', assignment: 'staging' } });
+          const assignData = {
+            alarm_level: level,
+            status: spokenStatus,
+            assignment: spokenAssignment || 'staging',
+          };
+          if (spokenStatus === 'rehab') assignData.rehab_time = new Date().toISOString();
+          if (['working','on_scene'].includes(spokenStatus)) assignData.on_scene_time = new Date().toISOString();
+          updateUnit.mutate({ id: bestMatch.id, data: assignData });
           logUnitDispatch(bestMatch.unit_name, level, null);
         } else {
           // New / mutual aid unit — create as staging
@@ -227,8 +256,8 @@ export default function DispatchLog() {
             unit_name: transcript,
             unit_type: detectedType,
             alarm_level: level,
-            status: 'staging',
-            assignment: 'staging',
+            status: spokenStatus,
+            assignment: spokenAssignment || 'staging',
             is_mutual_aid: MA_TOWNS.test(transcript),
           });
           logUnitDispatch(transcript, level, null);
