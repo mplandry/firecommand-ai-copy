@@ -247,6 +247,7 @@ export default function CommandBoard() {
       const newIdx = alarmOrder.indexOf(parsed.upgrade_alarm);
       if (newIdx > currentIdx) {
         updateIncident.mutate({ alarm_level: parsed.upgrade_alarm });
+        navigate(`/incident/${incidentId}/dispatch`);
       }
     }
 
@@ -379,7 +380,13 @@ export default function CommandBoard() {
         </Link>
 
         <div className="flex-1 min-w-0">
-          <IncidentHeader incident={incident} onAlarmChange={(alarm) => updateIncident.mutate({ alarm_level: alarm })} />
+          <IncidentHeader incident={incident} onAlarmChange={(alarm) => {
+            const alarmOrder = ['1st_alarm', '2nd_alarm', '3rd_alarm', '4th_alarm', '5th_alarm', 'task_force', 'strike_team'];
+            const currentIdx = alarmOrder.indexOf(incident?.alarm_level);
+            const newIdx = alarmOrder.indexOf(alarm);
+            updateIncident.mutate({ alarm_level: alarm });
+            if (newIdx > currentIdx) navigate(`/incident/${incidentId}/dispatch`);
+          }} />
         </div>
 
         {/* Action buttons */}
