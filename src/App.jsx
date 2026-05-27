@@ -16,7 +16,7 @@ import IncidentPanel from './pages/IncidentPanel';
 import KioskDisplay from './pages/KioskDisplay';
 import DispatchLog from './pages/DispatchLog';
 import IncidentContacts from './pages/IncidentContacts';
-// Add page imports here
+import AdminRegistrations from './pages/AdminRegistrations';
 
 const AuthenticatedApp = () => {
   return (
@@ -33,6 +33,7 @@ const AuthenticatedApp = () => {
       <Route path="/incident/:incidentId/dispatch" element={<DispatchLog />} />
       <Route path="/contacts" element={<IncidentContacts />} />
       <Route path="/incident/:incidentId/contacts" element={<IncidentContacts />} />
+      <Route path="/admin" element={<AdminRegistrations />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2 } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 import NewIncidentDialog from '@/components/command/NewIncidentDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import RosterLineup from '@/components/dashboard/RosterLineup';
@@ -46,6 +47,7 @@ const typeLabels = {
 };
 
 export default function IncidentsDashboard() {
+  const { userEmail } = useAuth();
   const [showNew, setShowNew] = useState(false);
   const [closingIncident, setClosingIncident] = useState(null);
   const [filter, setFilter] = useState('active');
@@ -208,6 +210,13 @@ export default function IncidentsDashboard() {
               <MessageSquare className="w-4 h-4" /> Terminology
             </Button>
           </Link>
+          {userEmail === 'mplandry77@gmail.com' && (
+            <Link to="/admin">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                <Users className="w-4 h-4" /> Registrations
+              </Button>
+            </Link>
+          )}
           <Link to="/settings">
             <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
               <Settings className="w-4 h-4" /> Settings
