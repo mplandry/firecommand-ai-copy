@@ -4,8 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2 } from 'lucide-react';
+import { Plus, Flame, Clock, MapPin, Shield, Users, Archive, Settings, MessageSquare, BookUser, Trash2, Phone, Camera, X, Check, Loader2, LifeBuoy } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { useDepartment } from '@/hooks/useDepartment';
+import { ADMIN_EMAIL, SUPPORT_EMAIL, APP_NAME } from '@/lib/appConfig';
 import NewIncidentDialog from '@/components/command/NewIncidentDialog';
 import CloseIncidentDialog from '@/components/command/CloseIncidentDialog';
 import RosterLineup from '@/components/dashboard/RosterLineup';
@@ -48,6 +50,7 @@ const typeLabels = {
 
 export default function IncidentsDashboard() {
   const { userEmail } = useAuth();
+  const { apparatusGroups, allUnits } = useDepartment();
   const [showNew, setShowNew] = useState(false);
   const [closingIncident, setClosingIncident] = useState(null);
   const [filter, setFilter] = useState('active');
@@ -210,13 +213,20 @@ export default function IncidentsDashboard() {
               <MessageSquare className="w-4 h-4" /> Terminology
             </Button>
           </Link>
-          {userEmail === 'mplandry77@gmail.com' && (
+          {userEmail === ADMIN_EMAIL && (
             <Link to="/admin">
               <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
                 <Users className="w-4 h-4" /> Registrations
               </Button>
             </Link>
           )}
+          <a
+            href={`mailto:${SUPPORT_EMAIL}?subject=${APP_NAME} Support`}
+            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            title="Contact Support"
+          >
+            <LifeBuoy className="w-4 h-4" /> Support
+          </a>
           <Link to="/settings">
             <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
               <Settings className="w-4 h-4" /> Settings
@@ -375,6 +385,8 @@ export default function IncidentsDashboard() {
         onCreate={(data) => createIncident.mutate(data)}
         isCreating={createIncident.isPending ?? createIncident.isLoading ?? false}
         createError={createIncident.isError ? 'Failed to create incident — check connection and try again.' : null}
+        apparatusGroups={apparatusGroups}
+        allUnits={allUnits}
       />
 
       <CloseIncidentDialog

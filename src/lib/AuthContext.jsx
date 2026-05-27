@@ -1,6 +1,13 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Flame, Loader2, Eye, EyeOff } from 'lucide-react';
+import DepartmentOnboarding from '@/pages/DepartmentOnboarding';
+import { ADMIN_EMAIL } from '@/lib/appConfig';
+
+function needsOnboarding(email) {
+  if (!email || email === ADMIN_EMAIL) return false;
+  try { return !localStorage.getItem('onboarding_done'); } catch { return false; }
+}
 
 const AuthContext = createContext();
 
@@ -86,7 +93,7 @@ function SignupScreen({ onSignup, onGoLogin }) {
         console.warn('Could not save registration profile:', _);
       }
 
-      onSignup(token, form.email.trim());
+      onSignup(token, form.email.trim(), `${form.first_name.trim()} ${form.last_name.trim()}`);
     } catch (err) {
       setError(err?.message || 'Signup failed. The email may already be in use.');
     }
@@ -311,6 +318,8 @@ export const AuthProvider = ({ children }) => {
   const [userEmail, setUserEmail] = useState(() => getStoredEmail());
   const [checking, setChecking] = useState(!!getStoredToken());
   const [screen, setScreen] = useState('login'); // 'login' | 'signup'
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
 
   useEffect(() => {
     const stored = getStoredToken();
@@ -332,9 +341,13 @@ export const AuthProvider = ({ children }) => {
       });
   }, []);
 
-  const handleLogin = (newToken, email) => {
+  const handleLogin = (newToken, email, name = '', isNewUser = false) => {
     setToken(newToken);
     setUserEmail(email);
+    if (isNewUser && needsOnboarding(email)) {
+      setNewUserName(name);
+      setShowOnboarding(true);
+    }
   };
 
   const logout = () => {
@@ -357,7 +370,7 @@ export const AuthProvider = ({ children }) => {
     if (screen === 'signup') {
       return (
         <SignupScreen
-          onSignup={(t, email) => { handleLogin(t, email); }}
+          onSignup={(t, email, name) => { handleLogin(t, email, name, true); }}
           onGoLogin={() => setScreen('login')}
         />
       );
@@ -366,6 +379,16 @@ export const AuthProvider = ({ children }) => {
       <LoginScreen
         onLogin={handleLogin}
         onGoSignup={() => setScreen('signup')}
+      />
+    );
+  }
+
+  if (showOnboarding) {
+    return (
+      <DepartmentOnboarding
+        userEmail={userEmail}
+        userName={newUserName}
+        onComplete={() => setShowOnboarding(false)}
       />
     );
   }
