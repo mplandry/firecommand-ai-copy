@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useMayday } from "@/contexts/MaydayContext";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -1010,40 +1011,19 @@ function BoardTab({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit, deptName = 'Fire Department' } = {}) {
+  // ── UI-only local state (no persistence needed) ──
   const [activeTab, setActiveTab] = useState("checklist");
-  const [isActive, setIsActive] = useState(false);
-  const [maydayTime, setMaydayTime] = useState(null);
-  const [elapsed, setElapsed] = useState(0);
-  const [checklist, setChecklist] = useState({});
-  const [lips, setLips] = useState({
-    location: "",
-    identification: "",
-    problem: "",
-    solution: "",
-  });
-  const [notes, setNotes] = useState({});
-  const [ritTimes, setRitTimes] = useState({});
-  const [unitData, setUnitData] = useState({});
-  const [ritData, setRitData] = useState({});
-  const [fireLocation, setFireLocation] = useState("");
-  const [boardNotes, setBoardNotes] = useState("");
   const [showReset, setShowReset] = useState(false);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
-  const [maydayUnit, setMaydayUnit] = useState(null); // the unit in distress
-  const [ritDeployTime, setRitDeployTime] = useState(null); // when RIT was deployed
-  const [showRITBackfill, setShowRITBackfill] = useState(false); // backfill picker
-  const [backfillRIT, setBackfillRIT] = useState(null); // unit assigned as backfill RIT
-  const intervalRef = useRef(null);
+  const [showRITBackfill, setShowRITBackfill] = useState(false);
 
-  // ── Timer ──
-  useEffect(() => {
-    if (isActive) {
-      intervalRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
-    } else {
-      clearInterval(intervalRef.current);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [isActive]);
+  // ── All MAYDAY data comes from context (survives navigation + page refresh) ──
+  const { state, setState, update, resetAll: ctxResetAll } = useMayday();
+  const {
+    isActive, maydayTime, elapsed, checklist, lips,
+    notes, ritTimes, unitData, ritData, fireLocation, boardNotes,
+    maydayUnit, ritDeployTime, backfillRIT,
+  } = state;
 
   // ── Notify parent when active state changes ──
   useEffect(() => {
@@ -1052,74 +1032,62 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
 
   // ── Activate MAYDAY ──
   function activateMayday() {
-    setShowUnitPicker(true); // prompt for which unit is in distress
+    setShowUnitPicker(true);
   }
 
   function confirmActivate(unit) {
     setShowUnitPicker(false);
-    setMaydayUnit(unit || null);
-    setIsActive(true);
-    setMaydayTime(now24());
-    setElapsed(0);
+    const startTs = Date.now();
+    const patch = {
+      isActive: true,
+      maydayTime: now24(),
+      maydayStartTimestamp: startTs,
+      elapsed: 0,
+      maydayUnit: unit || null,
+    };
 
     if (unit) {
-      // Mark unit as MAYDAY in the DB
       onUpdateUnit?.(unit, { status: 'mayday' });
-      // Auto-populate LIPS with last known info
       const loc = [unit.floor, unit.assignment].filter(Boolean).join(' / ') || 'Unknown';
-      setLips(p => ({
-        ...p,
-        location: p.location || loc,
-        identification: p.identification || unit.unit_name,
-      }));
+      patch.lips = {
+        ...lips,
+        location: lips.location || loc,
+        identification: lips.identification || unit.unit_name,
+      };
     }
+
+    update(patch);
   }
 
   // ── Deploy RIT ──
   function handleDeployRIT() {
-    // Mark all current RIT units as working/deployed
     const ritUnits = units.filter(u => u.assignment === 'rit');
     ritUnits.forEach(u => onUpdateUnit?.(u, { status: 'working', on_scene_time: new Date().toISOString() }));
-    setRitDeployTime(now24());
-    // Auto-check item #6
-    setChecklist(p => ({ ...p, 6: true }));
-    // Open backfill picker
+    update({
+      ritDeployTime: now24(),
+      checklist: { ...checklist, 6: true },
+    });
     setShowRITBackfill(true);
   }
 
   function handleBackfillRIT(unit) {
     setShowRITBackfill(false);
-    setBackfillRIT(unit);
+    update({ backfillRIT: unit || null });
     if (unit) onUpdateUnit?.(unit, { assignment: 'rit', status: 'working', on_scene_time: new Date().toISOString() });
   }
 
   // ── Reset ──
   function resetAll() {
-    // Restore mayday unit to on_scene
     if (maydayUnit) {
       onUpdateUnit?.(maydayUnit, { status: 'on_scene' });
     }
-    setIsActive(false);
-    setMaydayTime(null);
-    setElapsed(0);
-    setChecklist({});
-    setLips({ location: "", identification: "", problem: "", solution: "" });
-    setNotes({});
-    setRitTimes({});
-    setUnitData({});
-    setRitData({});
-    setFireLocation("");
-    setBoardNotes("");
-    setMaydayUnit(null);
-    setRitDeployTime(null);
-    setBackfillRIT(null);
-    setShowRITBackfill(false);
+    ctxResetAll();
     setShowReset(false);
   }
 
   // ── Checklist ──
   function toggleCheck(id) {
-    setChecklist((p) => ({ ...p, [id]: !p[id] }));
+    setState(s => ({ ...s, checklist: { ...s.checklist, [id]: !s.checklist[id] } }));
   }
 
   const checklistDone = Object.values(checklist).filter(Boolean).length;
@@ -1127,10 +1095,10 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
 
   // ── Unit / RIT data ──
   function handleUnitChange(unit, field, value) {
-    setUnitData((p) => ({ ...p, [unit]: { ...p[unit], [field]: value } }));
+    setState(s => ({ ...s, unitData: { ...s.unitData, [unit]: { ...s.unitData[unit], [field]: value } } }));
   }
   function handleRitChange(rit, field, value) {
-    setRitData((p) => ({ ...p, [rit]: { ...p[rit], [field]: value } }));
+    setState(s => ({ ...s, ritData: { ...s.ritData, [rit]: { ...s.ritData[rit], [field]: value } } }));
   }
 
   const TABS = [
@@ -1373,15 +1341,15 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
         {activeTab === "lips" && (
           <LIPSTab
             lips={lips}
-            onChange={(key, val) => setLips((p) => ({ ...p, [key]: val }))}
+            onChange={(key, val) => setState(s => ({ ...s, lips: { ...s.lips, [key]: val } }))}
           />
         )}
         {activeTab === "notes" && (
           <NotesTab
             notes={notes}
-            onNoteChange={(id, val) => setNotes((p) => ({ ...p, [id]: val }))}
+            onNoteChange={(id, val) => setState(s => ({ ...s, notes: { ...s.notes, [id]: val } }))}
             ritTimes={ritTimes}
-            onRitTime={(r, v) => setRitTimes((p) => ({ ...p, [r]: v }))}
+            onRitTime={(r, v) => setState(s => ({ ...s, ritTimes: { ...s.ritTimes, [r]: v } }))}
           />
         )}
         {activeTab === "board" && (
@@ -1391,11 +1359,11 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
             ritData={ritData}
             onRitChange={handleRitChange}
             lips={lips}
-            onLipsChange={(key, val) => setLips((p) => ({ ...p, [key]: val }))}
+            onLipsChange={(key, val) => setState(s => ({ ...s, lips: { ...s.lips, [key]: val } }))}
             fireLocation={fireLocation}
-            onFireLocation={setFireLocation}
+            onFireLocation={(val) => update({ fireLocation: val })}
             boardNotes={boardNotes}
-            onBoardNotes={setBoardNotes}
+            onBoardNotes={(val) => update({ boardNotes: val })}
             incidentUnits={units}
           />
         )}
