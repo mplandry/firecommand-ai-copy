@@ -7,45 +7,145 @@ import { base44 } from '@/api/base44Client';
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 const TOWN_MAP = [
-  { pattern: /\b(waltham|wal)\b/gi,   prefix: 'WAL' },
-  { pattern: /\b(watertown|wat)\b/gi, prefix: 'WAT' },
-  { pattern: /\b(belmont|bel)\b/gi,   prefix: 'BEL' },
-  { pattern: /\b(cambridge|cam)\b/gi, prefix: 'CAM' },
-  { pattern: /\b(wellesley|wel)\b/gi, prefix: 'WEL' },
-  { pattern: /\b(newton|new)\b/gi,    prefix: 'NEW' },
-  { pattern: /\b(lincoln|lin)\b/gi,   prefix: 'LIN' },
-  { pattern: /\b(lexington|lex)\b/gi, prefix: 'LEX' },
-  { pattern: /\b(arlington|arl)\b/gi, prefix: 'ARL' },
-  { pattern: /\b(armstrong)\b/gi,     prefix: 'ARM' },
+  { pattern: /\b(waltham|wal)\b/gi,              prefix: 'WAL' },
+  { pattern: /\b(watertown|wat)\b/gi,            prefix: 'WAT' },
+  { pattern: /\b(belmont|bel)\b/gi,              prefix: 'BEL' },
+  { pattern: /\b(cambridge|cam)\b/gi,            prefix: 'CAM' },
+  { pattern: /\b(wellesley|wel)\b/gi,            prefix: 'WEL' },
+  { pattern: /\b(newton|new\s+ten|new\s+town)\b/gi, prefix: 'NEW' },
+  { pattern: /\b(lincoln|lin)\b/gi,              prefix: 'LIN' },
+  { pattern: /\b(lexington|lex)\b/gi,            prefix: 'LEX' },
+  { pattern: /\b(arlington|arl)\b/gi,            prefix: 'ARL' },
+  { pattern: /\b(armstrong|arm)\b/gi,            prefix: 'ARM' },
+  { pattern: /\b(medford|med)\b/gi,              prefix: 'MED' },
+  { pattern: /\b(malden|mal)\b/gi,               prefix: 'MAL' },
+  { pattern: /\b(somerville|som)\b/gi,           prefix: 'SOM' },
+  { pattern: /\b(everett|eve)\b/gi,              prefix: 'EVE' },
+  { pattern: /\b(woburn|wob)\b/gi,               prefix: 'WOB' },
+  { pattern: /\b(reading|rea)\b/gi,              prefix: 'REA' },
+  { pattern: /\b(stoneham|sto)\b/gi,             prefix: 'STO' },
+  { pattern: /\b(natick|nat)\b/gi,               prefix: 'NAT' },
+  { pattern: /\b(needham|ned)\b/gi,              prefix: 'NED' },
+  { pattern: /\b(dedham|ded)\b/gi,               prefix: 'DED' },
+  { pattern: /\b(framingham|fra)\b/gi,           prefix: 'FRA' },
+  { pattern: /\b(quincy|qui)\b/gi,               prefix: 'QUI' },
 ];
 
 // Fix common speech-to-text mishears for fire radio context
 const SPEECH_FIXES = [
-  // Phonetic number corrections
+  // ── Unit type mishears (must come before number word expansion) ──
+  [/\blatter\b/gi,    'Ladder'],
+  [/\bladder\b/gi,    'Ladder'],
+  [/\blader\b/gi,     'Ladder'],
+  [/\bladda\b/gi,     'Ladder'],
+  [/\blater\b/gi,     'Ladder'],
+  [/\bengine\b/gi,    'Engine'],
+  [/\bengines\b/gi,   'Engine'],
+  [/\brescue\b/gi,    'Rescue'],
+  [/\bmedic\b/gi,     'Medic'],
+  [/\btanker\b/gi,    'Tanker'],
+  [/\btender\b/gi,    'Tanker'],
+  [/\bbattalion\b/gi, 'Battalion'],
+  [/\bsquad\b/gi,     'Squad'],
+
+  // ── Spoken numbers after unit type — most common and safe to replace ──
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+one\b/gi,   '$1 1'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+two\b/gi,   '$1 2'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+three\b/gi, '$1 3'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+four\b/gi,  '$1 4'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+five\b/gi,  '$1 5'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+six\b/gi,   '$1 6'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+seven\b/gi, '$1 7'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+eight\b/gi, '$1 8'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+nine\b/gi,  '$1 9'],
+  [/\b(Engine|Truck|Ladder|Rescue|Squad|Medic|Tanker|Tower|Car|Battalion|Deputy)\s+ten\b/gi,   '$1 10'],
+
+  // ── Phonetic / radio number corrections ──
   [/\bniner\b/gi, '9'],
-  [/\btree\b/gi, '3'],
+  [/\btree\b/gi,  '3'],
   [/\bfower\b/gi, '4'],
-  // Unit shorthand expansion
-  [/\bE(\d)\b/g, 'Engine $1'],
-  [/\bT(\d)\b/g, 'Truck $1'],
-  [/\bR(\d)\b/g, 'Rescue $1'],
-  [/\bL(\d)\b/g, 'Ladder $1'],       // Keep Ladder as Ladder (not Truck)
-  // ICS phonetic alphabet → Division labels
-  [/\balpha\s+(?:side|division)?\b/gi, 'Division A'],
-  [/\bbravo\s+(?:side|division)?\b/gi, 'Division B'],
-  [/\bcharlie\s+(?:side|division)?\b/gi, 'Division C'],
-  [/\bdelta\s+(?:side|division)?\b/gi, 'Division D'],
-  // Common status mishears
-  [/\bmay\s+day\b/gi, 'MAYDAY'],
-  [/\bon\s+seen\b/gi, 'on scene'],
-  [/\bon\s+the\s+seen\b/gi, 'on scene'],
-  [/\bworking\s+fire\b/gi, 'working fire'],
-  [/\ben\s+route\b/gi, 'en route'],
-  [/\brap(?:id)?\s*intervention\b/gi, 'RIT'],
-  [/\bwater\s+supply\b/gi, 'water supply'],
-  [/\bvent(?:ilation)?\b/gi, 'ventilation'],
-  [/\brehab(?:ilitation)?\b/gi, 'rehab'],
-  [/\bstag(?:ing)?\b/gi, 'staging'],
+
+  // ── Unit shorthand expansion ──
+  [/\bE(\d+)\b/g, 'Engine $1'],
+  [/\bT(\d+)\b/g, 'Truck $1'],
+  [/\bR(\d+)\b/g, 'Rescue $1'],
+  [/\bL(\d+)\b/g, 'Ladder $1'],
+
+  // ── ICS phonetic alphabet → Division labels ──
+  [/\balpha\s*(?:side|division|div)?\b/gi,   'Division A'],
+  [/\bbravo\s*(?:side|division|div)?\b/gi,   'Division B'],
+  [/\bcharlie\s*(?:side|division|div)?\b/gi, 'Division C'],
+  [/\bdelta\s*(?:side|division|div)?\b/gi,   'Division D'],
+  [/\ba\s*(?:side|division)\b/gi,            'Division A'],
+  [/\bb\s*(?:side|division)\b/gi,            'Division B'],
+  [/\bc\s*(?:side|division)\b/gi,            'Division C'],
+  [/\bd\s*(?:side|division)\b/gi,            'Division D'],
+
+  // ── Floor levels ──
+  [/\bfirst\s+floor\b/gi,   '1st Floor'],
+  [/\bsecond\s+floor\b/gi,  '2nd Floor'],
+  [/\bthird\s+floor\b/gi,   '3rd Floor'],
+  [/\bfourth\s+floor\b/gi,  '4th Floor'],
+  [/\bfifth\s+floor\b/gi,   '5th Floor'],
+  [/\bsixth\s+floor\b/gi,   '6th Floor'],
+  [/\bseventh\s+floor\b/gi, '7th Floor'],
+  [/\beighth\s+floor\b/gi,  '8th Floor'],
+  [/\b1st\s+floor\b/gi,     '1st Floor'],
+  [/\b2nd\s+floor\b/gi,     '2nd Floor'],
+  [/\b3rd\s+floor\b/gi,     '3rd Floor'],
+
+  // ── Status mishears ──
+  [/\bmay\s+day\b/gi,           'MAYDAY'],
+  [/\bmayday\b/gi,              'MAYDAY'],
+  [/\bon\s+seen\b/gi,           'on scene'],
+  [/\bon\s+the\s+seen\b/gi,     'on scene'],
+  [/\bon\s+the\s+scene\b/gi,    'on scene'],
+  [/\bat\s+the\s+box\b/gi,      'on scene'],
+  [/\bat\s+(?:the\s+)?scene\b/gi, 'on scene'],
+  [/\barriving\b/gi,            'on scene'],
+  [/\bpulling\s+up\b/gi,        'on scene'],
+  [/\ben\s+route\b/gi,          'responding'],
+  [/\binroute\b/gi,             'responding'],
+  [/\band\s+route\b/gi,         'responding'],
+  [/\bworking\s+fire\b/gi,      'working fire'],
+  [/\bwe\s+have\s+a\s+worker\b/gi, 'working fire'],
+  [/\bfire\s+showing\b/gi,      'working fire'],
+  [/\bgoing\s+on\s+air\b/gi,    'on air'],
+  [/\bmasking\s+up\b/gi,        'on air'],
+  [/\bbottles\s+on\b/gi,        'on air'],
+  [/\bpar\s+complete\b/gi,      'PAR'],
+  [/\ball\s+accounted\b/gi,     'PAR'],
+  [/\bout\s+of\s+service\b/gi,  'out of service'],
+  [/\boos\b/gi,                 'out of service'],
+  [/\bback\s+in\s+service\b/gi, 'available'],
+  [/\bin\s+service\b/gi,        'available'],
+
+  // ── Assignment mishears ──
+  [/\brap(?:id)?\s*intervention\b/gi,  'RIT'],
+  [/\br\.?i\.?t\.?\b/gi,               'RIT'],
+  [/\biric\b/gi,                       'RIT'],
+  [/\bwater\s+supply\b/gi,             'water supply'],
+  [/\bon\s+(?:the\s+)?hydrant\b/gi,    'water supply'],
+  [/\bcatch(?:ing)?\s+(?:a\s+)?plug\b/gi, 'water supply'],
+  [/\bvent(?:ilation)?\s+group\b/gi,   'ventilation'],
+  [/\bventing\b/gi,                    'ventilation'],
+  [/\brehab(?:ilitation)?\b/gi,        'rehab'],
+  [/\bstag(?:ing)?\b/gi,               'staging'],
+  [/\bprimary\s+search\b/gi,           'search'],
+  [/\bsearch\s+(?:and\s+)?rescue\b/gi, 'search'],
+  [/\bmedical\s+group\b/gi,            'medical'],
+  [/\btreatment\b/gi,                  'medical'],
+  [/\btriage\b/gi,                     'medical'],
+  [/\bgoing\s+interior\b/gi,           'interior'],
+  [/\binside\b/gi,                     'interior'],
+  [/\bgoing\s+to\s+(?:the\s+)?roof\b/gi, 'roof'],
+
+  // ── Alarm level mishears ──
+  [/\bstrike\s+(?:a\s+)?(?:the\s+)?second\s+alarm\b/gi,  '2nd alarm'],
+  [/\btransmit\s+(?:a\s+)?second\s+alarm\b/gi,           '2nd alarm'],
+  [/\bgo\s+to\s+(?:a\s+)?second\s+alarm\b/gi,            '2nd alarm'],
+  [/\bstrike\s+(?:a\s+)?(?:the\s+)?third\s+alarm\b/gi,   '3rd alarm'],
+  [/\bgo\s+to\s+(?:a\s+)?third\s+alarm\b/gi,             '3rd alarm'],
 ];
 
 function normalizeSpeech(text) {
@@ -121,15 +221,20 @@ ${units.map(u => `  - "${u.unit_name}" (type: ${u.unit_type}${u.alarm_level ? `,
 RADIO TRANSMISSION TO PARSE:
 "${transmission}"
 
-SPEECH-TO-TEXT CONTEXT: This transmission may have come from voice recognition. Common mishears to account for:
-- "seen" or "the seen" → "scene" (on scene)
+SPEECH-TO-TEXT CONTEXT: This transmission came from voice recognition and has been pre-processed, but may still have residual issues. Apply smart fuzzy matching:
+- Unit numbers may appear as words: "Engine one" = Engine 1, "Ladder two" = Ladder 2
+- "seen" / "the seen" / "at the box" → on scene
 - "fower" → 4, "niner" → 9, "tree" → 3
-- "may day" → MAYDAY
-- "alpha/bravo/charlie/delta" → Division A/B/C/D
-- "E1" → Engine 1, "T2" → Truck 2, "L3" → Ladder 3
-- Number words: one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10
-- "en route" may sound like "and route" or "inroute"
-- "working" may sound like "working fire" context clue
+- "latter" / "ladder" / "lader" → Ladder
+- "may day" / "mayday" → MAYDAY
+- "alpha/bravo/charlie/delta" / "A side/B side" → Division A/B/C/D
+- "E1"→Engine 1, "T2"→Truck 2, "L3"→Ladder 3, "R1"→Rescue 1
+- "en route" / "inroute" / "and route" → responding
+- "going interior" / "inside" → interior
+- "on hydrant" / "catching a plug" → water supply
+- "masking up" / "going on air" / "bottles on" → on air + working
+- "at scene" / "arriving" / "pulling up" → on scene
+- If a unit says any variant of arriving at the incident, set status to on_scene
 
 MUTUAL AID TOWN ABBREVIATION RULES (apply when a town/city name is spoken with a unit):
 - "Watertown" / "Wat" → prefix "WAT" (e.g. "Watertown Engine 2" → unit_name: "WAT Engine 2", unit_type: engine)
@@ -197,7 +302,9 @@ STATUS MAPPING:
 
 FLOOR MAPPING:
 - "first floor" / "1st floor" → "1st Floor" | "second floor" → "2nd Floor" | "third floor" → "3rd Floor"
-- "fourth floor" → "4th Floor" | "fifth floor" → "5th Floor" | "basement" → "Basement" | "lobby" → "Lobby"
+- "fourth floor" → "4th Floor" | "fifth floor" → "5th Floor" | "sixth floor" → "6th Floor"
+- "seventh floor" → "7th Floor" | "eighth floor" → "8th Floor"
+- "basement" / "sub-basement" → "Basement" | "attic" / "in the attic" → "Attic" | "roof" → "Roof"
 
 Respond with this exact JSON structure:
 {
