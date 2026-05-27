@@ -294,7 +294,7 @@ export default function EditUnitDialog({ unit, open, onClose, onSave, onDelete }
         <DialogFooter className="flex justify-between">
           <div className="flex gap-2">
             <Button variant="destructive" size="sm" onClick={() => {
-              const updated = { ...form, assignment: 'unassigned', status: 'available', rehab_time: null };
+              const updated = { ...form, assignment: 'unassigned', status: 'available', floor: '', rehab_time: null };
               onSave(updated);
               onClose();
             }}>
