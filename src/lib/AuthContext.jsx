@@ -62,8 +62,8 @@ function SignupScreen({ onSignup, onGoLogin }) {
   const finishSignup = async (token) => {
     storeToken(token);
     storeEmail(form.email.trim());
-    base44.auth.setToken(token);
-    // Save extended profile to Registration entity
+    // Save extended profile to Registration entity BEFORE switching to the user
+    // token — the app-level API key has broader write access than a new user's JWT.
     try {
       await base44.entities.Registration.create({
         first_name:       form.first_name.trim(),
@@ -73,9 +73,10 @@ function SignupScreen({ onSignup, onGoLogin }) {
         fire_department:  form.fire_department.trim(),
         role:             form.role,
       });
-    } catch (_) {
-      console.warn('Could not save registration profile:', _);
+    } catch (err) {
+      console.warn('Could not save registration profile:', err);
     }
+    base44.auth.setToken(token);
     onSignup(token, form.email.trim(), `${form.first_name.trim()} ${form.last_name.trim()}`);
   };
 
