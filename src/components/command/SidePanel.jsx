@@ -206,7 +206,8 @@ export default function SidePanel({
                       if (!unit.on_scene_time) data.on_scene_time = now;
                     } else if (
                       ['division_a', 'division_b', 'division_c', 'division_d',
-                       'water_supply', 'rit', 'exposure', 'medical'].includes(assignment) &&
+                       'water_supply', 'rit', 'exposure', 'medical',
+                       'corner_ab', 'corner_ad', 'corner_bc', 'corner_cd'].includes(assignment) &&
                       ['dispatched', 'responding', 'staging'].includes(unit.status)
                     ) {
                       data.status = 'on_scene';

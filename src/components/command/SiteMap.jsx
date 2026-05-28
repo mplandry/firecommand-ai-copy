@@ -59,32 +59,43 @@ function shortName(name) {
 
 // ── Map tactical assignment → SiteMap grid zone ───────────────────────────────
 function assignmentToPosition(assignment, index) {
-  const col = index % 3;
-  const row = Math.floor(index / 3);
+  const col = index % 2;
+  const row = Math.floor(index / 2);
   const cx = (v) => Math.min(COLS - 1, Math.max(0, v));
   const cy = (v) => Math.min(ROWS - 1, Math.max(0, v));
   switch (assignment) {
-    case 'division_a':   return { x: cx(6  + col), y: cy(13 + row) };
-    case 'division_b':   return { x: cx(col),       y: cy(4  + row) };
-    case 'division_c':   return { x: cx(6  + col), y: cy(row)       };
-    case 'division_d':   return { x: cx(17 + col), y: cy(4  + row)  };
-    case 'roof':         return { x: cx(7  + col), y: cy(2  + row)  };
-    case 'interior':     return { x: cx(8  + col), y: cy(6  + row)  };
-    case 'rit':          return { x: cx(col),       y: cy(1  + row)  };
-    case 'rehab':        return { x: cx(16 + col), y: cy(13 + row)  };
-    case 'staging':      return { x: cx(13 + col), y: cy(13 + row)  };
-    case 'medical':      return { x: cx(10 + col), y: cy(11 + row)  };
-    case 'water_supply': return { x: cx(col),       y: cy(12 + row)  };
-    case 'ventilation':  return { x: cx(3  + col), y: cy(row)       };
-    case 'search':       return { x: cx(8  + col), y: cy(9  + row)  };
-    case 'exposure':     return { x: cx(17 + col), y: cy(row)       };
-    case 'unassigned':   return { x: cx(3  + col), y: cy(13 + row)  };
+    case 'division_a':   return { x: cx(6  + col * 2), y: cy(13 + row) };
+    case 'division_b':   return { x: cx(col),           y: cy(4  + row) };
+    case 'division_c':   return { x: cx(6  + col * 2), y: cy(row)       };
+    case 'division_d':   return { x: cx(17 + col),      y: cy(4  + row)  };
+    case 'roof':         return { x: cx(7  + col * 2), y: cy(2  + row)  };
+    case 'interior':     return { x: cx(8  + col * 2), y: cy(6  + row)  };
+    case 'rit':          return { x: cx(col),           y: cy(1  + row)  };
+    case 'rehab':        return { x: cx(16 + col),      y: cy(13 + row)  };
+    case 'staging':      return { x: cx(13 + col * 2), y: cy(13 + row)  };
+    case 'medical':      return { x: cx(10 + col * 2), y: cy(11 + row)  };
+    case 'water_supply': return { x: cx(col),           y: cy(12 + row)  };
+    case 'ventilation':  return { x: cx(3  + col * 2), y: cy(row)       };
+    case 'search':       return { x: cx(8  + col * 2), y: cy(9  + row)  };
+    case 'exposure':     return { x: cx(17 + col),      y: cy(row)       };
+    case 'unassigned':   return { x: cx(3  + col * 2), y: cy(13 + row)  };
+    // ── Building corners ──
+    case 'corner_ab':    return { x: cx(3  + col), y: cy(10 + row) }; // bottom-left
+    case 'corner_ad':    return { x: cx(15 + col), y: cy(10 + row) }; // bottom-right
+    case 'corner_bc':    return { x: cx(3  + col), y: cy(2  + row) }; // top-left
+    case 'corner_cd':    return { x: cx(15 + col), y: cy(2  + row) }; // top-right
     default:             return { x: cx(col),       y: cy(ROWS - 1 - row) };
   }
 }
 
 // ── Map SiteMap grid position → tactical board assignment ─────────────────────
 function positionToAssignment(x, y) {
+  // ── Building corners — checked first (tight zones at each corner of structure) ──
+  if (x >= 3 && x <= 5  && y >= 10 && y <= 12) return 'corner_ab'; // bottom-left
+  if (x >= 14 && x <= 16 && y >= 10 && y <= 12) return 'corner_ad'; // bottom-right
+  if (x >= 3 && x <= 5  && y >= 2  && y <= 4)  return 'corner_bc'; // top-left
+  if (x >= 14 && x <= 16 && y >= 2  && y <= 4)  return 'corner_cd'; // top-right
+  // ── Outer zones ──
   if (x <= 2 && y <= 3)   return 'rit';
   if (x >= 17 && y <= 2)  return 'exposure';
   if (x >= 16 && y >= 12) return 'rehab';
@@ -350,6 +361,21 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit, incidentId }) {
               <span
                 key={label}
                 className="absolute text-xs font-mono font-bold text-white bg-black/70 border border-white/30 rounded px-2 py-0.5 uppercase tracking-wider whitespace-nowrap z-20"
+                style={{ left: x * GRID_SIZE, top: y * GRID_SIZE }}
+              >
+                {label}
+              </span>
+            ))}
+            {/* Corner zone indicators — fuchsia badges at each building corner */}
+            {[
+              { label: 'A/B', x: 3, y: 10.4 }, // bottom-left
+              { label: 'A/D', x: 15, y: 10.4 }, // bottom-right
+              { label: 'B/C', x: 3, y: 2.4  }, // top-left
+              { label: 'C/D', x: 15, y: 2.4  }, // top-right
+            ].map(({ label, x, y }) => (
+              <span
+                key={label}
+                className="absolute text-[9px] font-mono font-bold text-fuchsia-200 bg-fuchsia-900/80 border border-fuchsia-500/50 rounded px-1.5 py-0.5 uppercase tracking-wider whitespace-nowrap z-20"
                 style={{ left: x * GRID_SIZE, top: y * GRID_SIZE }}
               >
                 {label}
