@@ -31,6 +31,67 @@ function isMutualAid(unit, homePrefix = '') {
   return false;
 }
 
+// Hoisted outside the parent component so React never remounts it on re-render.
+// Receives callbacks as props rather than closing over parent state.
+function UnitRow({ unit, index, isChecked, note, onToggle, onNoteChange }) {
+  const personnel = unit.personnel_count || unit.personnel?.length || 0;
+  return (
+    <div
+      className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border transition-all cursor-pointer
+        ${isChecked
+          ? 'bg-emerald-500/10 border-emerald-500/40'
+          : 'bg-secondary/30 border-border/60 hover:border-border'
+        }`}
+      onClick={() => onToggle(unit.id)}
+    >
+      {/* Number */}
+      <span className="text-[11px] font-mono font-bold text-muted-foreground/60 w-5 shrink-0 pt-0.5 text-right">
+        {index + 1}.
+      </span>
+
+      {/* Check icon */}
+      <div className="shrink-0 mt-0.5">
+        {isChecked
+          ? <CheckCircle className="w-4 h-4 text-emerald-400" />
+          : <Circle className="w-4 h-4 text-muted-foreground/40" />
+        }
+      </div>
+
+      {/* Unit info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm leading-none">{UNIT_ICONS[unit.unit_type] || '🚐'}</span>
+          <span className={`font-mono font-bold text-sm ${isChecked ? 'text-emerald-300' : 'text-foreground'}`}>
+            {unit.unit_name}
+          </span>
+          {unit.officer && (
+            <span className="text-[11px] text-muted-foreground font-mono">{unit.officer}</span>
+          )}
+          {personnel > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] font-mono text-green-400 font-bold">
+              <Users className="w-3 h-3" />{personnel}
+            </span>
+          )}
+          {unit.air_time && (
+            <span className="flex items-center gap-0.5 text-[10px] font-mono text-amber-400">
+              <Wind className="w-3 h-3" /> AIR
+            </span>
+          )}
+        </div>
+        {/* Notes field — stopPropagation so clicking input doesn't toggle the check */}
+        <div className="mt-1.5" onClick={e => e.stopPropagation()}>
+          <Input
+            value={note}
+            onChange={e => onNoteChange(unit.id, e.target.value)}
+            placeholder="Notes (optional)"
+            className="h-6 text-[11px] font-mono bg-background/40 border-border/40 px-2 py-0"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PARChecklistDialog({ open, onClose, units, onConfirmPAR }) {
   const [checks, setChecks] = useState({});
   const [notes, setNotes] = useState({});
@@ -40,10 +101,9 @@ export default function PARChecklistDialog({ open, onClose, units, onConfirmPAR 
     const active = units.filter(u => ['on_scene', 'working', 'par', 'rehab', 'interior', 'staging'].includes(u.status) || ['on_scene','working','par','rehab'].includes(u.status));
     const mutual = active.filter(u => isMutualAid(u, homePrefix));
     const home   = active.filter(u => !isMutualAid(u, homePrefix));
-    // Sort numerically by unit name (Engine 1, Engine 2, Ladder 1...)
     const sortUnits = arr => [...arr].sort((a, b) => a.unit_name.localeCompare(b.unit_name, undefined, { numeric: true }));
     return { walthamUnits: sortUnits(home), mutualAidUnits: sortUnits(mutual) };
-  }, [units]);
+  }, [units, homePrefix]);
 
   const allUnits = [...walthamUnits, ...mutualAidUnits];
   const checkedCount = allUnits.filter(u => checks[u.id]).length;
@@ -62,66 +122,6 @@ export default function PARChecklistDialog({ open, onClose, units, onConfirmPAR 
     setChecks({});
     setNotes({});
     onClose();
-  };
-
-  const UnitRow = ({ unit, index }) => {
-    const isChecked = !!checks[unit.id];
-    const personnel = unit.personnel_count || unit.personnel?.length || 0;
-    return (
-      <div
-        className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border transition-all cursor-pointer
-          ${isChecked
-            ? 'bg-emerald-500/10 border-emerald-500/40'
-            : 'bg-secondary/30 border-border/60 hover:border-border'
-          }`}
-        onClick={() => toggle(unit.id)}
-      >
-        {/* Number */}
-        <span className="text-[11px] font-mono font-bold text-muted-foreground/60 w-5 shrink-0 pt-0.5 text-right">
-          {index + 1}.
-        </span>
-
-        {/* Check icon */}
-        <div className="shrink-0 mt-0.5">
-          {isChecked
-            ? <CheckCircle className="w-4 h-4 text-emerald-400" />
-            : <Circle className="w-4 h-4 text-muted-foreground/40" />
-          }
-        </div>
-
-        {/* Unit info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm leading-none">{UNIT_ICONS[unit.unit_type] || '🚐'}</span>
-            <span className={`font-mono font-bold text-sm ${isChecked ? 'text-emerald-300' : 'text-foreground'}`}>
-              {unit.unit_name}
-            </span>
-            {unit.officer && (
-              <span className="text-[11px] text-muted-foreground font-mono">{unit.officer}</span>
-            )}
-            {personnel > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px] font-mono text-green-400 font-bold">
-                <Users className="w-3 h-3" />{personnel}
-              </span>
-            )}
-            {unit.air_time && (
-              <span className="flex items-center gap-0.5 text-[10px] font-mono text-amber-400">
-                <Wind className="w-3 h-3" /> AIR
-              </span>
-            )}
-          </div>
-          {/* Notes field */}
-          <div className="mt-1.5" onClick={e => e.stopPropagation()}>
-            <Input
-              value={notes[unit.id] || ''}
-              onChange={e => setNote(unit.id, e.target.value)}
-              placeholder="Notes (optional)"
-              className="h-6 text-[11px] font-mono bg-background/40 border-border/40 px-2 py-0"
-            />
-          </div>
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -146,7 +146,7 @@ export default function PARChecklistDialog({ open, onClose, units, onConfirmPAR 
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-          {/* Waltham Units */}
+          {/* Home dept units */}
           {walthamUnits.length > 0 && (
             <div>
               <div className="text-[10px] font-mono font-bold tracking-widest text-muted-foreground uppercase mb-2 px-1">
@@ -154,7 +154,15 @@ export default function PARChecklistDialog({ open, onClose, units, onConfirmPAR 
               </div>
               <div className="space-y-1.5">
                 {walthamUnits.map((unit, i) => (
-                  <UnitRow key={unit.id} unit={unit} index={i} />
+                  <UnitRow
+                    key={unit.id}
+                    unit={unit}
+                    index={i}
+                    isChecked={!!checks[unit.id]}
+                    note={notes[unit.id] || ''}
+                    onToggle={toggle}
+                    onNoteChange={setNote}
+                  />
                 ))}
               </div>
             </div>
@@ -168,7 +176,15 @@ export default function PARChecklistDialog({ open, onClose, units, onConfirmPAR 
               </div>
               <div className="space-y-1.5">
                 {mutualAidUnits.map((unit, i) => (
-                  <UnitRow key={unit.id} unit={unit} index={walthamUnits.length + i} />
+                  <UnitRow
+                    key={unit.id}
+                    unit={unit}
+                    index={walthamUnits.length + i}
+                    isChecked={!!checks[unit.id]}
+                    note={notes[unit.id] || ''}
+                    onToggle={toggle}
+                    onNoteChange={setNote}
+                  />
                 ))}
               </div>
             </div>
