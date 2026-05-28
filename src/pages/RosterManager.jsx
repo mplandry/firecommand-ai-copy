@@ -338,6 +338,25 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
   );
 }
 
+// ── Compress image to max 1600px wide, 85% JPEG quality ───────────────────────
+function compressImage(file, maxWidth = 1600, quality = 0.85) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); }; // fallback: use original
+    img.src = url;
+  });
+}
+
 // ── Photo upload + parse panel ─────────────────────────────────────────────────
 function PhotoImportPanel({ onParsed, onClose }) {
   const [imageFiles, setImageFiles] = useState([]);
@@ -365,10 +384,11 @@ function PhotoImportPanel({ onParsed, onClose }) {
     setParseError('');
 
     try {
-      // Upload images one at a time to avoid timeout on large files
+      // Compress images before upload — large phone photos (4-8MB) cause AI timeouts
       let fileUrls;
       try {
-        const uploads = await Promise.all(imageFiles.map(f => base44.integrations.Core.UploadFile({ file: f })));
+        const compressed = await Promise.all(imageFiles.map(f => compressImage(f)));
+        const uploads = await Promise.all(compressed.map(f => base44.integrations.Core.UploadFile({ file: f })));
         fileUrls = uploads.map(u => u.file_url);
       } catch (uploadErr) {
         setParseError(`Photo upload failed: ${uploadErr?.message || 'Could not upload images. Check your connection and try again.'}`);
