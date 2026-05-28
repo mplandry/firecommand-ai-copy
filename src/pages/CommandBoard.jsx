@@ -574,6 +574,14 @@ export default function CommandBoard() {
               division_d: { active: 'text-yellow-400 bg-secondary/80 ring-1 ring-yellow-400/40', inactive: 'text-yellow-400/50 hover:text-yellow-400 hover:bg-secondary/50' },
             };
 
+            // Corner assignment keys — rotate with the sides automatically
+            const divLetter = { division_a: 'a', division_b: 'b', division_c: 'c', division_d: 'd' };
+            const cornerKey = (s1, s2) => { const [l1, l2] = [divLetter[s1], divLetter[s2]].sort(); return `corner_${l1}${l2}`; };
+            const cornerTL = cornerKey(topSide, leftSide);
+            const cornerTR = cornerKey(topSide, rightSide);
+            const cornerBL = cornerKey(bottomSide, leftSide);
+            const cornerBR = cornerKey(bottomSide, rightSide);
+
             const SideBtn = ({ division, position }) => {
               const isBottom = division === bottomSide;
               const posClass = {
@@ -595,44 +603,49 @@ export default function CommandBoard() {
               );
             };
 
+            // Shared props for all DivisionColumns in the diagram
+            const colProps = {
+              onEditUnit: isReadOnly ? null : setEditingUnit,
+              onUpdateUnit: isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data }),
+              onClearAssignment: isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } }),
+              allUnits: units,
+              stationGroups,
+              specialUnits,
+              deptPrefix,
+            };
+
             return (
-              <div className="flex flex-col items-center gap-2">
-                {/* Top */}
-                <div className="w-full max-w-xs">
-                <DivisionColumn assignment={topSide} units={units.filter(u => u.assignment === topSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
-                </div>
+              // 3×3 grid: corners at diagonals, sides on edges, structure in centre
+              // Column sizing: corners/sides share 1fr, top/bottom/structure get 1.5fr
+              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1.5fr 1fr' }}>
 
-                {/* Middle row */}
-                <div className="w-full flex items-stretch gap-2">
-                <div className="flex-1">
-                  <DivisionColumn assignment={leftSide} units={units.filter(u => u.assignment === leftSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
-                </div>
+                {/* ── Row 1: TL corner | top side | TR corner ── */}
+                <DivisionColumn assignment={cornerTL} units={units.filter(u => u.assignment === cornerTL)} {...colProps} />
+                <DivisionColumn assignment={topSide}  units={units.filter(u => u.assignment === topSide)}  {...colProps} />
+                <DivisionColumn assignment={cornerTR} units={units.filter(u => u.assignment === cornerTR)} {...colProps} />
 
-                  {/* Structure box */}
-                  <div className="flex-shrink-0 w-32 flex items-center justify-center">
-                    <div className="w-full aspect-square rounded-xl border-2 border-border/60 bg-secondary/30 flex flex-col items-center justify-center gap-1 relative">
-                      <div className="grid grid-cols-3 gap-0.5 opacity-30">
-                        {Array.from({length: 9}).map((_, i) => (
-                          <div key={i} className="w-5 h-5 rounded-sm bg-foreground/60" />
-                        ))}
-                      </div>
-                      <span className="text-[9px] font-mono font-bold tracking-widest text-muted-foreground/50 mt-1 uppercase">Structure</span>
-                      <SideBtn division={topSide}   position="top" />
-                      <SideBtn division={bottomSide} position="bottom" />
-                      <SideBtn division={leftSide}   position="left" />
-                      <SideBtn division={rightSide}  position="right" />
+                {/* ── Row 2: left side | structure box | right side ── */}
+                <DivisionColumn assignment={leftSide}  units={units.filter(u => u.assignment === leftSide)}  {...colProps} />
+                <div className="flex items-center justify-center py-1">
+                  <div className="w-28 aspect-square rounded-xl border-2 border-border/60 bg-secondary/30 flex flex-col items-center justify-center gap-1 relative">
+                    <div className="grid grid-cols-3 gap-0.5 opacity-30">
+                      {Array.from({length: 9}).map((_, i) => (
+                        <div key={i} className="w-4 h-4 rounded-sm bg-foreground/60" />
+                      ))}
                     </div>
-                  </div>
-
-                  <div className="flex-1">
-                    <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
+                    <span className="text-[9px] font-mono font-bold tracking-widest text-muted-foreground/50 mt-1 uppercase">Structure</span>
+                    <SideBtn division={topSide}    position="top" />
+                    <SideBtn division={bottomSide} position="bottom" />
+                    <SideBtn division={leftSide}   position="left" />
+                    <SideBtn division={rightSide}  position="right" />
                   </div>
                 </div>
+                <DivisionColumn assignment={rightSide} units={units.filter(u => u.assignment === rightSide)} {...colProps} />
 
-                {/* Bottom (front/address side) */}
-                <div className="w-full max-w-xs">
-                  <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} onEditUnit={isReadOnly ? null : setEditingUnit} onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })} onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })} allUnits={units} stationGroups={stationGroups} specialUnits={specialUnits} deptPrefix={deptPrefix} />
-                </div>
+                {/* ── Row 3: BL corner | bottom side | BR corner ── */}
+                <DivisionColumn assignment={cornerBL} units={units.filter(u => u.assignment === cornerBL)} {...colProps} />
+                <DivisionColumn assignment={bottomSide} units={units.filter(u => u.assignment === bottomSide)} {...colProps} />
+                <DivisionColumn assignment={cornerBR} units={units.filter(u => u.assignment === cornerBR)} {...colProps} />
               </div>
             );
           })()}
@@ -675,7 +688,7 @@ export default function CommandBoard() {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              {['corner_ab', 'corner_ad', 'corner_bc', 'corner_cd', 'roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
+              {['roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
                 <DivisionColumn
                   key={assignment}
                   assignment={assignment}
