@@ -30,9 +30,6 @@ export const DEFAULT_APPARATUS = [
   { name: 'Engine 7',     type: 'engine',  personnel: 3, station: 'OTHER',         special: false },
   { name: 'Engine 8',     type: 'engine',  personnel: 3, station: 'OTHER',         special: false },
   { name: 'Ladder 3',     type: 'truck',   personnel: 3, station: 'OTHER',         special: false },
-  { name: 'Moody Boat',   type: 'other',   personnel: 2, station: 'WATER/SPECIAL', special: true  },
-  { name: 'Central Boat', type: 'other',   personnel: 2, station: 'WATER/SPECIAL', special: true  },
-  { name: 'RTV',          type: 'other',   personnel: 2, station: 'WATER/SPECIAL', special: true  },
 ];
 
 export const DEFAULT_PREFIX = 'WAL';
@@ -410,7 +407,7 @@ export default function DepartmentSettings() {
           </div>
 
           <p className="text-[10px] font-mono text-muted-foreground">
-            <span className="font-semibold">Low priority</span> units (boats, RTV, special) are sorted to the bottom of the Unassigned column.
+            <span className="font-semibold">Low priority</span> units (marked special) are sorted to the bottom of the Unassigned column.
           </p>
         </section>
 

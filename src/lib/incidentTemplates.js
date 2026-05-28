@@ -122,10 +122,6 @@ export const INCIDENT_TEMPLATES = [
       { unit_name: 'Tower 1',     unit_type: 'truck',     assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 4 },
       { unit_name: 'Ladder 2',    unit_type: 'truck',     assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 4 },
       { unit_name: 'Ladder 3',    unit_type: 'truck',     assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 4 },
-      { unit_name: 'Moody Boat',  unit_type: 'other',     assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 2 },
-      { unit_name: 'Central Boat',unit_type: 'other',     assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 2 },
-      { unit_name: 'Engine 7 Boat', unit_type: 'other',   assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 2 },
-      { unit_name: 'RTV',         unit_type: 'other',     assignment: 'unassigned', floor: null, status: 'dispatched', personnel_count: 2 },
     ],
   },
   {

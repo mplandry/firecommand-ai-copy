@@ -181,7 +181,12 @@ function snapToGrid(px) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Units that never appear on the site map (boats, utility vehicles, etc.)
+const SITEMAP_EXCLUDE = /\b(boat|rtv)\b/i;
+
 export default function SiteMap({ units, isReadOnly, onMoveUnit, incidentId }) {
+  // Strip non-deployable apparatus before any rendering or position tracking
+  const mapUnits = units.filter(u => !SITEMAP_EXCLUDE.test(u.unit_name || ''));
   // Unit positions derived from assignments
   const [positions, setPositions] = useState({});
   const [dragging, setDragging] = useState(null); // { id, type: 'unit'|'hydrant', offsetX, offsetY }
@@ -215,12 +220,12 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit, incidentId }) {
     setPositions(prev => {
       const next = { ...prev };
       const groups = {};
-      units.forEach(u => {
+      mapUnits.forEach(u => {
         const a = u.assignment || 'unassigned';
         if (!groups[a]) groups[a] = [];
         groups[a].push(u.id);
       });
-      units.forEach((unit) => {
+      mapUnits.forEach((unit) => {
         const curr = unit.assignment || 'unassigned';
         const prev2 = prevAssignments.current[unit.id];
         const idx = groups[curr].indexOf(unit.id);
@@ -231,14 +236,14 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit, incidentId }) {
       });
       // Clean up removed units
       Object.keys(next).forEach(id => {
-        if (!units.find(u => u.id === id)) {
+        if (!mapUnits.find(u => u.id === id)) {
           delete next[id];
           delete prevAssignments.current[id];
         }
       });
       return next;
     });
-  }, [units]);
+  }, [mapUnits]);
 
   // ── Drag start — handles both units and hydrants ──────────────────────────
   const handleDragStart = useCallback((e, id, type = 'unit') => {
@@ -284,7 +289,7 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit, incidentId }) {
     if (dragging?.type === 'unit' && onMoveUnit) {
       const pos = positionsRef.current[dragging.id];
       if (pos) {
-        const unit = units.find(u => u.id === dragging.id);
+        const unit = mapUnits.find(u => u.id === dragging.id);
         const newAssignment = positionToAssignment(pos.x, pos.y);
         if (unit && newAssignment !== (unit.assignment || 'unassigned')) {
           onMoveUnit(unit, newAssignment);
@@ -292,7 +297,7 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit, incidentId }) {
       }
     }
     setDragging(null);
-  }, [dragging, units, onMoveUnit]);
+  }, [dragging, mapUnits, onMoveUnit]);
 
   // Global listeners while dragging
   useEffect(() => {
@@ -403,7 +408,7 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit, incidentId }) {
           ))}
 
           {/* Unit tokens */}
-          {units.map(unit => {
+          {mapUnits.map(unit => {
             const pos = positions[unit.id] || { x: 0, y: 0 };
             return (
               <UnitToken

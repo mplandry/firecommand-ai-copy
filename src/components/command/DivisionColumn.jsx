@@ -43,7 +43,7 @@ const DEFAULT_STATION_GROUPS = [
   { label: 'MOODY ST.',   units: ['WAL C2', 'WAL Engine 1', 'WAL Squad 5', 'WAL Ladder 2'] },
   { label: 'CENTRAL ST.', units: ['WAL Engine 2', 'WAL Rescue 1', 'WAL Tower 1'] },
 ];
-const DEFAULT_LOW_PRIORITY = ['WAL Moody Boat', 'WAL Central Boat', 'WAL RTV'];
+const DEFAULT_LOW_PRIORITY = [];
 
 export default function DivisionColumn({
   assignment, units, onEditUnit, onUpdateUnit, onClearAssignment, allUnits = [],
