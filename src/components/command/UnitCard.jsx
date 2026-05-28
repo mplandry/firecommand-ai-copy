@@ -20,6 +20,17 @@ const unitTypeLabel = {
   hazmat: 'HZM', other: 'OTH',
 };
 
+// Short badge label for alarm level — shown on every card that has one
+const ALARM_BADGE = {
+  '1st_alarm':  { label: '1A', color: 'bg-sky-500/20 text-sky-400 border-sky-500/40' },
+  '2nd_alarm':  { label: '2A', color: 'bg-orange-500/20 text-orange-400 border-orange-500/40' },
+  '3rd_alarm':  { label: '3A', color: 'bg-red-500/20 text-red-400 border-red-500/40' },
+  '4th_alarm':  { label: '4A', color: 'bg-red-700/20 text-red-300 border-red-700/40' },
+  '5th_alarm':  { label: '5A', color: 'bg-red-900/30 text-red-200 border-red-900/50' },
+  'task_force': { label: 'TF', color: 'bg-purple-500/20 text-purple-400 border-purple-500/40' },
+  'strike_team':{ label: 'ST', color: 'bg-purple-700/20 text-purple-300 border-purple-700/40' },
+};
+
 function useElapsed(timestamp) {
   const [elapsed, setElapsed] = useState(null);
   useEffect(() => {
@@ -47,6 +58,10 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
   const isWorking = unit.status === 'working' || unit.status === 'par';
   const isRehab = unit.status === 'rehab';
   const isOnScene = unit.status === 'on_scene';
+
+  // Blink until the IC assigns this unit somewhere real
+  const isStaging = unit.assignment === 'staging';
+  const alarmBadge = ALARM_BADGE[unit.alarm_level] || null;
 
   // Mutual aid: explicit flag, OR short prefix (ARL, NEW…), OR full town name at start
   const MA_TOWNS = /^(arlington|belmont|boston|cambridge|chelsea|concord|dedham|everett|framingham|lexington|lincoln|malden|medford|millis|natick|needham|newton|norwood|quincy|reading|somerville|stoneham|sudbury|watertown|wellesley|weston|woburn|worcester|arl|bel|cam|con|ded|eve|fra|lex|lin|mal|med|nat|ned|new|nor|qui|rea|som|sto|sud|wat|wel|wes|wob|wor)\s/i;
@@ -76,10 +91,11 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
         border transition-all duration-150
         hover:shadow-lg hover:shadow-black/20 group ${unit.notes ? 'min-h-[68px]' : 'h-[68px]'}
         ${cfg.bg}
-        ${isMayday    ? 'animate-pulse-red border-red-500/60 ring-1 ring-red-500/60' :
-          rehabWarning ? 'animate-pulse border-violet-400/80 ring-1 ring-violet-400/50' :
-          isMutualAid  ? 'border-amber-500/50 ring-1 ring-amber-500/20' :
-                         'border-border/60 hover:border-border'}
+        ${isMayday     ? 'animate-pulse-red border-red-500/60 ring-1 ring-red-500/60' :
+          rehabWarning  ? 'animate-pulse border-violet-400/80 ring-1 ring-violet-400/50' :
+          isStaging     ? 'animate-pulse border-amber-400/80 ring-2 ring-amber-400/60 shadow-amber-500/20 shadow-md' :
+          isMutualAid   ? 'border-amber-500/50 ring-1 ring-amber-500/20' :
+                          'border-border/60 hover:border-border'}
       `}
     >
       {/* Status bar accent — amber for mutual aid */}
@@ -97,7 +113,7 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
       )}
 
       <div className="pl-4 pr-7 py-2 flex flex-col justify-between gap-1">
-        {/* Top row: type badge + name + status */}
+        {/* Top row: type badge + name + alarm badge + status */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <span className={`text-xs font-mono font-bold tracking-wider px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.text} border border-current/20 shrink-0`}>
@@ -109,11 +125,18 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
             {isMutualAid && (
               <span className="text-[10px] font-mono font-bold px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">MA</span>
             )}
+            {alarmBadge && (
+              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${alarmBadge.color}`}>
+                {alarmBadge.label}
+              </span>
+            )}
           </div>
           <span className={`text-xs font-mono font-semibold tracking-wider shrink-0 ${
-            rehabWarning ? 'text-violet-300 font-bold' : cfg.text
+            rehabWarning ? 'text-violet-300 font-bold' :
+            isStaging    ? 'text-amber-300 font-bold animate-pulse' :
+            cfg.text
           }`}>
-            {rehabWarning ? '⚠ REHAB' : cfg.label}
+            {rehabWarning ? '⚠ REHAB' : isStaging ? '⚡ STAGE' : cfg.label}
           </span>
         </div>
 
