@@ -171,11 +171,24 @@ export default function RosterUploadDialog({ open, onClose, existingUnits, onImp
     setIsParsing(true);
     setParseError('');
 
-    const uploads = await Promise.all(images.map(img => base44.integrations.Core.UploadFile({ file: img.file })));
-    const fileUrls = uploads.map(u => u.file_url);
+    try {
+      // Upload images
+      let fileUrls;
+      try {
+        const uploads = await Promise.all(
+          images.map(img => base44.integrations.Core.UploadFile({ file: img.file }))
+        );
+        fileUrls = uploads.map(u => u.file_url);
+      } catch (uploadErr) {
+        setParseError(`Upload failed: ${uploadErr?.message || 'Could not upload photos. Check your connection and try again.'}`);
+        return;
+      }
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a fire department roster parser. Analyze these ${fileUrls.length} daily roster sheet image(s) and extract ALL units/apparatus and their personnel assignments across all pages/sheets.
+      // Run AI extraction
+      let result;
+      try {
+        result = await base44.integrations.Core.InvokeLLM({
+          prompt: `You are a fire department roster parser. Analyze these ${fileUrls.length} daily roster sheet image(s) and extract ALL units/apparatus and their personnel assignments across all pages/sheets.
 
 For each unit found, extract:
 - unit_name: the unit designator (e.g. "Engine 1", "Truck 3", "Rescue 2", "C2", "Medic 4")
@@ -187,48 +200,55 @@ For each unit found, extract:
 Deduplicate units that appear on multiple pages (use the most complete record). If no assignment is shown, default to "unassigned".
 
 Return ONLY the structured JSON with the units array.`,
-      file_urls: fileUrls,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          units: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                unit_name: { type: 'string' },
-                unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'] },
-                officer: { type: 'string' },
-                personnel: { type: 'array', items: { type: 'string' } },
-                personnel_count: { type: 'number' },
+          file_urls: fileUrls,
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              units: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    unit_name: { type: 'string' },
+                    unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'] },
+                    officer: { type: 'string' },
+                    personnel: { type: 'array', items: { type: 'string' } },
+                    personnel_count: { type: 'number' },
+                  },
+                  required: ['unit_name', 'unit_type'],
+                },
               },
-              required: ['unit_name', 'unit_type'],
             },
+            required: ['units'],
           },
-        },
-        required: ['units'],
-      },
-    });
+        });
+      } catch (llmErr) {
+        setParseError(`AI parsing failed: ${llmErr?.message || 'The AI could not process the photos. Try again or use CSV import.'}`);
+        return;
+      }
 
-    if (!result?.units || result.units.length === 0) {
-      setParseError('No units found in the images. Try clearer photos of the roster sheet.');
+      if (!result?.units || result.units.length === 0) {
+        setParseError('No units found in the images. Make sure the roster sheet is clearly visible and fills most of the frame. Try the CSV import option instead.');
+        return;
+      }
+
+      const mapped = result.units.map(u => ({
+        unit_name: u.unit_name,
+        unit_type: u.unit_type || 'engine',
+        officer: u.officer || '',
+        personnel: u.personnel || [],
+        personnel_count: u.personnel_count || (u.personnel?.length) || null,
+        assignment: 'unassigned',
+        status: 'dispatched',
+        _isNew: !existingUnits.some(e => e.unit_name.toLowerCase() === u.unit_name.toLowerCase()),
+      }));
+
+      setParsedUnits(mapped);
+    } catch (err) {
+      setParseError(`Unexpected error: ${err?.message || 'Something went wrong. Please try again.'}`);
+    } finally {
       setIsParsing(false);
-      return;
     }
-
-    const mapped = result.units.map(u => ({
-      unit_name: u.unit_name,
-      unit_type: u.unit_type || 'engine',
-      officer: u.officer || '',
-      personnel: u.personnel || [],
-      personnel_count: u.personnel_count || (u.personnel?.length) || null,
-      assignment: 'unassigned',
-      status: 'dispatched',
-      _isNew: !existingUnits.some(e => e.unit_name.toLowerCase() === u.unit_name.toLowerCase()),
-    }));
-
-    setParsedUnits(mapped);
-    setIsParsing(false);
   };
 
   // ── CSV helpers ──
