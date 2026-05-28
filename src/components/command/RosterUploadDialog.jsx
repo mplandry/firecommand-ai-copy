@@ -190,12 +190,34 @@ export default function RosterUploadDialog({ open, onClose, existingUnits, onImp
     setIsParsing(true);
     setParseError('');
 
+    const unitSchema = {
+      type: 'object',
+      properties: {
+        units: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              unit_name: { type: 'string' },
+              unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'] },
+              officer: { type: 'string' },
+              personnel: { type: 'array', items: { type: 'string' } },
+              personnel_count: { type: 'number' },
+            },
+            required: ['unit_name', 'unit_type'],
+          },
+        },
+      },
+      required: ['units'],
+    };
+
     try {
-      // Upload images
+      // Compress images before upload — large phone photos (4-8MB) cause AI timeouts
       let fileUrls;
       try {
+        const compressed = await Promise.all(images.map(img => compressImage(img.file)));
         const uploads = await Promise.all(
-          images.map(img => base44.integrations.Core.UploadFile({ file: img.file }))
+          compressed.map(f => base44.integrations.Core.UploadFile({ file: f }))
         );
         fileUrls = uploads.map(u => u.file_url);
       } catch (uploadErr) {
@@ -203,55 +225,57 @@ export default function RosterUploadDialog({ open, onClose, existingUnits, onImp
         return;
       }
 
-      // Run AI extraction
-      let result;
-      try {
-        result = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are a fire department roster parser. Analyze these ${fileUrls.length} daily roster sheet image(s) and extract ALL units/apparatus and their personnel assignments across all pages/sheets.
+      // Try ExtractDataFromUploadedFile per page first (purpose-built for document images)
+      let allUnits = [];
+      let lastErr = null;
 
-For each unit found, extract:
-- unit_name: the unit designator (e.g. "Engine 1", "Truck 3", "Rescue 2", "C2", "Medic 4")
-- unit_type: one of engine/truck/rescue/squad/deputy/medic/tanker/brush/hazmat/other
-- officer: the officer/captain/lieutenant name if visible
-- personnel: array of crew member names listed under that unit
-- personnel_count: total count of personnel on that unit
+      for (const url of fileUrls) {
+        try {
+          const pageResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
+            file_url: url,
+            json_schema: unitSchema,
+          });
+          if (pageResult?.units?.length) allUnits.push(...pageResult.units);
+        } catch (e) {
+          lastErr = e;
+        }
+      }
 
-Deduplicate units that appear on multiple pages (use the most complete record). If no assignment is shown, default to "unassigned".
+      // Fall back to InvokeLLM with all images if ExtractDataFromUploadedFile got nothing
+      if (allUnits.length === 0) {
+        try {
+          const fallback = await base44.integrations.Core.InvokeLLM({
+            model: 'claude_sonnet_4_6',
+            prompt: `You are a fire department daily roster parser. Look at these roster images and extract every apparatus unit and its crew.
 
-Return ONLY the structured JSON with the units array.`,
-          file_urls: fileUrls,
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              units: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    unit_name: { type: 'string' },
-                    unit_type: { type: 'string', enum: ['engine','truck','rescue','squad','deputy','medic','tanker','brush','hazmat','other'] },
-                    officer: { type: 'string' },
-                    personnel: { type: 'array', items: { type: 'string' } },
-                    personnel_count: { type: 'number' },
-                  },
-                  required: ['unit_name', 'unit_type'],
-                },
-              },
-            },
-            required: ['units'],
-          },
-        });
-      } catch (llmErr) {
-        setParseError(`AI parsing failed: ${llmErr?.message || 'The AI could not process the photos. Try again or use CSV import.'}`);
+For each unit return:
+- unit_name: apparatus name only (e.g. "Engine 1", "Truck 3", "Rescue 2", "C2", "Medic 4")
+- unit_type: engine/truck/rescue/squad/deputy/medic/tanker/brush/hazmat/other
+- officer: the most senior person listed on that unit
+- personnel: array of all other crew member names
+- personnel_count: total headcount including officer
+
+Return partial results if some units are unclear. Do not return an empty list if ANY units are visible.`,
+            file_urls: fileUrls,
+            response_json_schema: unitSchema,
+          });
+          if (fallback?.units?.length) allUnits.push(...fallback.units);
+        } catch (llmErr) {
+          lastErr = llmErr;
+        }
+      }
+
+      if (allUnits.length === 0) {
+        const hint = lastErr?.message ? ` (${lastErr.message})` : '';
+        setParseError(`No units found in these photos${hint}. Make sure the roster sheet is clearly visible and fills most of the frame. Try the CSV import option instead.`);
         return;
       }
 
-      if (!result?.units || result.units.length === 0) {
-        setParseError('No units found in the images. Make sure the roster sheet is clearly visible and fills most of the frame. Try the CSV import option instead.');
-        return;
-      }
+      // Deduplicate by unit name
+      const seen = new Map();
+      for (const u of allUnits) seen.set(u.unit_name.toLowerCase().trim(), u);
 
-      const mapped = result.units.map(u => ({
+      const mapped = Array.from(seen.values()).map(u => ({
         unit_name: u.unit_name,
         unit_type: u.unit_type || 'engine',
         officer: u.officer || '',
