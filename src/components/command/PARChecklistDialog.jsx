@@ -3,32 +3,43 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CheckCircle, Circle, Users, Wind } from 'lucide-react';
+import { useDepartment } from '@/hooks/useDepartment';
 
 const UNIT_ICONS = {
   engine:'🚒', truck:'🪜', rescue:'🚑', squad:'🔧',
   deputy:'⭐', medic:'🏥', tanker:'💧', brush:'🌿', hazmat:'☣️', other:'🚐',
 };
 
-// Heuristic: mutual aid units often have a town prefix (CAM, ARL, LEX, BEL...)
-// or notes starting with "Mutual Aid"
-function isMutualAid(unit) {
+// A unit is mutual aid if the DB flag is set, or if its name starts with a
+// known out-of-town prefix that is NOT the home department's own prefix.
+function isMutualAid(unit, homePrefix = '') {
+  // Explicit DB flag — most reliable
+  if (unit.is_mutual_aid) return true;
+  // Notes hint (legacy fallback)
   if (unit.notes?.toLowerCase().includes('mutual aid')) return true;
+  // Full town name in unit name
   if (/watertown/i.test(unit.unit_name)) return true;
-  // Names like "CAM Engine 1", "ARL Ladder 1"
-  const knownPrefixes = /^(CAM|ARL|LEX|BEL|NAT|NED|WAY|STO|WAL|WIN|WOB|MED|MAL|EVE|SOM|CHE|WES|NEE|FRA|MIL|MED|BRO|QUI|DEU|NEW|WAT|WTW)/i;
-  const parts = unit.unit_name?.split(' ');
-  if (parts?.length > 1 && knownPrefixes.test(parts[0])) return true;
+  // Short prefix like "CAM Engine 1" — but never match the home dept prefix
+  const knownPrefixes = /^(CAM|ARL|LEX|BEL|NAT|NED|WAY|STO|WIN|WOB|MED|MAL|EVE|SOM|CHE|WES|NEE|FRA|MIL|BRO|QUI|DEU|NEW|WAT|WTW)/i;
+  const firstWord = unit.unit_name?.split(' ')[0] || '';
+  if (
+    firstWord.length >= 2 &&
+    homePrefix &&
+    firstWord.toUpperCase() === homePrefix.toUpperCase()
+  ) return false; // always home dept
+  if (unit.unit_name?.split(' ').length > 1 && knownPrefixes.test(firstWord)) return true;
   return false;
 }
 
 export default function PARChecklistDialog({ open, onClose, units, onConfirmPAR }) {
   const [checks, setChecks] = useState({});
   const [notes, setNotes] = useState({});
+  const { prefix: homePrefix } = useDepartment();
 
   const { walthamUnits, mutualAidUnits } = useMemo(() => {
     const active = units.filter(u => ['on_scene', 'working', 'par', 'rehab', 'interior', 'staging'].includes(u.status) || ['on_scene','working','par','rehab'].includes(u.status));
-    const mutual = active.filter(isMutualAid);
-    const home   = active.filter(u => !isMutualAid(u));
+    const mutual = active.filter(u => isMutualAid(u, homePrefix));
+    const home   = active.filter(u => !isMutualAid(u, homePrefix));
     // Sort numerically by unit name (Engine 1, Engine 2, Ladder 1...)
     const sortUnits = arr => [...arr].sort((a, b) => a.unit_name.localeCompare(b.unit_name, undefined, { numeric: true }));
     return { walthamUnits: sortUnits(home), mutualAidUnits: sortUnits(mutual) };
