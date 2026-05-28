@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen, Radio, Pencil, MicOff } from 'lucide-react';
+import { Plus, ArrowLeft, Archive, ScanLine, ShieldCheck, Monitor, Moon, Sun, PanelRightClose, PanelRightOpen, Radio, Pencil, MicOff, RotateCcw } from 'lucide-react';
 import { DragDropContext } from '@hello-pangea/dnd';
 import { useTheme } from '@/lib/ThemeContext';
 import IncidentHeader from '@/components/command/IncidentHeader';
@@ -37,6 +37,7 @@ export default function CommandBoard() {
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [bottomSide, setBottomSide] = useState('division_a'); // Alpha is default front/address side
   const [micBlocked, setMicBlocked] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const queryClient = useQueryClient();
   const { state: maydayState, update: maydayUpdate } = useMayday();
 
@@ -160,6 +161,24 @@ export default function CommandBoard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidents-all'] });
       navigate('/');
+    },
+  });
+
+  const resetUnits = useMutation({
+    mutationFn: async () => {
+      const resetData = {
+        assignment: 'unassigned',
+        status: 'dispatched',
+        floor: null,
+        on_scene_time: null,
+        rehab_time: null,
+        air_time: null,
+      };
+      await Promise.all(units.map(u => base44.entities.Unit.update(u.id, resetData)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
+      setShowResetConfirm(false);
     },
   });
 
@@ -435,6 +454,17 @@ export default function CommandBoard() {
             </Button>
           )}
           <ExportIncidentPDF incident={incident} units={units} radioLogs={radioLogs} department={department} />
+          {!isReadOnly && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-amber-400/70 hover:text-amber-400 hover:bg-amber-400/10"
+              title="Reset All Units"
+              onClick={() => setShowResetConfirm(true)}
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+          )}
           {!isReadOnly && (
             <Button variant="ghost" size="icon" className="h-10 w-10 text-red-400/70 hover:text-red-400 hover:bg-red-400/10" title="Close Incident" onClick={() => setShowClose(true)}>
               <Archive className="w-5 h-5" />
@@ -777,6 +807,44 @@ export default function CommandBoard() {
             isSaving={updateIncident.isPending}
           />
         </>
+      )}
+
+      {/* ── Reset Units Confirm Dialog ── */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl shadow-2xl w-[90vw] max-w-sm p-6 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                <RotateCcw className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-mono font-bold text-foreground tracking-wide">RESET ALL UNITS?</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  All {units.length} units will be moved back to Unassigned / Dispatched. Floors and timestamps will be cleared.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-mono text-xs"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={resetUnits.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="font-mono text-xs bg-amber-500 hover:bg-amber-600 text-black border-0"
+                onClick={() => resetUnits.mutate()}
+                disabled={resetUnits.isPending}
+              >
+                {resetUnits.isPending ? 'Resetting…' : 'Reset Units'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
