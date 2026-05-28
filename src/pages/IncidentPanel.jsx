@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ShieldCheck, LayoutGrid, CheckCircle, Layers, Map, Siren } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowLeft, ShieldCheck, LayoutGrid, CheckCircle, Layers,
+  Map, Siren, Camera, FlaskConical, Ambulance,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ICAccountabilitySummary from '@/components/command/ICAccountabilitySummary';
 import StructureTactical from '@/components/command/StructureTactical';
@@ -11,14 +14,18 @@ import FloorTracker from '@/components/command/FloorTracker';
 import SiteMap from '@/components/command/SiteMap';
 import RadioLogPanel from '@/components/command/RadioLogPanel';
 import MaydayCommand from '@/components/command/MaydayCommand';
+import PhotoPanel from '@/components/command/PhotoPanel';
+import HazmatPanel from '@/components/command/HazmatPanel';
+import MCIPanel from '@/components/command/MCIPanel';
 import { useDepartment } from '@/hooks/useDepartment';
 
-const TABS = [
+const BASE_TABS = [
   { id: 'ic',       label: 'IC Summary', icon: ShieldCheck },
   { id: 'tactical', label: 'Tactical',   icon: LayoutGrid  },
   { id: 'par',      label: 'PAR',        icon: CheckCircle },
   { id: 'floors',   label: 'Floors',     icon: Layers      },
   { id: 'sitemap',  label: 'Site Map',   icon: Map         },
+  { id: 'photos',   label: 'Photos',     icon: Camera      },
 ];
 
 export default function IncidentPanel() {
@@ -26,7 +33,8 @@ export default function IncidentPanel() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') || 'ic';
-  const { specialUnits } = useDepartment();
+  const { specialUnits, dept } = useDepartment();
+  const queryClient = useQueryClient();
 
   const { data: units = [] } = useQuery({
     queryKey: ['units', incidentId],
@@ -51,8 +59,59 @@ export default function IncidentPanel() {
     enabled: !!incidentId,
   });
 
-  const updateUnit = async (unit, data) => {
-    await base44.entities.Unit.update(unit.id, data);
+  const incidentType = incident?.incident_type || 'structure_fire';
+
+  // Dynamic tab list — inject Hazmat or MCI tab before Photos
+  const TABS = useMemo(() => {
+    const tabs = [...BASE_TABS];
+    if (incidentType === 'hazmat') {
+      tabs.splice(tabs.length - 1, 0, { id: 'hazmat', label: 'HazMat', icon: FlaskConical });
+    } else if (incidentType === 'mci') {
+      tabs.splice(tabs.length - 1, 0, { id: 'mci', label: 'MCI', icon: Ambulance });
+    }
+    return tabs;
+  }, [incidentType]);
+
+  // Mutation with cache invalidation so tactical board refreshes immediately
+  const updateUnitMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Unit.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['units', incidentId] }),
+  });
+
+  const onUpdateUnit = (unit, data) => {
+    const id = unit?.id ?? unit;
+    updateUnitMutation.mutate({ id, data });
+  };
+
+  // Same status promotion logic as SidePanel / CommandBoard
+  const handleMoveUnit = (unit, assignment) => {
+    const data = { assignment };
+    const now = new Date().toISOString();
+
+    if (assignment === 'rehab' && unit.status !== 'rehab') {
+      data.status = 'rehab';
+      data.rehab_time = now;
+    } else if (
+      ['interior', 'roof', 'search', 'ventilation'].includes(assignment) &&
+      ['dispatched', 'responding', 'on_scene', 'staging'].includes(unit.status)
+    ) {
+      data.status = 'working';
+      if (!unit.on_scene_time) data.on_scene_time = now;
+    } else if (
+      ['division_a', 'division_b', 'division_c', 'division_d',
+       'water_supply', 'rit', 'exposure', 'medical',
+       'corner_ab', 'corner_ad', 'corner_bc', 'corner_cd'].includes(assignment) &&
+      ['dispatched', 'responding', 'staging'].includes(unit.status)
+    ) {
+      data.status = 'on_scene';
+      if (!unit.on_scene_time) data.on_scene_time = now;
+    } else if (assignment === 'staging') {
+      if (unit.status === 'dispatched' || unit.status === 'responding') {
+        data.status = 'staging';
+      }
+    }
+
+    onUpdateUnit(unit, data);
   };
 
   const isMayday = tab === 'mayday';
@@ -66,21 +125,21 @@ export default function IncidentPanel() {
         <Button
           variant="ghost"
           size="sm"
-          className={`gap-1.5 text-xs ${isMayday ? 'text-white hover:bg-red-700' : 'text-muted-foreground'}`}
+          className={`gap-1.5 text-xs shrink-0 ${isMayday ? 'text-white hover:bg-red-700' : 'text-muted-foreground'}`}
           onClick={() => navigate(`/incident/${incidentId}`)}
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Board
         </Button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {incident && (
-            <p className={`text-xs font-mono ${isMayday ? 'text-red-100' : 'text-muted-foreground'}`}>
+            <p className={`text-xs font-mono truncate ${isMayday ? 'text-red-100' : 'text-muted-foreground'}`}>
               {incident.command_name || incident.address}
             </p>
           )}
         </div>
 
         {/* Tab bar in header */}
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1 flex-wrap justify-end">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -126,7 +185,7 @@ export default function IncidentPanel() {
           <div className="max-w-2xl mx-auto p-6">
             <StructureTactical
               units={units}
-              onUpdateUnit={(unit, data) => updateUnit(unit, data)}
+              onUpdateUnit={onUpdateUnit}
             />
           </div>
         )}
@@ -137,9 +196,9 @@ export default function IncidentPanel() {
               units={units}
               onRequestPAR={() => {
                 const workingUnits = units.filter(u => ['on_scene', 'working', 'par'].includes(u.status));
-                workingUnits.forEach(u => base44.entities.Unit.update(u.id, { status: 'par', last_par_time: new Date().toISOString() }));
+                workingUnits.forEach(u => onUpdateUnit(u, { status: 'par', last_par_time: new Date().toISOString() }));
               }}
-              onMarkUnitPAR={(unit) => base44.entities.Unit.update(unit.id, { status: 'par', last_par_time: new Date().toISOString() })}
+              onMarkUnitPAR={(unit) => onUpdateUnit(unit, { status: 'par', last_par_time: new Date().toISOString() })}
             />
           </div>
         )}
@@ -148,7 +207,7 @@ export default function IncidentPanel() {
           <div className="max-w-3xl mx-auto p-6">
             <FloorTracker
               units={units}
-              onUpdateUnit={(unit, data) => updateUnit(unit, data)}
+              onUpdateUnit={onUpdateUnit}
               specialUnits={specialUnits}
             />
           </div>
@@ -156,13 +215,40 @@ export default function IncidentPanel() {
 
         {tab === 'sitemap' && (
           <div className="h-[calc(100vh-57px)] flex flex-col">
-            <SiteMap units={units} isReadOnly={false} />
+            <SiteMap
+              units={units}
+              isReadOnly={false}
+              incidentId={incidentId}
+              onMoveUnit={handleMoveUnit}
+            />
+          </div>
+        )}
+
+        {tab === 'photos' && (
+          <div className="max-w-4xl mx-auto p-6">
+            <PhotoPanel isReadOnly={false} />
+          </div>
+        )}
+
+        {tab === 'hazmat' && (
+          <div className="max-w-4xl mx-auto p-6">
+            <HazmatPanel isReadOnly={false} />
+          </div>
+        )}
+
+        {tab === 'mci' && (
+          <div className="max-w-4xl mx-auto p-6">
+            <MCIPanel units={units} isReadOnly={false} />
           </div>
         )}
 
         {tab === 'mayday' && (
           <div className="max-w-4xl mx-auto p-6">
-            <MaydayCommand />
+            <MaydayCommand
+              units={units}
+              onUpdateUnit={onUpdateUnit}
+              deptName={dept?.name || 'Fire Department'}
+            />
           </div>
         )}
       </div>
