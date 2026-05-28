@@ -323,7 +323,7 @@ function ForgotPasswordScreen({ onGoLogin }) {
     setLoading(true);
     setError('');
     try {
-      await base44.auth.requestPasswordReset(email.trim());
+      await base44.auth.resetPasswordRequest(email.trim());
       setSent(true);
     } catch (err) {
       setError(err?.message || 'Could not send reset email. Check the address and try again.');
