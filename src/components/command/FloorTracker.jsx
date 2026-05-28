@@ -228,7 +228,7 @@ export default function FloorTracker({ units, onUpdateUnit, specialUnits = [] })
                       snapshot.isDraggingOver ? 'border-primary/60 bg-primary/10' : 'border-border/40'
                     }`}
                   >
-                    {units.filter(u => !u.floor?.trim()).map((unit, idx) => (
+                    {floorUnits.filter(u => !u.floor?.trim()).map((unit, idx) => (
                       <Draggable
                         key={unit.id}
                         draggableId={unit.id}
@@ -251,7 +251,7 @@ export default function FloorTracker({ units, onUpdateUnit, specialUnits = [] })
                       </Draggable>
                     ))}
                     {provided.placeholder}
-                    {units.filter(u => !u.floor?.trim()).length === 0 && !snapshot.isDraggingOver && (
+                    {floorUnits.filter(u => !u.floor?.trim()).length === 0 && !snapshot.isDraggingOver && (
                       <span className="text-xs font-mono text-muted-foreground/30">all units assigned to a floor</span>
                     )}
                   </div>
