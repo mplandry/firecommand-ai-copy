@@ -20,6 +20,17 @@ const divisionConfig = {
   exposure:     { label: 'EXPOSURE',   sub: 'PROTECT',  accent: 'border-t-indigo-500', dot: 'bg-indigo-500', count: 'text-indigo-400' },
   staging:      { label: 'STAGING',    sub: 'AREA',     accent: 'border-t-slate-400',  dot: 'bg-slate-400',  count: 'text-slate-400' },
   unassigned:   { label: 'UNASSIGNED', sub: 'UNITS',    accent: 'border-t-slate-600',  dot: 'bg-slate-600',  count: 'text-slate-500' },
+  // ── Hazmat zones ──
+  hot_zone:             { label: 'HOT',         sub: 'ZONE',      accent: 'border-t-red-600',    dot: 'bg-red-600',    count: 'text-red-500' },
+  warm_zone:            { label: 'WARM',        sub: 'ZONE',      accent: 'border-t-orange-500', dot: 'bg-orange-500', count: 'text-orange-400' },
+  cold_zone:            { label: 'COLD',        sub: 'ZONE',      accent: 'border-t-blue-400',   dot: 'bg-blue-400',   count: 'text-blue-400' },
+  decon_sector:         { label: 'DECON',       sub: 'SECTOR',    accent: 'border-t-teal-500',   dot: 'bg-teal-500',   count: 'text-teal-400' },
+  // ── MCI sectors ──
+  triage_sector:        { label: 'TRIAGE',      sub: 'SECTOR',    accent: 'border-t-amber-500',  dot: 'bg-amber-500',  count: 'text-amber-400' },
+  treatment_immediate:  { label: 'IMMEDIATE',   sub: 'RED TAG',   accent: 'border-t-red-500',    dot: 'bg-red-500',    count: 'text-red-400' },
+  treatment_delayed:    { label: 'DELAYED',     sub: 'YELLOW TAG',accent: 'border-t-yellow-500', dot: 'bg-yellow-500', count: 'text-yellow-400' },
+  treatment_minor:      { label: 'MINOR',       sub: 'GREEN TAG', accent: 'border-t-green-500',  dot: 'bg-green-500',  count: 'text-green-400' },
+  transport_sector:     { label: 'TRANSPORT',   sub: 'SECTOR',    accent: 'border-t-blue-500',   dot: 'bg-blue-500',   count: 'text-blue-400' },
 };
 
 // Waltham fallback defaults (used when dept config not yet loaded)

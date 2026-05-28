@@ -549,8 +549,8 @@ export default function CommandBoard() {
             )}
           </div>
 
-          {/* ── Structure Diagram with Divisions on each side ── */}
-          {(() => {
+          {/* ── Structure Diagram with Divisions — hidden for hazmat/MCI ── */}
+          {!['hazmat', 'mci'].includes(incident?.incident_type) && (() => {
             // The 4 sides. bottomSide is always rendered at bottom.
             // Opposite side goes to top. The other two go left/right.
             const sides = ['division_a', 'division_b', 'division_c', 'division_d'];
@@ -637,27 +637,64 @@ export default function CommandBoard() {
             );
           })()}
 
-          {/* ── Operational Groups ── */}
-          <div className="grid grid-cols-2 gap-2">
-            {['roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
-              <DivisionColumn
-                key={assignment}
-                assignment={assignment}
-                units={units.filter(u =>
-                  assignment === 'interior'
-                    ? (u.assignment === 'interior' || u.assignment === 'attic')
-                    : u.assignment === assignment
-                )}
-                onEditUnit={isReadOnly ? null : setEditingUnit}
-                onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })}
-                onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })}
-                allUnits={units}
-                stationGroups={stationGroups}
-                specialUnits={specialUnits}
-                deptPrefix={deptPrefix}
-              />
-            ))}
-          </div>
+          {/* ── Operational Groups — layout depends on incident type ── */}
+
+          {incident?.incident_type === 'hazmat' ? (
+            <div className="grid grid-cols-2 gap-2">
+              {['hot_zone', 'warm_zone', 'decon_sector', 'medical', 'staging', 'unassigned'].map(assignment => (
+                <DivisionColumn
+                  key={assignment}
+                  assignment={assignment}
+                  units={units.filter(u => u.assignment === assignment)}
+                  onEditUnit={isReadOnly ? null : setEditingUnit}
+                  onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })}
+                  onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })}
+                  allUnits={units}
+                  stationGroups={stationGroups}
+                  specialUnits={specialUnits}
+                  deptPrefix={deptPrefix}
+                />
+              ))}
+            </div>
+          ) : incident?.incident_type === 'mci' ? (
+            <div className="grid grid-cols-2 gap-2">
+              {['triage_sector', 'treatment_immediate', 'treatment_delayed', 'treatment_minor', 'transport_sector', 'medical', 'staging', 'unassigned'].map(assignment => (
+                <DivisionColumn
+                  key={assignment}
+                  assignment={assignment}
+                  units={units.filter(u => u.assignment === assignment)}
+                  onEditUnit={isReadOnly ? null : setEditingUnit}
+                  onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })}
+                  onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })}
+                  allUnits={units}
+                  stationGroups={stationGroups}
+                  specialUnits={specialUnits}
+                  deptPrefix={deptPrefix}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {['roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
+                <DivisionColumn
+                  key={assignment}
+                  assignment={assignment}
+                  units={units.filter(u =>
+                    assignment === 'interior'
+                      ? (u.assignment === 'interior' || u.assignment === 'attic')
+                      : u.assignment === assignment
+                  )}
+                  onEditUnit={isReadOnly ? null : setEditingUnit}
+                  onUpdateUnit={isReadOnly ? null : (id, data) => updateUnit.mutate({ id, data })}
+                  onClearAssignment={isReadOnly ? null : (unit) => updateUnit.mutate({ id: unit.id, data: { assignment: 'unassigned', floor: '', status: 'available', rehab_time: null } })}
+                  allUnits={units}
+                  stationGroups={stationGroups}
+                  specialUnits={specialUnits}
+                  deptPrefix={deptPrefix}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Side Panel — slide-in overlay on tablet */}
@@ -668,6 +705,7 @@ export default function CommandBoard() {
           ${showSidePanel ? 'translate-x-0' : 'translate-x-full'}
         `}>
           <SidePanel
+            incident={incident}
             units={units}
             radioLogs={radioLogs}
             isReadOnly={isReadOnly}
