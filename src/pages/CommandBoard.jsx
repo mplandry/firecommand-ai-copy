@@ -289,7 +289,7 @@ export default function CommandBoard() {
     const updateData = { assignment: newAssignment };
 
     // Auto-status when dragged onto active tactical zones
-    const workingZones = ['division_a', 'division_b', 'division_c', 'division_d', 'roof', 'attic', 'interior', 'ventilation', 'search', 'water_supply', 'medical', 'exposure'];
+    const workingZones = ['division_a', 'division_b', 'division_c', 'division_d', 'roof', 'attic', 'interior', 'ventilation', 'search', 'water_supply', 'medical', 'exposure', 'corner_ab', 'corner_ad', 'corner_bc', 'corner_cd'];
     const onSceneZones = ['staging'];
 
     // Auto-set floor when dragged to roof or attic assignment
@@ -675,7 +675,7 @@ export default function CommandBoard() {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              {['roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
+              {['corner_ab', 'corner_ad', 'corner_bc', 'corner_cd', 'roof', 'interior', 'rit', 'rehab', 'water_supply', 'ventilation', 'search', 'medical', 'staging', 'exposure', 'unassigned'].map(assignment => (
                 <DivisionColumn
                   key={assignment}
                   assignment={assignment}

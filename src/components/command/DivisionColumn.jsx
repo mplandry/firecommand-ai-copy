@@ -31,6 +31,11 @@ const divisionConfig = {
   treatment_delayed:    { label: 'DELAYED',     sub: 'YELLOW TAG',accent: 'border-t-yellow-500', dot: 'bg-yellow-500', count: 'text-yellow-400' },
   treatment_minor:      { label: 'MINOR',       sub: 'GREEN TAG', accent: 'border-t-green-500',  dot: 'bg-green-500',  count: 'text-green-400' },
   transport_sector:     { label: 'TRANSPORT',   sub: 'SECTOR',    accent: 'border-t-blue-500',   dot: 'bg-blue-500',   count: 'text-blue-400' },
+  // ── Building corners (for aerial/ladder positioning) ──
+  corner_ab:            { label: 'A / B',       sub: 'CORNER',    accent: 'border-t-fuchsia-500',dot: 'bg-fuchsia-500',count: 'text-fuchsia-400' },
+  corner_ad:            { label: 'A / D',       sub: 'CORNER',    accent: 'border-t-fuchsia-500',dot: 'bg-fuchsia-500',count: 'text-fuchsia-400' },
+  corner_bc:            { label: 'B / C',       sub: 'CORNER',    accent: 'border-t-fuchsia-500',dot: 'bg-fuchsia-500',count: 'text-fuchsia-400' },
+  corner_cd:            { label: 'C / D',       sub: 'CORNER',    accent: 'border-t-fuchsia-500',dot: 'bg-fuchsia-500',count: 'text-fuchsia-400' },
 };
 
 // Waltham fallback defaults (used when dept config not yet loaded)
