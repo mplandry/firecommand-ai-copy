@@ -364,53 +364,20 @@ function PhotoImportPanel({ onParsed, onClose }) {
     setIsParsing(true);
     setParseError('');
 
-    // Upload all images in parallel
-    const uploads = await Promise.all(imageFiles.map(f => base44.integrations.Core.UploadFile({ file: f })));
-    const fileUrls = uploads.map(u => u.file_url);
+    try {
+      // Upload images one at a time to avoid timeout on large files
+      let fileUrls;
+      try {
+        const uploads = await Promise.all(imageFiles.map(f => base44.integrations.Core.UploadFile({ file: f })));
+        fileUrls = uploads.map(u => u.file_url);
+      } catch (uploadErr) {
+        setParseError(`Photo upload failed: ${uploadErr?.message || 'Could not upload images. Check your connection and try again.'}`);
+        return;
+      }
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      model: 'claude_sonnet_4_6',
-      prompt: `You are a fire department daily roster parser. Carefully analyze these roster sheet images (may be multiple pages) and extract ALL units and their personnel with 100% accuracy.
-
-CRITICAL RULES:
-1. UNIT NAME = the apparatus name only (e.g. "Engine 1", "Engine 2", "Ladder 2", "Tower 1", "Rescue 1", "Squad 5", "C2", "C3", "Moody Boat", "Central Boat", "RTV"). NEVER include riding position numbers in the unit name.
-2. RIDING POSITIONS = the 3-digit numbers (100, 101, 102, 200, etc.) next to personnel names. These are seat/position codes, NOT part of the unit name.
-3. OFFICER = the first person listed for a unit (Captain, Lieutenant, or most senior rank).
-   - officer field: store as "Name|PositionCode" (e.g. "Steven Hopkins|500") — the officer's position code is the X00 number for their unit type.
-   - officer_rank field: store their title separately (e.g. "Lieutenant", "Captain", "Acting Lieutenant").
-4. PERSONNEL = all crew members listed under that unit EXCEPT the officer. Include EVERY person — do NOT skip anyone.
-   Format: "Name|PositionCode" or "Name|PositionCode|OT" for overtime.
-
-POSITION CODE RULES — CRITICAL:
-   - The officer/first seat is ALWAYS the X00 number. Crew follow in sequence.
-   - Engine units: officer=100, crew=101, 102, 103...
-   - Truck/Ladder units: officer=200, crew=201, 202, 203...
-   - Rescue units: officer=300, crew=301, 302, 303...
-   - Tanker units: officer=400, crew=401, 402, 403...
-   - Squad units: officer=500, crew=501, 502, 503...
-   - Medic units: officer=600, crew=601, 602, 603...
-   - If the roster shows a different position number than expected, USE THE NUMBER FROM THE ROSTER exactly.
-
-OVERTIME DETECTION — CRITICAL: Names in GREEN ink/text = overtime. Also flag if name has "(OT)" or "OT" next to it.
-   - For OT personnel: append "|OT" (e.g. "James Vanaria|101|OT")
-   - Do NOT miss green-colored names.
-
-5. Command officers: C1 = Fire Chief (deputy). C2/C3/C4 = Deputy Chiefs (deputy). H1/H2 = unit_type: "other".
-6. Boats/marine units = unit_type: "other". RTV = unit_type: "other". 6A = unit_type: "other".
-7. Do NOT split the same unit into multiple entries. Merge all personnel for a given unit name.
-8. Read EVERY name carefully — do not skip or truncate any personnel.
-
-For each unit return:
-- unit_name: apparatus name only
-- unit_type: engine/truck/rescue/squad/deputy/medic/tanker/brush/hazmat/other
-- officer: "FirstName LastName|PositionCode" (e.g. "Steven Hopkins|500")
-- officer_rank: title only (e.g. "Lieutenant", "Captain", "Acting Captain") — empty string if unknown
-- personnel: array of crew strings (everyone except officer), format "Name|PositionCode" or "Name|PositionCode|OT"
-- personnel_count: total headcount including officer
-
-Scan every unit on every page. Return all of them.`,
-      file_urls: fileUrls,
-      response_json_schema: {
+      // Extract from each page separately using ExtractDataFromUploadedFile,
+      // which is purpose-built for structured extraction from document images.
+      const unitSchema = {
         type: 'object',
         properties: {
           units: {
@@ -430,25 +397,83 @@ Scan every unit on every page. Return all of them.`,
           },
         },
         required: ['units'],
-      },
-    });
+      };
 
-    setIsParsing(false);
+      let allUnits = [];
+      let lastErr = null;
 
-    if (!result?.units?.length) {
-      setParseError('No units found in these images. Try clearer, well-lit photos of the roster.');
-      return;
+      // Try ExtractDataFromUploadedFile for each page first
+      for (const url of fileUrls) {
+        try {
+          const pageResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
+            file_url: url,
+            json_schema: unitSchema,
+          });
+          if (pageResult?.units?.length) {
+            allUnits.push(...pageResult.units);
+          }
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+
+      // If ExtractDataFromUploadedFile got nothing, fall back to InvokeLLM with all images
+      if (allUnits.length === 0) {
+        try {
+          const fallback = await base44.integrations.Core.InvokeLLM({
+            model: 'claude_sonnet_4_6',
+            prompt: `You are a fire department daily roster parser. Look at these roster images and extract every apparatus unit and its crew.
+
+For each unit return:
+- unit_name: apparatus name only (e.g. "Engine 1", "Ladder 2", "Rescue 1", "C2", "Squad 5")
+- unit_type: engine/truck/rescue/squad/deputy/medic/tanker/brush/hazmat/other
+- officer: "FirstName LastName|PositionCode" — the first/most senior person listed (e.g. "John Smith|100")
+- officer_rank: their rank title (e.g. "Lieutenant", "Captain") or empty string
+- personnel: array of all other crew as "Name|PositionCode" or "Name|PositionCode|OT" for overtime (green names)
+- personnel_count: total headcount including officer
+
+Position codes: Engine=1XX, Truck/Ladder=2XX, Rescue=3XX, Tanker=4XX, Squad=5XX, Medic=6XX.
+C1/C2/C3/C4 = deputy type. Boats, RTV, special = other type.
+Return partial results if some units are unclear. Do not return an empty list if ANY units are visible.`,
+            file_urls: fileUrls,
+            response_json_schema: unitSchema,
+          });
+          if (fallback?.units?.length) {
+            allUnits.push(...fallback.units);
+          }
+        } catch (llmErr) {
+          lastErr = llmErr;
+        }
+      }
+
+      if (allUnits.length === 0) {
+        const hint = lastErr?.message ? ` (${lastErr.message})` : '';
+        setParseError(`No units found in these photos${hint}. Tips: photograph each page straight-on so the sheet fills the frame, ensure text is sharp and not blurry. You can also add units manually with the + Add Unit button.`);
+        return;
+      }
+
+      // Deduplicate by unit name (keep last seen — later pages win)
+      const seen = new Map();
+      for (const u of allUnits) {
+        seen.set(u.unit_name.toLowerCase().trim(), u);
+      }
+      const result = { units: Array.from(seen.values()) };
+
+      onParsed(result.units.map(u => ({
+        unit_name: u.unit_name,
+        unit_type: u.unit_type || 'engine',
+        officer: u.officer || '',
+        officer_rank: u.officer_rank || '',
+        personnel: u.personnel || [],
+        personnel_count: u.personnel_count || (u.personnel?.length) || null,
+        notes: '',
+      })));
+
+    } catch (err) {
+      setParseError(`Unexpected error: ${err?.message || 'Something went wrong. Please try again.'}`);
+    } finally {
+      setIsParsing(false);
     }
-
-    onParsed(result.units.map(u => ({
-      unit_name: u.unit_name,
-      unit_type: u.unit_type || 'engine',
-      officer: u.officer || '',
-      officer_rank: u.officer_rank || '',
-      personnel: u.personnel || [],
-      personnel_count: u.personnel_count || (u.personnel?.length) || null,
-      notes: '',
-    })));
   };
 
   return (
