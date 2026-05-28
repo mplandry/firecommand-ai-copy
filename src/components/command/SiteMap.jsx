@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Move, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Move, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const UNIT_TYPE_ICONS = {
@@ -8,99 +8,135 @@ const UNIT_TYPE_ICONS = {
 };
 
 const STATUS_COLORS = {
-  dispatched:   'border-gray-500   bg-gray-900/80',
-  responding:   'border-yellow-500 bg-yellow-900/80',
-  on_scene:     'border-blue-500   bg-blue-900/80',
-  working:      'border-red-500    bg-red-900/80',
-  par:          'border-green-500  bg-green-900/80',
-  mayday:       'border-red-400    bg-red-800/90 animate-pulse',
-  available:    'border-green-600  bg-green-900/80',
-  rehab:        'border-purple-500 bg-purple-900/80',
-  out_of_service:'border-gray-600  bg-gray-900/80',
+  dispatched:    'border-gray-500   bg-gray-900/80',
+  responding:    'border-yellow-500 bg-yellow-900/80',
+  on_scene:      'border-blue-500   bg-blue-900/80',
+  working:       'border-red-500    bg-red-900/80',
+  par:           'border-green-500  bg-green-900/80',
+  mayday:        'border-red-400    bg-red-800/90 animate-pulse',
+  available:     'border-green-600  bg-green-900/80',
+  rehab:         'border-purple-500 bg-purple-900/80',
+  out_of_service:'border-gray-600   bg-gray-900/80',
 };
 
 const GRID_SIZE = 64; // px per cell
 const COLS = 20;
 const ROWS = 16;
 
+// Default hydrant starting positions — bottom-left near water supply, bottom-right near delta
+const DEFAULT_HYDRANTS = [
+  { id: 'h1', x: 1,  y: 12 },
+  { id: 'h2', x: 16, y: 12 },
+];
+
 // ── Abbreviate unit name for tight label ──────────────────────────────────────
 function shortName(name) {
   const parts = name.trim().split(/\s+/);
   const rawTown = parts[0];
-  const town = rawTown.toUpperCase(); // WAL→WAL, CAM→CAM
+  const town = rawTown.toUpperCase();
   const rest = parts.slice(1).join(' ');
 
   const typeMap = [
-    [/^Engine\s*/i,       'E'],
-    [/^Tower\s*/i,        'Tw'],
-    [/^Ladder\s*/i,       'L'],
-    [/^Rescue\s*/i,       'R'],
-    [/^Squad\s*/i,        'Sq'],
-    [/^Moody Boat/i,      'MB'],
-    [/^Central Boat/i,    'CB'],
-    [/^Medic\s*/i,        'M'],
-    [/^Tanker\s*/i,       'Tnk'],
-    [/^Brush\s*/i,        'Br'],
-    [/^Hazmat\s*/i,       'Hz'],
+    [/^Engine\s*/i,    'E'],
+    [/^Tower\s*/i,     'Tw'],
+    [/^Ladder\s*/i,    'L'],
+    [/^Rescue\s*/i,    'R'],
+    [/^Squad\s*/i,     'Sq'],
+    [/^Moody Boat/i,   'MB'],
+    [/^Central Boat/i, 'CB'],
+    [/^Medic\s*/i,     'M'],
+    [/^Tanker\s*/i,    'Tnk'],
+    [/^Brush\s*/i,     'Br'],
+    [/^Hazmat\s*/i,    'Hz'],
   ];
 
   let abbrev = rest;
   for (const [pattern, short] of typeMap) {
-    if (pattern.test(rest)) {
-      abbrev = rest.replace(pattern, short);
-      break;
-    }
+    if (pattern.test(rest)) { abbrev = rest.replace(pattern, short); break; }
   }
-
   return rest ? `${town} ${abbrev}` : town;
 }
 
-// ── Map tactical board assignment → SiteMap grid zone ────────────────────────
+// ── Map tactical assignment → SiteMap grid zone ───────────────────────────────
 function assignmentToPosition(assignment, index) {
   const col = index % 3;
   const row = Math.floor(index / 3);
   const cx = (v) => Math.min(COLS - 1, Math.max(0, v));
   const cy = (v) => Math.min(ROWS - 1, Math.max(0, v));
   switch (assignment) {
-    case 'division_a':   return { x: cx(6 + col),   y: cy(13 + row) };  // Alpha — bottom
-    case 'division_b':   return { x: cx(col),        y: cy(4 + row) };   // Bravo — left
-    case 'division_c':   return { x: cx(6 + col),   y: cy(row) };        // Charlie — top
-    case 'division_d':   return { x: cx(17 + col),  y: cy(4 + row) };   // Delta — right
-    case 'roof':         return { x: cx(7 + col),   y: cy(2 + row) };   // Roof — upper center
-    case 'interior':     return { x: cx(8 + col),   y: cy(6 + row) };   // Interior — center
-    case 'rit':          return { x: cx(col),        y: cy(1 + row) };   // RIT — top-left
-    case 'rehab':        return { x: cx(16 + col),  y: cy(13 + row) };  // Rehab — bottom-right
-    case 'staging':      return { x: cx(13 + col),  y: cy(13 + row) };  // Staging — bottom center
-    case 'medical':      return { x: cx(10 + col),  y: cy(11 + row) };  // Medical
-    case 'water_supply': return { x: cx(col),        y: cy(12 + row) };  // Water supply — bottom-left
-    case 'ventilation':  return { x: cx(3 + col),   y: cy(row) };       // Ventilation — top
-    case 'search':       return { x: cx(8 + col),   y: cy(9 + row) };   // Search — lower interior
-    case 'exposure':     return { x: cx(17 + col),  y: cy(row) };       // Exposure — top-right
-    case 'unassigned':   return { x: cx(3 + col),   y: cy(13 + row) };  // Unassigned — bottom staging
-    default:             return { x: cx(col),        y: cy(ROWS - 1 - row) };
+    case 'division_a':   return { x: cx(6  + col), y: cy(13 + row) };
+    case 'division_b':   return { x: cx(col),       y: cy(4  + row) };
+    case 'division_c':   return { x: cx(6  + col), y: cy(row)       };
+    case 'division_d':   return { x: cx(17 + col), y: cy(4  + row)  };
+    case 'roof':         return { x: cx(7  + col), y: cy(2  + row)  };
+    case 'interior':     return { x: cx(8  + col), y: cy(6  + row)  };
+    case 'rit':          return { x: cx(col),       y: cy(1  + row)  };
+    case 'rehab':        return { x: cx(16 + col), y: cy(13 + row)  };
+    case 'staging':      return { x: cx(13 + col), y: cy(13 + row)  };
+    case 'medical':      return { x: cx(10 + col), y: cy(11 + row)  };
+    case 'water_supply': return { x: cx(col),       y: cy(12 + row)  };
+    case 'ventilation':  return { x: cx(3  + col), y: cy(row)       };
+    case 'search':       return { x: cx(8  + col), y: cy(9  + row)  };
+    case 'exposure':     return { x: cx(17 + col), y: cy(row)       };
+    case 'unassigned':   return { x: cx(3  + col), y: cy(13 + row)  };
+    default:             return { x: cx(col),       y: cy(ROWS - 1 - row) };
   }
 }
 
 // ── Map SiteMap grid position → tactical board assignment ─────────────────────
 function positionToAssignment(x, y) {
-  // Corners (most specific, check first)
-  if (x <= 2 && y <= 3)  return 'rit';
-  if (x >= 17 && y <= 2) return 'exposure';
+  if (x <= 2 && y <= 3)   return 'rit';
+  if (x >= 17 && y <= 2)  return 'exposure';
   if (x >= 16 && y >= 12) return 'rehab';
   if (x <= 2 && y >= 11)  return 'water_supply';
-  // Sides
   if (y >= 12 && x >= 5 && x <= 15) return 'division_a';
   if (x <= 3  && y >= 3  && y <= 11) return 'division_b';
   if (y <= 2  && x >= 4  && x <= 16) return 'division_c';
   if (x >= 16 && y >= 3  && y <= 11) return 'division_d';
-  // Interior zones
-  if (y >= 2 && y <= 4 && x >= 5 && x <= 15) return 'roof';
-  if (y >= 5 && y <= 8 && x >= 5 && x <= 14) return 'interior';
-  if (y >= 8 && y <= 11 && x >= 6 && x <= 12) return 'search';
-  if (y >= 9 && y <= 12 && x >= 9 && x <= 14) return 'medical';
+  if (y >= 2  && y <= 4  && x >= 5  && x <= 15) return 'roof';
+  if (y >= 5  && y <= 8  && x >= 5  && x <= 14) return 'interior';
+  if (y >= 8  && y <= 11 && x >= 6  && x <= 12) return 'search';
+  if (y >= 9  && y <= 12 && x >= 9  && x <= 14) return 'medical';
   if (y >= 11 && x >= 11 && x <= 15) return 'staging';
-  if (y <= 4 && x >= 3 && x <= 6) return 'ventilation';
+  if (y <= 4  && x >= 3  && x <= 6)  return 'ventilation';
   return 'unassigned';
+}
+
+// ── Draggable fire hydrant token ──────────────────────────────────────────────
+function HydrantToken({ hydrant, onDragStart, isReadOnly }) {
+  return (
+    <div
+      className={`absolute z-20 select-none cursor-${isReadOnly ? 'default' : 'grab'} active:cursor-grabbing`}
+      style={{ left: hydrant.x * GRID_SIZE + 2, top: hydrant.y * GRID_SIZE + 2 }}
+      onMouseDown={isReadOnly ? undefined : (e) => onDragStart(e, hydrant.id, 'hydrant')}
+      onTouchStart={isReadOnly ? undefined : (e) => onDragStart(e, hydrant.id, 'hydrant')}
+      title="Fire Hydrant — drag to reposition"
+    >
+      <div
+        className="rounded-md border-2 border-red-400 bg-red-950/90 shadow-lg flex flex-col items-center justify-center gap-0.5"
+        style={{ width: GRID_SIZE - 4, height: GRID_SIZE - 4 }}
+      >
+        {/* Inline SVG hydrant icon */}
+        <svg viewBox="0 0 24 28" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Cap (blue) */}
+          <ellipse cx="12" cy="4" rx="6" ry="3.5" fill="#3b82f6" />
+          {/* Neck */}
+          <rect x="10" y="4" width="4" height="4" fill="#b91c1c" />
+          {/* Body */}
+          <rect x="7" y="8" width="10" height="11" rx="2.5" fill="#ef4444" />
+          {/* Left outlet */}
+          <rect x="2" y="11" width="5" height="4" rx="1.5" fill="#b91c1c" />
+          {/* Right outlet */}
+          <rect x="17" y="11" width="5" height="4" rx="1.5" fill="#b91c1c" />
+          {/* Base */}
+          <rect x="5" y="19" width="14" height="5" rx="2" fill="#b91c1c" />
+          {/* Cap shine */}
+          <ellipse cx="10" cy="3" rx="2" ry="1" fill="#93c5fd" opacity="0.5" />
+        </svg>
+        <span className="font-mono text-[8px] font-bold text-red-200 leading-none tracking-wider">HYDRANT</span>
+      </div>
+    </div>
+  );
 }
 
 // ── Draggable unit token ──────────────────────────────────────────────────────
@@ -110,8 +146,8 @@ function UnitToken({ unit, position, onDragStart, isReadOnly }) {
     <div
       className={`absolute cursor-${isReadOnly ? 'default' : 'grab'} active:cursor-grabbing select-none z-10`}
       style={{ left: position.x * GRID_SIZE + 2, top: position.y * GRID_SIZE + 2 }}
-      onMouseDown={isReadOnly ? undefined : (e) => onDragStart(e, unit.id)}
-      onTouchStart={isReadOnly ? undefined : (e) => onDragStart(e, unit.id)}
+      onMouseDown={isReadOnly ? undefined : (e) => onDragStart(e, unit.id, 'unit')}
+      onTouchStart={isReadOnly ? undefined : (e) => onDragStart(e, unit.id, 'unit')}
       title={`${unit.unit_name} — ${unit.status}`}
     >
       <div
@@ -127,47 +163,61 @@ function UnitToken({ unit, position, onDragStart, isReadOnly }) {
   );
 }
 
-// ── Snap a pixel offset to nearest grid cell ──────────────────────────────────
+// ── Snap pixel offset to nearest grid cell ────────────────────────────────────
 function snapToGrid(px) {
   return Math.max(0, Math.round(px / GRID_SIZE));
 }
 
-export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
-  // positions: { [unitId]: { x, y } }
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function SiteMap({ units, isReadOnly, onMoveUnit, incidentId }) {
+  // Unit positions derived from assignments
   const [positions, setPositions] = useState({});
-  const [dragging, setDragging] = useState(null); // { unitId, offsetX, offsetY }
+  const [dragging, setDragging] = useState(null); // { id, type: 'unit'|'hydrant', offsetX, offsetY }
   const gridRef = useRef(null);
   const prevAssignments = useRef({});
   const positionsRef = useRef({});
 
-  // Keep a ref so handleMouseUp always reads the latest positions (avoids stale closure)
+  // Hydrant positions — persisted in localStorage per incident
+  const [hydrantPositions, setHydrantPositions] = useState(() => {
+    if (!incidentId) return DEFAULT_HYDRANTS;
+    try {
+      const saved = localStorage.getItem(`sitemap_hydrants_${incidentId}`);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_HYDRANTS;
+  });
+
+  // Persist hydrant positions on every change
+  useEffect(() => {
+    if (!incidentId) return;
+    try {
+      localStorage.setItem(`sitemap_hydrants_${incidentId}`, JSON.stringify(hydrantPositions));
+    } catch {}
+  }, [hydrantPositions, incidentId]);
+
+  // Keep ref so handleMouseUp reads latest unit positions without stale closure
   useEffect(() => { positionsRef.current = positions; }, [positions]);
 
-  // Mirror tactical board: auto-place/move units when assignment changes
+  // Mirror tactical board → SiteMap: auto-place/move units when assignment changes
   useEffect(() => {
     setPositions(prev => {
       const next = { ...prev };
-
-      // Group units by assignment so we can stagger within each zone
       const groups = {};
       units.forEach(u => {
         const a = u.assignment || 'unassigned';
         if (!groups[a]) groups[a] = [];
         groups[a].push(u.id);
       });
-
       units.forEach((unit) => {
         const curr = unit.assignment || 'unassigned';
         const prev2 = prevAssignments.current[unit.id];
         const idx = groups[curr].indexOf(unit.id);
-
         if (!next[unit.id] || prev2 !== curr) {
-          // New unit or assignment changed → snap to zone
           next[unit.id] = assignmentToPosition(curr, idx);
         }
         prevAssignments.current[unit.id] = curr;
       });
-
       // Clean up removed units
       Object.keys(next).forEach(id => {
         if (!units.find(u => u.id === id)) {
@@ -175,25 +225,31 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
           delete prevAssignments.current[id];
         }
       });
-
       return next;
     });
   }, [units]);
 
-  const handleDragStart = useCallback((e, unitId) => {
+  // ── Drag start — handles both units and hydrants ──────────────────────────
+  const handleDragStart = useCallback((e, id, type = 'unit') => {
     e.preventDefault();
     const rect = gridRef.current?.getBoundingClientRect();
     if (!rect) return;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const pos = positions[unitId] || { x: 0, y: 0 };
+
+    const pos = type === 'hydrant'
+      ? (hydrantPositions.find(h => h.id === id) || { x: 0, y: 0 })
+      : (positions[id] || { x: 0, y: 0 });
+
     setDragging({
-      unitId,
+      id,
+      type,
       offsetX: clientX - rect.left - pos.x * GRID_SIZE,
       offsetY: clientY - rect.top  - pos.y * GRID_SIZE,
     });
-  }, [positions]);
+  }, [positions, hydrantPositions]);
 
+  // ── Mouse/touch move ──────────────────────────────────────────────────────
   const handleMouseMove = useCallback((e) => {
     if (!dragging) return;
     const rect = gridRef.current?.getBoundingClientRect();
@@ -204,14 +260,20 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
     const rawY = clientY - rect.top  - dragging.offsetY;
     const x = Math.min(COLS - 1, snapToGrid(rawX));
     const y = Math.min(ROWS - 1, snapToGrid(rawY));
-    setPositions(prev => ({ ...prev, [dragging.unitId]: { x, y } }));
+
+    if (dragging.type === 'hydrant') {
+      setHydrantPositions(prev => prev.map(h => h.id === dragging.id ? { ...h, x, y } : h));
+    } else {
+      setPositions(prev => ({ ...prev, [dragging.id]: { x, y } }));
+    }
   }, [dragging]);
 
+  // ── Mouse/touch up — fires onMoveUnit for unit drops ─────────────────────
   const handleMouseUp = useCallback(() => {
-    if (dragging && onMoveUnit) {
-      const pos = positionsRef.current[dragging.unitId];
+    if (dragging?.type === 'unit' && onMoveUnit) {
+      const pos = positionsRef.current[dragging.id];
       if (pos) {
-        const unit = units.find(u => u.id === dragging.unitId);
+        const unit = units.find(u => u.id === dragging.id);
         const newAssignment = positionToAssignment(pos.x, pos.y);
         if (unit && newAssignment !== (unit.assignment || 'unassigned')) {
           onMoveUnit(unit, newAssignment);
@@ -237,9 +299,7 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
     };
   }, [dragging, handleMouseMove, handleMouseUp]);
 
-  const resetPositions = () => {
-    setPositions({});
-  };
+  const resetPositions = () => setPositions({});
 
   const gridW = COLS * GRID_SIZE;
   const gridH = ROWS * GRID_SIZE;
@@ -250,10 +310,11 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
         <Move className="w-3.5 h-3.5 text-muted-foreground" />
         <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider flex-1">
-          Site Map — drag units to position
+          Site Map — drag units · assignments sync to tactical board
         </span>
+        <span className="text-[9px] font-mono text-red-400/70 mr-1">🔴 hydrants draggable</span>
         <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1 text-muted-foreground" onClick={resetPositions}>
-          <RotateCcw className="w-3 h-3" /> Reset
+          <RotateCcw className="w-3 h-3" /> Reset Units
         </Button>
       </div>
 
@@ -265,10 +326,7 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
           style={{ width: gridW, height: gridH, minWidth: gridW }}
         >
           {/* Grid lines */}
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="smallGrid" width={GRID_SIZE} height={GRID_SIZE} patternUnits="userSpaceOnUse">
                 <path d={`M ${GRID_SIZE} 0 L 0 0 0 ${GRID_SIZE}`} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
@@ -284,10 +342,10 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
           {/* Zone labels */}
           <div className="absolute inset-0 pointer-events-none">
             {[
-              { label: '▲ ALPHA',    x: COLS/2 - 2,   y: ROWS - 1.2,    rotate: false, anchor: 'left' },
-              { label: '▼ CHARLIE', x: COLS/2 - 2.5, y: 0.2,           rotate: false, anchor: 'left' },
-              { label: 'BRAVO ▶',  x: 0,             y: ROWS/2 - 0.5,  rotate: false, anchor: 'left' },
-              { label: '◀ DELTA',  x: COLS - 4,      y: ROWS/2 - 0.5,  rotate: false, anchor: 'left' },
+              { label: '▲ ALPHA',   x: COLS/2 - 2,   y: ROWS - 1.2  },
+              { label: '▼ CHARLIE', x: COLS/2 - 2.5, y: 0.2         },
+              { label: 'BRAVO ▶',  x: 0,             y: ROWS/2 - 0.5 },
+              { label: '◀ DELTA',  x: COLS - 4,      y: ROWS/2 - 0.5 },
             ].map(({ label, x, y }) => (
               <span
                 key={label}
@@ -300,16 +358,23 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
             {/* Building outline (centered) */}
             <div
               className="absolute border-2 border-dashed border-primary/20 rounded"
-              style={{
-                left: GRID_SIZE * 5, top: GRID_SIZE * 3,
-                width: GRID_SIZE * 10, height: GRID_SIZE * 8,
-              }}
+              style={{ left: GRID_SIZE * 5, top: GRID_SIZE * 3, width: GRID_SIZE * 10, height: GRID_SIZE * 8 }}
             >
               <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-mono text-primary/20 uppercase tracking-widest whitespace-nowrap">
                 Structure
               </span>
             </div>
           </div>
+
+          {/* Hydrant tokens — rendered below units (z-20 vs z-10 on units, but hydrant has z-20 so it stays on top when dragged) */}
+          {hydrantPositions.map(hydrant => (
+            <HydrantToken
+              key={hydrant.id}
+              hydrant={hydrant}
+              onDragStart={handleDragStart}
+              isReadOnly={isReadOnly}
+            />
+          ))}
 
           {/* Unit tokens */}
           {units.map(unit => {
@@ -329,17 +394,21 @@ export default function SiteMap({ units, isReadOnly, onMoveUnit }) {
         {/* Legend */}
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 px-1">
           {[
-            ['working',   'Working'  ],
-            ['on_scene',  'On Scene' ],
-            ['par',       'PAR'      ],
-            ['rehab',     'Rehab'    ],
-            ['mayday',    'MAYDAY'   ],
+            ['working',   'Working' ],
+            ['on_scene',  'On Scene'],
+            ['par',       'PAR'     ],
+            ['rehab',     'Rehab'   ],
+            ['mayday',    'MAYDAY'  ],
           ].map(([status, label]) => (
             <div key={status} className="flex items-center gap-1">
               <div className={`w-3 h-3 rounded border-2 ${STATUS_COLORS[status]}`} />
               <span className="text-[9px] font-mono text-muted-foreground">{label}</span>
             </div>
           ))}
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded border-2 border-red-400 bg-red-950/90" />
+            <span className="text-[9px] font-mono text-muted-foreground">Hydrant</span>
+          </div>
         </div>
       </div>
     </div>

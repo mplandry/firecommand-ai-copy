@@ -152,15 +152,41 @@ export default function SidePanel({
           <SiteMap
             units={units}
             isReadOnly={isReadOnly}
+            incidentId={incidentId}
             onMoveUnit={
               isReadOnly
                 ? null
                 : (unit, assignment) => {
                     const data = { assignment };
+                    const now = new Date().toISOString();
+
+                    // Auto-update status based on where the IC dropped the unit
                     if (assignment === 'rehab' && unit.status !== 'rehab') {
+                      // Rehab zone → mark rehab
                       data.status = 'rehab';
-                      data.rehab_time = new Date().toISOString();
+                      data.rehab_time = now;
+                    } else if (
+                      ['interior', 'roof', 'search', 'ventilation'].includes(assignment) &&
+                      ['dispatched', 'responding', 'on_scene', 'staging'].includes(unit.status)
+                    ) {
+                      // Active interior zones → working
+                      data.status = 'working';
+                      if (!unit.on_scene_time) data.on_scene_time = now;
+                    } else if (
+                      ['division_a', 'division_b', 'division_c', 'division_d',
+                       'water_supply', 'rit', 'exposure', 'medical'].includes(assignment) &&
+                      ['dispatched', 'responding', 'staging'].includes(unit.status)
+                    ) {
+                      // Perimeter / support zones → on scene
+                      data.status = 'on_scene';
+                      if (!unit.on_scene_time) data.on_scene_time = now;
+                    } else if (assignment === 'staging') {
+                      // Staging zone → staging status
+                      if (unit.status === 'dispatched' || unit.status === 'responding') {
+                        data.status = 'staging';
+                      }
                     }
+
                     onUpdateUnit(unit, data);
                   }
             }
