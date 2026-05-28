@@ -134,7 +134,20 @@ function EditableUnitRow({ unit, onChange, onRemove }) {
   );
 }
 
-// ── Compress image before upload ─────────────────────────────────────────────
+// ── Cloudflare Worker proxy URL (same worker used by Cape Cod expense app) ────
+const ROSTER_WORKER_URL = 'https://YOUR_WORKER.workers.dev'; // ← replace with your worker URL
+
+// ── Read a File as base64 string ─────────────────────────────────────────────
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Compress image before sending ────────────────────────────────────────────
 function compressImage(file, maxWidth = 1600, quality = 0.85) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -212,62 +225,66 @@ export default function RosterUploadDialog({ open, onClose, existingUnits, onImp
     };
 
     try {
-      // Compress images before upload — large phone photos (4-8MB) cause AI timeouts
-      let fileUrls;
+      // Compress + encode images as base64 — bypasses base44 upload pipeline entirely
+      let imageBlocks;
       try {
         const compressed = await Promise.all(images.map(img => compressImage(img.file)));
-        const uploads = await Promise.all(
-          compressed.map(f => base44.integrations.Core.UploadFile({ file: f }))
-        );
-        fileUrls = uploads.map(u => u.file_url);
-      } catch (uploadErr) {
-        setParseError(`Upload failed: ${uploadErr?.message || 'Could not upload photos. Check your connection and try again.'}`);
+        const base64s = await Promise.all(compressed.map(f => readFileAsBase64(f)));
+        imageBlocks = base64s.map(b64 => ({
+          type: 'image',
+          source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
+        }));
+      } catch (encErr) {
+        setParseError(`Could not prepare photos: ${encErr?.message || 'Check your connection and try again.'}`);
         return;
       }
 
-      // Try ExtractDataFromUploadedFile per page first (purpose-built for document images)
+      // Call Anthropic directly via Cloudflare Worker proxy
       let allUnits = [];
-      let lastErr = null;
-
-      for (const url of fileUrls) {
-        try {
-          const pageResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
-            file_url: url,
-            json_schema: unitSchema,
-          });
-          if (pageResult?.units?.length) allUnits.push(...pageResult.units);
-        } catch (e) {
-          lastErr = e;
-        }
-      }
-
-      // Fall back to InvokeLLM with all images if ExtractDataFromUploadedFile got nothing
-      if (allUnits.length === 0) {
-        try {
-          const fallback = await base44.integrations.Core.InvokeLLM({
-            model: 'claude_sonnet_4_6',
-            prompt: `You are a fire department daily roster parser. Look at these roster images and extract every apparatus unit and its crew.
+      try {
+        const resp = await fetch(ROSTER_WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 2000,
+            messages: [{
+              role: 'user',
+              content: [
+                ...imageBlocks,
+                {
+                  type: 'text',
+                  text: `You are a fire department daily roster parser. Look at these ${imageBlocks.length} roster image(s) and extract every apparatus unit and its crew.
 
 For each unit return:
-- unit_name: apparatus name only (e.g. "Engine 1", "Truck 3", "Rescue 2", "C2", "Medic 4")
+- unit_name: apparatus designator only (e.g. "Engine 1", "Truck 3", "Rescue 2", "C2", "Medic 4")
 - unit_type: engine/truck/rescue/squad/deputy/medic/tanker/brush/hazmat/other
-- officer: the most senior person listed on that unit
+- officer: the most senior person listed on that unit (name only)
 - personnel: array of all other crew member names
 - personnel_count: total headcount including officer
 
-Return partial results if some units are unclear. Do not return an empty list if ANY units are visible.`,
-            file_urls: fileUrls,
-            response_json_schema: unitSchema,
-          });
-          if (fallback?.units?.length) allUnits.push(...fallback.units);
-        } catch (llmErr) {
-          lastErr = llmErr;
-        }
+Deduplicate units that appear on multiple pages. Return partial results if some units are unclear — do not return an empty list if ANY units are visible.
+
+Return ONLY valid JSON: {"units": [...]}`,
+                },
+              ],
+            }],
+          }),
+        });
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error.message);
+        const text = (data.content || []).map(b => b.text || '').join('');
+        const jsonMatch = text.replace(/```json/g, '').replace(/```/g, '').trim().match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON in response');
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed?.units?.length) allUnits = parsed.units;
+      } catch (apiErr) {
+        setParseError(`AI parsing failed: ${apiErr?.message || 'Could not process photos. Try CSV import instead.'}`);
+        return;
       }
 
       if (allUnits.length === 0) {
-        const hint = lastErr?.message ? ` (${lastErr.message})` : '';
-        setParseError(`No units found in these photos${hint}. Make sure the roster sheet is clearly visible and fills most of the frame. Try the CSV import option instead.`);
+        setParseError('No units found in these photos. Make sure the roster sheet is clearly visible and fills most of the frame. Try the CSV import option instead.');
         return;
       }
 
