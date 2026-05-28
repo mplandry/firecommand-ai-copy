@@ -22,6 +22,7 @@ import PARAlert from '@/components/command/PARAlert';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { enqueue, getCached, setCached, patchCachedUnit, addCachedUnit, addCachedRadioLog } from '@/lib/offlineQueue';
 import { getAutoAssignment } from '@/lib/statusAssignment';
+import { useMayday } from '@/contexts/MaydayContext';
 
 export default function CommandBoard() {
   const { incidentId } = useParams();
@@ -37,6 +38,7 @@ export default function CommandBoard() {
   const [bottomSide, setBottomSide] = useState('division_a'); // Alpha is default front/address side
   const [micBlocked, setMicBlocked] = useState(false);
   const queryClient = useQueryClient();
+  const { state: maydayState, update: maydayUpdate } = useMayday();
 
   // Request mic permission immediately when the board loads so there's no
   // popup mid-incident. If already granted the browser resolves instantly.
@@ -469,6 +471,47 @@ export default function CommandBoard() {
           <button
             onClick={() => setShowSidePanel(true)}
             className="ml-auto text-xs font-bold underline underline-offset-2 text-red-100 hover:text-white whitespace-nowrap"
+          >
+            Open MAYDAY →
+          </button>
+        </div>
+      )}
+
+      {/* ── RIT Backfill Needed Banner — flashes until a backfill team is assigned ── */}
+      {maydayState.isActive && maydayState.ritDeployTime && !maydayState.backfillRIT && (
+        <div className="shrink-0 bg-amber-500 border-b-2 border-amber-600 px-4 py-2 flex items-center gap-3 animate-pulse font-mono font-bold text-black">
+          <span className="text-lg">🚒</span>
+          <div className="flex flex-col">
+            <span className="tracking-widest text-xs uppercase">RIT Deployed — Backfill RIT Needed</span>
+            <span className="font-normal text-[11px] text-amber-900">
+              Primary RIT deployed at {maydayState.ritDeployTime} — assign a second team now
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setShowSidePanel(true);
+              maydayUpdate({ backfillPickerOpen: true });
+            }}
+            className="ml-auto bg-black/20 hover:bg-black/30 text-black text-xs font-bold px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+          >
+            Assign Backfill RIT →
+          </button>
+        </div>
+      )}
+
+      {/* ── RIT Backfill Assigned — status ribbon ── */}
+      {maydayState.isActive && maydayState.ritDeployTime && maydayState.backfillRIT && (
+        <div className="shrink-0 bg-blue-700 border-b border-blue-800 px-4 py-1.5 flex items-center gap-3 font-mono text-white">
+          <span>🚒</span>
+          <span className="text-xs font-bold uppercase tracking-wider">RIT Active</span>
+          <span className="text-xs text-blue-200">
+            Primary deployed {maydayState.ritDeployTime}
+            {' · '}
+            Backfill: <strong className="text-white">{maydayState.backfillRIT.unit_name}</strong>
+          </span>
+          <button
+            onClick={() => setShowSidePanel(true)}
+            className="ml-auto text-xs underline text-blue-200 hover:text-white whitespace-nowrap"
           >
             Open MAYDAY →
           </button>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShieldCheck,
   LayoutGrid,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDepartment } from "@/hooks/useDepartment";
+import { useMayday } from "@/contexts/MaydayContext";
 import ICAccountabilitySummary from "./ICAccountabilitySummary";
 import StructureTactical from "./StructureTactical";
 import PARTracker from "./PARTracker";
@@ -43,6 +44,14 @@ export default function SidePanel({
   const navigate = useNavigate();
   const { incidentId } = useParams();
   const { specialUnits, dept } = useDepartment();
+  const { state: maydayState } = useMayday();
+
+  // When CommandBoard fires the backfill picker trigger, jump to MAYDAY tab
+  useEffect(() => {
+    if (maydayState.backfillPickerOpen) {
+      setActiveTab("mayday");
+    }
+  }, [maydayState.backfillPickerOpen]);
 
   // Track the most recent radio log timestamp to reset PAR timer
   const lastRadioLogTime = useMemo(() => {

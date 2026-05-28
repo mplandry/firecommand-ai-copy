@@ -15,9 +15,10 @@ export const DEFAULT_MAYDAY_STATE = {
   ritData: {},
   fireLocation: '',
   boardNotes: '',
-  maydayUnit: null,      // unit object (serialised in localStorage)
+  maydayUnit: null,           // unit object (serialised in localStorage)
   ritDeployTime: null,
-  backfillRIT: null,     // unit object
+  backfillRIT: null,          // unit object
+  backfillPickerOpen: false,  // cross-component trigger: CommandBoard → MaydayCommand modal
 };
 
 // ─── Context ─────────────────────────────────────────────────────────────────

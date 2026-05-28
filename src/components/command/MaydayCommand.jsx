@@ -596,6 +596,9 @@ function BoardTab({
   boardNotes,
   onBoardNotes,
   incidentUnits = [],
+  ritDeployTime,
+  backfillRIT,
+  onRequestBackfill,
 }) {
   // Use real incident units if available, else fall back to static list
   const unitNames = incidentUnits.length > 0
@@ -603,6 +606,7 @@ function BoardTab({
     : FALLBACK_UNITS;
   const ritNames = incidentUnits.filter(u => u.assignment === 'rit').map(u => u.unit_name);
   const displayRit = ritNames.length > 0 ? ritNames : FALLBACK_RIT;
+  const backfillName = backfillRIT?.unit_name || null;
   function cellInput(value, onChange, placeholder = "", width = 72) {
     return (
       <input
@@ -766,18 +770,47 @@ function BoardTab({
       </div>
 
       {/* ── RIT Tracking ── */}
-      <div
-        style={{
-          fontWeight: 700,
-          fontSize: 12,
-          color: "#374151",
-          letterSpacing: 0.5,
-          marginBottom: 6,
-          textTransform: "uppercase",
-        }}
-      >
-        RIT Team Tracking
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+        <div style={{ fontWeight: 700, fontSize: 12, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase" }}>
+          RIT Team Tracking
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {ritDeployTime && (
+            <span style={{ fontSize: 11, fontWeight: 700, background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", padding: "3px 10px", borderRadius: 99 }}>
+              🚒 Primary deployed {ritDeployTime}
+            </span>
+          )}
+          {ritDeployTime && !backfillName && (
+            <span style={{ fontSize: 11, fontWeight: 700, background: "#fef9c3", border: "1px solid #fbbf24", color: "#92400e", padding: "3px 10px", borderRadius: 99, animation: "pulse 1.5s infinite" }}>
+              ⚠️ No Backfill RIT Assigned
+            </span>
+          )}
+          {backfillName && (
+            <span style={{ fontSize: 11, fontWeight: 700, background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", padding: "3px 10px", borderRadius: 99 }}>
+              ✓ Backfill: {backfillName}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* No-backfill warning + assign button */}
+      {ritDeployTime && !backfillName && (
+        <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: 8, background: "#fffbeb", border: "2px dashed #f59e0b", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 12, color: "#92400e" }}>⚠️ BACKFILL RIT NOT ASSIGNED</div>
+            <div style={{ fontSize: 11, color: "#92400e", marginTop: 2 }}>A second RIT team must always be staged. Assign one now.</div>
+          </div>
+          {onRequestBackfill && (
+            <button
+              onClick={onRequestBackfill}
+              style={{ padding: "8px 14px", borderRadius: 7, border: "none", background: "#f59e0b", color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Assign Backfill →
+            </button>
+          )}
+        </div>
+      )}
+
       <div style={{ overflowX: "auto", marginBottom: 24 }}>
         <table
           style={{ borderCollapse: "collapse", width: "100%", minWidth: 520 }}
@@ -785,6 +818,7 @@ function BoardTab({
           <thead>
             <tr>
               <th style={{ ...thStyle, textAlign: "left" }}>Team</th>
+              <th style={thStyle}>Role</th>
               <th style={thStyle}>Entry Time</th>
               <th style={thStyle}>PAR ✓</th>
               <th style={thStyle}>Air ON</th>
@@ -794,10 +828,13 @@ function BoardTab({
           <tbody>
             {displayRit.map((rit) => {
               const d = ritData[rit] || {};
+              const isBackfill = backfillName && rit === backfillName;
+              const isPrimary = ritDeployTime && !isBackfill;
+              const rowBg = d.par ? "#f0fdf4" : isBackfill ? "#eff6ff" : isPrimary ? "#fff7f7" : "#fff";
               return (
                 <tr
                   key={rit}
-                  style={{ background: d.par ? "#f0fdf4" : "#fff" }}
+                  style={{ background: rowBg }}
                 >
                   <td
                     style={{
@@ -807,7 +844,23 @@ function BoardTab({
                       color: "#374151",
                     }}
                   >
-                    {rit}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <span>{rit}</span>
+                      {isPrimary && ritDeployTime && (
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "#dc2626", letterSpacing: 0.5 }}>
+                          DEPLOYED {ritDeployTime}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td style={tdStyle}>
+                    {isBackfill ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, background: "#dbeafe", color: "#1d4ed8", padding: "2px 8px", borderRadius: 99 }}>BACKFILL</span>
+                    ) : isPrimary ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, background: "#fee2e2", color: "#dc2626", padding: "2px 8px", borderRadius: 99 }}>PRIMARY</span>
+                    ) : (
+                      <span style={{ fontSize: 10, color: "#9ca3af" }}>—</span>
+                    )}
                   </td>
                   <td style={tdStyle}>
                     <div
@@ -1015,14 +1068,13 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
   const [activeTab, setActiveTab] = useState("checklist");
   const [showReset, setShowReset] = useState(false);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
-  const [showRITBackfill, setShowRITBackfill] = useState(false);
 
   // ── All MAYDAY data comes from context (survives navigation + page refresh) ──
   const { state, setState, update, resetAll: ctxResetAll } = useMayday();
   const {
     isActive, maydayTime, elapsed, checklist, lips,
     notes, ritTimes, unitData, ritData, fireLocation, boardNotes,
-    maydayUnit, ritDeployTime, backfillRIT,
+    maydayUnit, ritDeployTime, backfillRIT, backfillPickerOpen,
   } = state;
 
   // ── Notify parent when active state changes ──
@@ -1066,13 +1118,12 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
     update({
       ritDeployTime: now24(),
       checklist: { ...checklist, 6: true },
+      backfillPickerOpen: true,
     });
-    setShowRITBackfill(true);
   }
 
   function handleBackfillRIT(unit) {
-    setShowRITBackfill(false);
-    update({ backfillRIT: unit || null });
+    update({ backfillRIT: unit || null, backfillPickerOpen: false });
     if (unit) onUpdateUnit?.(unit, { assignment: 'rit', status: 'working', on_scene_time: new Date().toISOString() });
   }
 
@@ -1365,6 +1416,9 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
             boardNotes={boardNotes}
             onBoardNotes={(val) => update({ boardNotes: val })}
             incidentUnits={units}
+            ritDeployTime={ritDeployTime}
+            backfillRIT={backfillRIT}
+            onRequestBackfill={() => update({ backfillPickerOpen: true })}
           />
         )}
       </div>
@@ -1423,7 +1477,7 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
       )}
 
       {/* ════ RIT BACKFILL PICKER ════ */}
-      {showRITBackfill && (
+      {backfillPickerOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: 24, maxWidth: 400, width: "90%", boxShadow: "0 10px 40px rgba(0,0,0,.3)" }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#1d4ed8", marginBottom: 4 }}>
@@ -1457,7 +1511,7 @@ export default function MaydayCommand({ onActiveChange, units = [], onUpdateUnit
               )}
             </div>
             <button
-              onClick={() => handleBackfillRIT(null)}
+              onClick={() => update({ backfillPickerOpen: false })}
               style={{ width: "100%", padding: 12, borderRadius: 8, border: "1.5px solid #d1d5db", background: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", color: "#374151" }}
             >
               Skip — Assign Later
