@@ -310,8 +310,109 @@ function SignupScreen({ onSignup, onGoLogin }) {
   );
 }
 
+// ── Forgot Password Screen ────────────────────────────────────────────────────
+function ForgotPasswordScreen({ onGoLogin }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setLoading(true);
+    setError('');
+    try {
+      await base44.auth.requestPasswordReset(email.trim());
+      setSent(true);
+    } catch (err) {
+      setError(err?.message || 'Could not send reset email. Check the address and try again.');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center">
+            <Flame className="w-7 h-7 text-primary" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-mono font-bold text-foreground tracking-wide">FIREGROUND COMMAND</h1>
+            <p className="text-sm text-muted-foreground font-mono mt-1">Reset your password</p>
+          </div>
+        </div>
+
+        {sent ? (
+          <div className="space-y-4 text-center">
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-5">
+              <p className="text-sm font-mono text-green-400 font-bold mb-1">Check your email</p>
+              <p className="text-xs font-mono text-muted-foreground">
+                A password reset link was sent to <span className="text-foreground">{email}</span>.
+                Follow the link to set a new password.
+              </p>
+            </div>
+            <p className="text-xs font-mono text-muted-foreground">
+              Didn't get it? Check your spam folder, or{' '}
+              <button type="button" onClick={() => setSent(false)} className="text-primary hover:underline">
+                try again
+              </button>.
+            </p>
+            <button
+              type="button"
+              onClick={onGoLogin}
+              className="w-full h-10 rounded-md border border-border bg-secondary text-sm font-mono font-bold text-foreground hover:bg-secondary/70 transition-colors"
+            >
+              Back to Sign In
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <p className="text-xs font-mono text-muted-foreground text-center pb-1">
+              Enter your account email and we'll send you a reset link.
+            </p>
+            <div>
+              <label className="block text-xs font-mono text-muted-foreground mb-1.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full h-10 px-3 rounded-md border border-border bg-secondary text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                autoComplete="email"
+                autoFocus
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs font-mono text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !email.trim()}
+              className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-mono font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</> : 'Send Reset Link'}
+            </button>
+
+            <p className="text-center text-xs font-mono text-muted-foreground">
+              <button type="button" onClick={onGoLogin} className="text-primary hover:underline">
+                ← Back to Sign In
+              </button>
+            </p>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Login Screen ──────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin, onGoSignup }) {
+function LoginScreen({ onLogin, onGoSignup, onGoForgot }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -366,7 +467,16 @@ function LoginScreen({ onLogin, onGoSignup }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-mono text-muted-foreground mb-1.5">Password</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-mono text-muted-foreground">Password</label>
+              <button
+                type="button"
+                onClick={onGoForgot}
+                className="text-xs font-mono text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
             <input
               type="password"
               value={password}
@@ -408,7 +518,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => getStoredToken());
   const [userEmail, setUserEmail] = useState(() => getStoredEmail());
   const [checking, setChecking] = useState(!!getStoredToken());
-  const [screen, setScreen] = useState('login'); // 'login' | 'signup'
+  const [screen, setScreen] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [newUserName, setNewUserName] = useState('');
 
@@ -466,10 +576,18 @@ export const AuthProvider = ({ children }) => {
         />
       );
     }
+    if (screen === 'forgot') {
+      return (
+        <ForgotPasswordScreen
+          onGoLogin={() => setScreen('login')}
+        />
+      );
+    }
     return (
       <LoginScreen
         onLogin={handleLogin}
         onGoSignup={() => setScreen('signup')}
+        onGoForgot={() => setScreen('forgot')}
       />
     );
   }
