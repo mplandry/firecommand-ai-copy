@@ -341,37 +341,29 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
 // ── Cloudflare Worker proxy URL ───────────────────────────────────────────────
 const ROSTER_WORKER_URL = 'https://anthripic-proxy.mplandry77.workers.dev';
 
-// ── Read a File as base64 string ─────────────────────────────────────────────
-function readFileAsBase64(file) {
+// ── Compress image and return base64 string directly (canvas.toDataURL is more
+//    reliable than toBlob across browsers, and guarantees valid JPEG output) ──
+function compressToBase64(file, maxWidth = 1200, quality = 0.80) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// ── Compress image to max 1200px wide, 80% JPEG quality ───────────────────────
-function compressImage(file, maxWidth = 1200, quality = 0.80) {
-  return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const scale = Math.min(1, maxWidth / img.width);
-      const canvas = document.createElement('canvas');
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
-        } else {
-          resolve(file); // toBlob failed — fall back to original
-        }
-      }, 'image/jpeg', quality);
+      try {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        const base64 = dataUrl.split(',')[1];
+        if (!base64) throw new Error('Canvas produced empty output');
+        resolve(base64);
+      } catch (e) {
+        reject(e);
+      }
     };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
     img.src = url;
   });
 }
@@ -405,11 +397,10 @@ function PhotoImportPanel({ onParsed, onClose }) {
     setParseError('');
 
     try {
-      // Compress + encode as base64 — bypasses base44 upload pipeline entirely
+      // Compress + encode directly to base64 via canvas.toDataURL (guaranteed valid JPEG)
       let imageBlocks;
       try {
-        const compressed = await Promise.all(imageFiles.map(f => compressImage(f)));
-        const base64s = await Promise.all(compressed.map(f => readFileAsBase64(f)));
+        const base64s = await Promise.all(imageFiles.map(f => compressToBase64(f)));
         imageBlocks = base64s.map(b64 => ({
           type: 'image',
           source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
