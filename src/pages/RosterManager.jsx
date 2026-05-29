@@ -339,7 +339,7 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
 }
 
 // ── Cloudflare Worker proxy URL ───────────────────────────────────────────────
-const ROSTER_WORKER_URL = 'https://YOUR_WORKER.workers.dev'; // ← replace with your worker URL
+const ROSTER_WORKER_URL = 'https://anthripic-proxy.mplandry77.workers.dev';
 
 // ── Read a File as base64 string ─────────────────────────────────────────────
 function readFileAsBase64(file) {
