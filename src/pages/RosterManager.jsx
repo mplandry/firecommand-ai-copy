@@ -379,7 +379,9 @@ function PhotoImportPanel({ onParsed, onClose }) {
   const fileInputRef = useRef(null);
 
   const handleFiles = (files) => {
-    const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+    // Don't filter by MIME type — some browsers return empty type for valid images.
+    // The file input's accept="image/*" already restricts what can be selected.
+    const imgs = Array.from(files).filter(f => f.size > 0);
     if (!imgs.length) return;
     setImageFiles(prev => [...prev, ...imgs]);
     setImagePreviews(prev => [...prev, ...imgs.map(f => URL.createObjectURL(f))]);
@@ -517,7 +519,7 @@ Return ONLY valid JSON: {"units": [...]}`,
             </p>
             <p className="text-[10px] font-mono text-muted-foreground">Browse or drag files</p>
             <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
-              onChange={e => handleFiles(e.target.files)} />
+              onChange={e => { handleFiles(e.target.files); e.target.value = ''; }} />
           </div>
         </div>
 
