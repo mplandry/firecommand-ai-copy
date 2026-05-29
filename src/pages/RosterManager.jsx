@@ -341,12 +341,16 @@ function RosterRow({ entry, onSave, onDelete, isNew }) {
 // ── Cloudflare Worker proxy URL ───────────────────────────────────────────────
 const ROSTER_WORKER_URL = 'https://anthripic-proxy.mplandry77.workers.dev';
 
-// ── Compress image and return base64 string directly (canvas.toDataURL is more
-//    reliable than toBlob across browsers, and guarantees valid JPEG output) ──
-function compressToBase64(file, maxWidth = 1200, quality = 0.80) {
+// ── Prepare image for Anthropic API: compress via canvas if possible,
+//    fall back to raw FileReader for formats canvas can't handle (e.g. HEIC).
+//    Returns { base64, mediaType }. ──────────────────────────────────────────
+const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+function prepareImageForApi(file, maxWidth = 1200, quality = 0.80) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
+
     img.onload = () => {
       URL.revokeObjectURL(url);
       try {
@@ -358,12 +362,33 @@ function compressToBase64(file, maxWidth = 1200, quality = 0.80) {
         const dataUrl = canvas.toDataURL('image/jpeg', quality);
         const base64 = dataUrl.split(',')[1];
         if (!base64) throw new Error('Canvas produced empty output');
-        resolve(base64);
+        resolve({ base64, mediaType: 'image/jpeg' });
       } catch (e) {
         reject(e);
       }
     };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      // Canvas can't decode this format (likely HEIC from iPhone) — try raw FileReader
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const parts = (e.target.result || '').split(',');
+        if (parts.length < 2 || !parts[1]) {
+          reject(new Error('Could not read image. On iPhone go to Settings → Camera → Formats → Most Compatible to shoot in JPEG.'));
+          return;
+        }
+        const mediaType = parts[0].split(':')[1]?.split(';')[0] || file.type || 'image/jpeg';
+        if (!SUPPORTED_TYPES.includes(mediaType)) {
+          reject(new Error(`Unsupported format (${mediaType || 'unknown'}). On iPhone go to Settings → Camera → Formats → Most Compatible to shoot in JPEG.`));
+          return;
+        }
+        resolve({ base64: parts[1], mediaType });
+      };
+      reader.onerror = () => reject(new Error('Could not read image file. Try converting it to JPEG first.'));
+      reader.readAsDataURL(file);
+    };
+
     img.src = url;
   });
 }
@@ -397,16 +422,16 @@ function PhotoImportPanel({ onParsed, onClose }) {
     setParseError('');
 
     try {
-      // Compress + encode directly to base64 via canvas.toDataURL (guaranteed valid JPEG)
+      // Compress + encode to base64, with fallback for HEIC/unsupported formats
       let imageBlocks;
       try {
-        const base64s = await Promise.all(imageFiles.map(f => compressToBase64(f)));
-        imageBlocks = base64s.map(b64 => ({
+        const prepared = await Promise.all(imageFiles.map(f => prepareImageForApi(f)));
+        imageBlocks = prepared.map(({ base64, mediaType }) => ({
           type: 'image',
-          source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
+          source: { type: 'base64', media_type: mediaType, data: base64 },
         }));
       } catch (encErr) {
-        setParseError(`Could not prepare photos: ${encErr?.message || 'Check your connection and try again.'}`);
+        setParseError(encErr?.message || 'Could not prepare photos. Check your connection and try again.');
         return;
       }
 
