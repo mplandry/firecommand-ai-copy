@@ -386,16 +386,17 @@ export default function MVAPanel({ incidentId }) {
     vehicles: data.vehicles.map(v => v.id === vid ? { ...v, expanded: !v.expanded } : v),
   });
 
-  // Create patient records for a vehicle based on occupant count
+  // Add patient records up to the occupant count — never erases existing data
   const createPatients = (vid) => {
     const vehicle = data.vehicles.find(v => v.id === vid);
     if (!vehicle) return;
     const count = parseInt(vehicle.occupants) || 0;
     if (count < 1) return;
-    // Remove existing patients for this vehicle and recreate
-    const existing = data.patients.filter(p => p.vehicleId !== vid);
-    const newPatients = Array.from({ length: count }, () => emptyPatient(vid));
-    persist({ ...data, patients: [...existing, ...newPatients] });
+    const alreadyHave = data.patients.filter(p => p.vehicleId === vid).length;
+    const toAdd = count - alreadyHave;
+    if (toAdd <= 0) return; // already have enough, nothing to do
+    const newPatients = Array.from({ length: toAdd }, () => emptyPatient(vid));
+    persist({ ...data, patients: [...data.patients, ...newPatients] });
   };
 
   // ── Patient ops ──────────────────────────────────────────────────────────────
@@ -593,11 +594,16 @@ export default function MVAPanel({ incidentId }) {
                     <Button
                       size="sm"
                       className="h-9 gap-1.5 text-xs"
-                      disabled={!v.occupants || parseInt(v.occupants) < 1}
+                      disabled={!v.occupants || parseInt(v.occupants) < 1 || parseInt(v.occupants) <= vPatients.length}
                       onClick={() => createPatients(v.id)}
                     >
                       <User className="w-3.5 h-3.5" />
-                      {vPatients.length > 0 ? 'Regenerate Patient Logs' : 'Create Patient Logs'}
+                      {vPatients.length === 0
+                      ? 'Create Patient Logs'
+                      : parseInt(v.occupants) > vPatients.length
+                        ? `Add ${parseInt(v.occupants) - vPatients.length} More`
+                        : 'Patient Logs Created'
+                    }
                     </Button>
                     {vPatients.length > 0 && (
                       <span className="text-xs font-mono text-muted-foreground">{vPatients.length} log{vPatients.length !== 1 ? 's' : ''} created</span>
