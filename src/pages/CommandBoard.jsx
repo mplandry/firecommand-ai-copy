@@ -41,13 +41,6 @@ export default function CommandBoard() {
   const queryClient = useQueryClient();
   const { state: maydayState, update: maydayUpdate } = useMayday();
 
-  // Auto-navigate to MVA panel when incident type is MVA
-  React.useEffect(() => {
-    if (incident?.incident_type === 'vehicle_fire') {
-      navigate(`/incident/${incidentId}/panel?tab=mva`);
-    }
-  }, [incident?.incident_type]);
-
   // Request mic permission immediately when the board loads so there's no
   // popup mid-incident. If already granted the browser resolves instantly.
   React.useEffect(() => {
@@ -67,6 +60,13 @@ export default function CommandBoard() {
     select: (data) => data?.[0] || null,
     enabled: !!incidentId,
   });
+
+  // Auto-navigate to MVA panel for vehicle_fire incidents
+  React.useEffect(() => {
+    if (incident?.incident_type === 'vehicle_fire') {
+      navigate(`/incident/${incidentId}/panel?tab=mva`);
+    }
+  }, [incident?.incident_type]);
 
   const { isOnline, pendingCount, replaying, updatePending } = useOnlineStatus(() => {
     queryClient.invalidateQueries({ queryKey: ['units', incidentId] });
