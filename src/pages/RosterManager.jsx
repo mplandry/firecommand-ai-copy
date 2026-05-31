@@ -540,7 +540,7 @@ Return ONLY valid JSON: {"units": [...]}`,
               {imageFiles.length === 0 ? 'Upload Photo' : 'Add More'}
             </p>
             <p className="text-[10px] font-mono text-muted-foreground">Browse or drag files</p>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
               onChange={e => { handleFiles(e.target.files); e.target.value = ''; }} />
           </div>
         </div>
