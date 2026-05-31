@@ -43,6 +43,7 @@ export function useDepartment() {
     unit_name:       `${prefix} ${u.name}`,
     unit_type:       u.type,
     personnel_count: u.personnel,
+    station:         u.station,
   }));
 
   /** Station group config for DivisionColumn (without prefix in unit names for matching) */
