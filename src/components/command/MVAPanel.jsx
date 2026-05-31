@@ -2,13 +2,92 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users, Mic, MicOff, Loader2 } from 'lucide-react';
+
+const WORKER_URL = 'https://anthripic-proxy.mplandry77.workers.dev';
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+// Parse spoken patient info into structured fields via AI
+async function parsePatientSpeech(transcript, hospitals) {
+  const resp = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: `Parse this spoken patient information from an MVA scene into structured fields.
+
+Spoken: "${transcript}"
+
+Extract:
+- name: full name in "First Last" format (e.g. "John Smith")
+- sex: "male", "female", or "unknown"
+- dob: date of birth in YYYY-MM-DD format (interpret spoken dates like "March 15 1985" → "1985-03-15")
+- severity: one of "minor", "moderate", "critical", "deceased"
+- hospital: best match from this list: ${hospitals.join(', ')}
+- notes: any other info (injuries, restrained, airbag, etc.)
+
+Return ONLY valid JSON. Use null for any field not mentioned.
+{"name":null,"sex":null,"dob":null,"severity":null,"hospital":null,"notes":null}`
+      }]
+    })
+  });
+  const data = await resp.json();
+  const text = (data.content || []).map(b => b.text || '').join('');
+  const match = text.replace(/```json/g,'').replace(/```/g,'').trim().match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('No JSON');
+  return JSON.parse(match[0]);
+}
+
+// Hook: dictate patient info with mic → AI parse → returns parsed fields
+function usePatientDictation(onParsed, hospitals) {
+  const [listening, setListening] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+  const recRef = useRef(null);
+
+  const start = () => {
+    if (!SpeechRecognition) { setError('Speech not supported in this browser'); return; }
+    setError('');
+    const rec = new SpeechRecognition();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onstart = () => setListening(true);
+    rec.onresult = async (e) => {
+      const transcript = e.results[0][0].transcript;
+      setListening(false);
+      setProcessing(true);
+      try {
+        const parsed = await parsePatientSpeech(transcript, hospitals);
+        onParsed(parsed);
+      } catch {
+        setError('Could not parse — try again');
+      } finally {
+        setProcessing(false);
+      }
+    };
+    rec.onerror = (e) => {
+      setError(e.error === 'not-allowed' ? 'Mic blocked — allow access in browser settings' : `Mic error: ${e.error}`);
+      setListening(false);
+    };
+    rec.onend = () => setListening(false);
+    recRef.current = rec;
+    rec.start();
+  };
+
+  const stop = () => { recRef.current?.stop(); setListening(false); };
+
+  return { listening, processing, error, start, stop };
+}
 
 const MAKES_MODELS = {
   'Toyota':     ['Camry','Corolla','RAV4','Tacoma','Prius','Highlander','4Runner','Tundra','Sienna'],
   'Honda':      ['Accord','Civic','CR-V','Pilot','Odyssey','Ridgeline','HR-V','Passport'],
   'Ford':       ['F-150','Explorer','Escape','Mustang','Edge','Bronco','Ranger','Expedition','Transit'],
-  'Chevrolet':  ['Silverado','Equinox','Malibu','Traverse','Colorado','Tahoe','Suburban'],
+  'Chevrolet':  ['Silverado','Equinox','Malibu','Traverse','Colorado','Tahoe','Suburban','Corvette','Camaro','Blazer','Trax','Spark','Sonic','Bolt'],
   'Nissan':     ['Altima','Sentra','Rogue','Pathfinder','Frontier','Titan','Murano'],
   'Jeep':       ['Wrangler','Grand Cherokee','Cherokee','Compass','Gladiator'],
   'RAM':        ['1500','2500','3500','ProMaster'],
@@ -58,6 +137,90 @@ const emptyVehicle = () => ({
   occupants: '',
   expanded: true,
 });
+
+// ── Patient row with dictation support ────────────────────────────────────────
+function PatientRow({ p, label, onUpdate, onRemove }) {
+  const { listening, processing, error, start, stop } = usePatientDictation((parsed) => {
+    if (parsed.name     !== null) onUpdate('name',     parsed.name);
+    if (parsed.sex      !== null) onUpdate('sex',      parsed.sex);
+    if (parsed.dob      !== null) onUpdate('dob',      parsed.dob);
+    if (parsed.severity !== null) onUpdate('severity', parsed.severity);
+    if (parsed.hospital !== null) onUpdate('hospital', parsed.hospital);
+    if (parsed.notes    !== null) onUpdate('notes',    parsed.notes);
+  }, HOSPITALS);
+
+  const sev = SEVERITY.find(s => s.value === p.severity) || SEVERITY[0];
+
+  return (
+    <div className="px-4 py-3 bg-card/20">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-mono font-bold text-muted-foreground">{label}</span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${sev.color}`}>{sev.label}</span>
+        {/* Dictate button */}
+        {SpeechRecognition && (
+          <button
+            onClick={listening ? stop : start}
+            disabled={processing}
+            title={listening ? 'Stop recording' : 'Dictate patient info'}
+            className={`flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
+              listening
+                ? 'bg-green-500/20 text-green-400 border-green-500/40 animate-pulse'
+                : processing
+                  ? 'bg-secondary/40 text-muted-foreground border-border/40'
+                  : 'bg-secondary/40 text-muted-foreground border-border/40 hover:text-foreground hover:border-border'
+            }`}
+          >
+            {processing
+              ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Parsing…</>
+              : listening
+                ? <><MicOff className="w-2.5 h-2.5" /> Stop</>
+                : <><Mic className="w-2.5 h-2.5" /> Dictate</>
+            }
+          </button>
+        )}
+        <button onClick={onRemove} className="ml-auto text-muted-foreground hover:text-red-400 transition-colors">
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {error && <p className="text-[10px] text-red-400 font-mono mb-1">{error}</p>}
+      {listening && <p className="text-[10px] text-green-400 font-mono mb-1 animate-pulse">Listening… say name, sex, DOB, severity, hospital</p>}
+
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        <Input value={p.name} onChange={e => onUpdate('name', e.target.value)}
+          placeholder="Last, First" className="h-8 text-xs font-mono bg-secondary/60" />
+        <Select value={p.sex} onValueChange={v => onUpdate('sex', v)}>
+          <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue placeholder="Sex…" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="male">Male</SelectItem>
+            <SelectItem value="female">Female</SelectItem>
+            <SelectItem value="unknown">Unknown</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="relative">
+          <Input type="date" value={p.dob} onChange={e => onUpdate('dob', e.target.value)}
+            className="h-8 text-xs font-mono bg-secondary/60" />
+          {p.dob && (
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-primary pointer-events-none">
+              Age {Math.floor((Date.now() - new Date(p.dob)) / 31557600000)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <Select value={p.severity} onValueChange={v => onUpdate('severity', v)}>
+          <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue /></SelectTrigger>
+          <SelectContent>{SEVERITY.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+        </Select>
+        <Select value={p.hospital} onValueChange={v => onUpdate('hospital', v)}>
+          <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue placeholder="Hospital…" /></SelectTrigger>
+          <SelectContent>{HOSPITALS.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
+        </Select>
+        <Input value={p.notes} onChange={e => onUpdate('notes', e.target.value)}
+          placeholder="Injuries, restrained…" className="h-8 text-xs font-mono bg-secondary/60" />
+      </div>
+    </div>
+  );
+}
 
 const emptyPatient = (vehicleId) => ({
   id: nextPid++,
@@ -242,10 +405,14 @@ export default function MVAPanel({ incidentId }) {
                     <div>
                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Model</label>
                       {v.make && v.make !== 'Other' && MAKES_MODELS[v.make]?.length > 0 ? (
-                        <Select value={v.model} onValueChange={val => setVehicle(v.id, 'model', val)}>
-                          <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1"><SelectValue placeholder="Model…" /></SelectTrigger>
-                          <SelectContent>{MAKES_MODELS[v.make].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <>
+                          <Select value={MAKES_MODELS[v.make].includes(v.model) ? v.model : ''} onValueChange={val => setVehicle(v.id, 'model', val)}>
+                            <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1"><SelectValue placeholder="Select…" /></SelectTrigger>
+                            <SelectContent>{MAKES_MODELS[v.make].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                          </Select>
+                          <Input value={v.model} onChange={e => setVehicle(v.id, 'model', e.target.value)}
+                            placeholder="Or type model…" className="h-8 text-xs font-mono bg-secondary/60 mt-1" />
+                        </>
                       ) : (
                         <Input value={v.model} onChange={e => setVehicle(v.id, 'model', e.target.value)}
                           placeholder="Model…" className="h-9 text-sm font-mono bg-secondary/60 mt-1" />
@@ -307,76 +474,15 @@ export default function MVAPanel({ incidentId }) {
               {/* Patient records for this vehicle */}
               {vPatients.length > 0 && (
                 <div className="border-t border-border/40 divide-y divide-border/30">
-                  {vPatients.map((p, pIdx) => {
-                    const sev = SEVERITY.find(s => s.value === p.severity) || SEVERITY[0];
-                    return (
-                      <div key={p.id} className="px-4 py-3 bg-card/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-mono font-bold text-muted-foreground">
-                            V{vIdx + 1} · Patient {pIdx + 1}
-                          </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${sev.color}`}>
-                            {sev.label}
-                          </span>
-                          <button onClick={() => removePatient(p.id)} className="ml-auto text-muted-foreground hover:text-red-400 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        {/* Name + Sex + DOB */}
-                        <div className="grid grid-cols-3 gap-2 mb-2">
-                          <div>
-                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">Full Name</label>
-                            <Input value={p.name} onChange={e => setPatient(p.id, 'name', e.target.value)}
-                              placeholder="Last, First" className="h-8 text-xs font-mono bg-secondary/60 mt-0.5" />
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">Sex</label>
-                            <Select value={p.sex} onValueChange={v => setPatient(p.id, 'sex', v)}>
-                              <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60 mt-0.5"><SelectValue placeholder="Select…" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="unknown">Unknown</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">
-                              Date of Birth{p.dob ? ` · Age ${Math.floor((Date.now() - new Date(p.dob)) / 31557600000)}` : ''}
-                            </label>
-                            <Input type="date" value={p.dob} onChange={e => setPatient(p.id, 'dob', e.target.value)}
-                              className="h-8 text-xs font-mono bg-secondary/60 mt-0.5" />
-                          </div>
-                        </div>
-
-                        {/* Severity + Hospital + Notes */}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">Severity</label>
-                            <Select value={p.severity} onValueChange={v => setPatient(p.id, 'severity', v)}>
-                              <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60 mt-0.5"><SelectValue /></SelectTrigger>
-                              <SelectContent>{SEVERITY.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono flex items-center gap-1">
-                              <Ambulance className="w-2.5 h-2.5" /> Hospital
-                            </label>
-                            <Select value={p.hospital} onValueChange={v => setPatient(p.id, 'hospital', v)}>
-                              <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60 mt-0.5"><SelectValue placeholder="Select…" /></SelectTrigger>
-                              <SelectContent>{HOSPITALS.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">Notes</label>
-                            <Input value={p.notes} onChange={e => setPatient(p.id, 'notes', e.target.value)}
-                              placeholder="Injuries, restrained…" className="h-8 text-xs font-mono bg-secondary/60 mt-0.5" />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {vPatients.map((p, pIdx) => (
+                    <PatientRow
+                      key={p.id}
+                      p={p}
+                      label={`V${vIdx + 1} · Patient ${pIdx + 1}`}
+                      onUpdate={(field, val) => setPatient(p.id, field, val)}
+                      onRemove={() => removePatient(p.id)}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -394,45 +500,15 @@ export default function MVAPanel({ incidentId }) {
             <Plus className="w-3 h-3" /> Add
           </Button>
         </div>
-        {data.patients.filter(p => !p.vehicleId).map((p, idx) => {
-          const sev = SEVERITY.find(s => s.value === p.severity) || SEVERITY[0];
-          return (
-            <div key={p.id} className="bg-secondary/30 border border-border/50 rounded-xl p-3 mb-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold">Patient</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${sev.color}`}>{sev.label}</span>
-                <button onClick={() => removePatient(p.id)} className="ml-auto text-muted-foreground hover:text-red-400">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <Input value={p.name} onChange={e => setPatient(p.id, 'name', e.target.value)} placeholder="Last, First" className="h-8 text-xs font-mono bg-secondary/60" />
-                <Select value={p.sex} onValueChange={v => setPatient(p.id, 'sex', v)}>
-                  <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue placeholder="Sex…" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="unknown">Unknown</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="relative">
-                  <Input type="date" value={p.dob} onChange={e => setPatient(p.id, 'dob', e.target.value)} className="h-8 text-xs font-mono bg-secondary/60" />
-                  {p.dob && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-primary pointer-events-none">Age {Math.floor((Date.now() - new Date(p.dob)) / 31557600000)}</span>}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Select value={p.severity} onValueChange={v => setPatient(p.id, 'severity', v)}>
-                  <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue /></SelectTrigger>
-                  <SelectContent>{SEVERITY.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <Select value={p.hospital} onValueChange={v => setPatient(p.id, 'hospital', v)}>
-                  <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue placeholder="Hospital…" /></SelectTrigger>
-                  <SelectContent>{HOSPITALS.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-          );
-        })}
+        {data.patients.filter(p => !p.vehicleId).map((p, idx) => (
+          <PatientRow
+            key={p.id}
+            p={p}
+            label={`Patient ${idx + 1}`}
+            onUpdate={(field, val) => setPatient(p.id, field, val)}
+            onRemove={() => removePatient(p.id)}
+          />
+        ))}
       </section>
 
       {/* ── SCENE PHOTOS ── */}
