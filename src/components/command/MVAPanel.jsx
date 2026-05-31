@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car, Plus, Trash2, User, Hospital } from 'lucide-react';
+import { Car, Plus, Trash2, User, Hospital, Camera, X } from 'lucide-react';
 
 const SEVERITY = [
   { value: 'minor',    label: 'Minor',    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
@@ -50,6 +50,8 @@ const emptyPatient = () => ({
 
 export default function MVAPanel({ incidentId }) {
   const [state, setState] = useState(DEFAULT_STATE);
+  const [photos, setPhotos] = useState([]);
+  const cameraRef = useRef(null);
 
   // Persist to localStorage keyed by incidentId
   useEffect(() => {
@@ -81,6 +83,17 @@ export default function MVAPanel({ incidentId }) {
 
   const criticalCount = state.patients.filter(p => p.severity === 'critical').length;
   const totalPatients = state.patients.length;
+
+  const handleCameraCapture = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const url = URL.createObjectURL(file);
+      setPhotos(prev => [...prev, { id: Date.now() + Math.random(), url, name: file.name }]);
+    });
+    e.target.value = '';
+  };
+
+  const removePhoto = (id) => setPhotos(prev => prev.filter(p => p.id !== id));
 
   return (
     <div className="p-3 space-y-4 text-xs font-mono">
@@ -278,6 +291,49 @@ export default function MVAPanel({ incidentId }) {
           })}
         </div>
       </div>
+      {/* ── Scene Photos ── */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+            <Camera className="w-3 h-3" /> Scene Photos
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 text-[10px] gap-1 px-2"
+            onClick={() => cameraRef.current?.click()}
+          >
+            <Camera className="w-3 h-3" /> Take Photo
+          </Button>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleCameraCapture}
+          />
+        </div>
+
+        {photos.length === 0 && (
+          <p className="text-muted-foreground text-[10px] italic py-1">No photos taken yet</p>
+        )}
+
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map(photo => (
+            <div key={photo.id} className="relative rounded-lg overflow-hidden border border-border/40 aspect-square">
+              <img src={photo.url} alt="Scene" className="w-full h-full object-cover" />
+              <button
+                onClick={() => removePhoto(photo.id)}
+                className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 text-white hover:bg-black/90"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }
