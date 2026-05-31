@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Users, AlertTriangle, Wind, X } from 'lucide-react';
+import { Clock, Users, AlertTriangle, Wind, X, Split } from 'lucide-react';
 
 const statusConfig = {
   dispatched:    { bar: 'bg-yellow-500',  bg: 'bg-yellow-500/10',  text: 'text-yellow-400',  label: 'DISPATCHED' },
@@ -50,6 +50,34 @@ function useElapsed(timestamp) {
 }
 
 export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix = 'WAL' }) {
+  const [isSplit, setIsSplit] = useState(false);
+  const [teamAName, setTeamAName] = useState('Team 1');
+  const [teamBName, setTeamBName] = useState('Team 2');
+  const isRescue = unit.unit_type === 'rescue';
+
+  const personnel = unit.personnel || [];
+
+  // teamAssignments: { [personName]: 1 | 2 } — all unassigned (null) by default
+  const [teamAssignments, setTeamAssignments] = useState({});
+
+  // Re-init if personnel changes — preserve existing assignments
+  useEffect(() => {
+    setTeamAssignments(prev => {
+      const map = {};
+      personnel.forEach(p => { map[p] = prev[p] ?? null; });
+      return map;
+    });
+  }, [unit.personnel]);
+
+  const teamA = personnel.filter(p => teamAssignments[p] === 1);
+  const teamB = personnel.filter(p => teamAssignments[p] === 2);
+  const unassigned = personnel.filter(p => !teamAssignments[p]);
+
+  const assignToTeam = (e, person, team) => {
+    e.stopPropagation();
+    setTeamAssignments(prev => ({ ...prev, [person]: prev[person] === team ? null : team }));
+  };
+
   const airElapsed = useElapsed(unit.air_time);
   const entryElapsed = useElapsed(unit.on_scene_time);
   const cfg = statusConfig[unit.status] || statusConfig.dispatched;
@@ -180,7 +208,96 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
             {unit.notes}
           </div>
         )}
+
+        {/* Split teams view — rescue units only */}
+        {isRescue && isSplit && (
+          <div className="mt-1 pt-1 border-t border-border/40 pb-1 space-y-1.5">
+            {personnel.length === 0 ? (
+              <div className="text-[10px] font-mono text-muted-foreground italic text-center py-1">
+                No roster loaded — add personnel via unit edit
+              </div>
+            ) : (
+              <>
+                {/* Unassigned pool */}
+                {unassigned.length > 0 && (
+                  <div>
+                    <div className="text-[9px] font-mono text-muted-foreground mb-0.5">Tap to assign →</div>
+                    <div className="flex flex-wrap gap-1">
+                      {unassigned.map((p, i) => (
+                        <div key={i} className="flex gap-0.5">
+                          <button onClick={e => assignToTeam(e, p, 1)}
+                            className="text-[9px] font-mono px-1 py-0.5 rounded-l bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/40 transition-colors leading-3">
+                            1
+                          </button>
+                          <span className="text-[10px] font-mono text-foreground px-1 py-0.5 bg-secondary/40 border-y border-border/40 leading-3">
+                            {p.split('|')[0]}
+                          </span>
+                          <button onClick={e => assignToTeam(e, p, 2)}
+                            className="text-[9px] font-mono px-1 py-0.5 rounded-r bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/40 transition-colors leading-3">
+                            2
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Team boxes */}
+                <div className="flex gap-2">
+                  <div className="flex-1 bg-blue-500/10 border border-blue-500/30 rounded px-2 py-1 min-h-[32px]">
+                    <input
+                      value={teamAName}
+                      onChange={e => setTeamAName(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      className="text-[9px] font-mono font-bold text-blue-400 tracking-wider bg-transparent border-none outline-none w-full mb-0.5"
+                      maxLength={12}
+                    />
+                    {teamA.map((p, i) => (
+                      <button key={i} onClick={e => assignToTeam(e, p, 1)}
+                        className="block w-full text-left text-[10px] font-mono text-foreground truncate hover:text-muted-foreground transition-colors leading-4">
+                        {p.split('|')[0]}
+                      </button>
+                    ))}
+                    {teamA.length === 0 && <div className="text-[10px] font-mono text-muted-foreground italic">—</div>}
+                  </div>
+                  <div className="flex-1 bg-orange-500/10 border border-orange-500/30 rounded px-2 py-1 min-h-[32px]">
+                    <input
+                      value={teamBName}
+                      onChange={e => setTeamBName(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      className="text-[9px] font-mono font-bold text-orange-400 tracking-wider bg-transparent border-none outline-none w-full mb-0.5"
+                      maxLength={12}
+                    />
+                    {teamB.map((p, i) => (
+                      <button key={i} onClick={e => assignToTeam(e, p, 2)}
+                        className="block w-full text-left text-[10px] font-mono text-foreground truncate hover:text-muted-foreground transition-colors leading-4">
+                        {p.split('|')[0]}
+                      </button>
+                    ))}
+                    {teamB.length === 0 && <div className="text-[10px] font-mono text-muted-foreground italic">—</div>}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Split toggle button — rescue units only, bottom right */}
+      {isRescue && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsSplit(s => !s); }}
+          title={isSplit ? 'Merge teams' : 'Split into 2 teams'}
+          className={`absolute bottom-1 right-1 flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-colors
+            ${isSplit
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30'
+              : 'bg-secondary/60 text-muted-foreground border border-border/40 hover:text-foreground opacity-0 group-hover:opacity-100'
+            }`}
+        >
+          <Split className="w-2.5 h-2.5" />
+          {isSplit ? 'SPLIT' : 'SPLIT'}
+        </button>
+      )}
     </div>
   );
 }
