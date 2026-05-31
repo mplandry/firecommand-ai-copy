@@ -2,54 +2,46 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car, Plus, Trash2, User, Ambulance, Camera, X, Save } from 'lucide-react';
+import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
 
-// ── Vehicle data ─────────────────────────────────────────────────────────────
 const MAKES_MODELS = {
-  'Toyota':     ['Camry','Corolla','RAV4','Tacoma','Prius','Highlander','4Runner','Tundra','Avalon','Sienna'],
+  'Toyota':     ['Camry','Corolla','RAV4','Tacoma','Prius','Highlander','4Runner','Tundra','Sienna'],
   'Honda':      ['Accord','Civic','CR-V','Pilot','Odyssey','Ridgeline','HR-V','Passport'],
   'Ford':       ['F-150','Explorer','Escape','Mustang','Edge','Bronco','Ranger','Expedition','Transit'],
-  'Chevrolet':  ['Silverado','Equinox','Malibu','Traverse','Colorado','Tahoe','Suburban','Blazer','Trax'],
-  'Nissan':     ['Altima','Sentra','Rogue','Pathfinder','Frontier','Titan','Murano','Kicks'],
+  'Chevrolet':  ['Silverado','Equinox','Malibu','Traverse','Colorado','Tahoe','Suburban'],
+  'Nissan':     ['Altima','Sentra','Rogue','Pathfinder','Frontier','Titan','Murano'],
   'Jeep':       ['Wrangler','Grand Cherokee','Cherokee','Compass','Gladiator'],
   'RAM':        ['1500','2500','3500','ProMaster'],
   'GMC':        ['Sierra','Yukon','Terrain','Acadia','Canyon'],
   'Dodge':      ['Charger','Challenger','Durango','Grand Caravan'],
   'Hyundai':    ['Elantra','Sonata','Tucson','Santa Fe','Palisade','Kona'],
-  'Kia':        ['Optima','K5','Sorento','Sportage','Soul','Telluride','Forte'],
+  'Kia':        ['K5','Sorento','Sportage','Soul','Telluride','Forte'],
   'Subaru':     ['Outback','Forester','Impreza','Crosstrek','Ascent','Legacy'],
   'Volkswagen': ['Jetta','Passat','Tiguan','Atlas','Golf'],
-  'BMW':        ['3 Series','5 Series','X3','X5','7 Series','X1'],
-  'Mercedes':   ['C-Class','E-Class','GLC','GLE','GLS','Sprinter'],
+  'BMW':        ['3 Series','5 Series','X3','X5','X1'],
+  'Mercedes':   ['C-Class','E-Class','GLC','GLE','Sprinter'],
   'Audi':       ['A4','A6','Q5','Q7','Q3'],
   'Lexus':      ['ES','RX','IS','GX','NX'],
-  'Volvo':      ['XC60','XC90','S60','V60'],
   'Tesla':      ['Model 3','Model Y','Model S','Model X','Cybertruck'],
   'Mazda':      ['CX-5','CX-9','Mazda3','Mazda6'],
-  'Acura':      ['MDX','RDX','TLX'],
-  'Infiniti':   ['QX50','QX60','Q50'],
-  'Cadillac':   ['Escalade','XT5','CT5'],
-  'Lincoln':    ['Navigator','Nautilus','Corsair'],
+  'Subaru':     ['Outback','Forester','Impreza','Crosstrek'],
   'Other':      [],
 };
 
-const COLORS = ['White','Black','Silver','Gray','Red','Blue','Green','Yellow','Orange','Brown','Beige','Purple','Gold','Maroon','Navy','Teal','Other'];
-
-const STATES = ['MA','RI','NY','CT','NH','VT','ME','NJ','PA','FL','CA','TX','Other'];
-
+const COLORS  = ['White','Black','Silver','Gray','Red','Blue','Green','Yellow','Orange','Brown','Beige','Purple','Gold','Maroon','Navy','Other'];
+const STATES  = ['MA','RI','NY','CT','NH','VT','ME','NJ','PA','FL','CA','TX','Other'];
 const HOSPITALS = [
-  'Lahey Clinic',
+  'Lahey Clinic (Trauma I)',
   'Newton-Wellesley',
   'Mount Auburn',
   'Beth Israel Deaconess',
   'Mass General',
   'Boston Medical Center',
   'Tufts Medical',
-  'Brigham & Women\'s',
+  "Brigham & Women's",
   'Cambridge Hospital',
   'Other',
 ];
-
 const SEVERITY = [
   { value: 'minor',    label: 'Minor',    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
   { value: 'moderate', label: 'Moderate', color: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
@@ -57,16 +49,28 @@ const SEVERITY = [
   { value: 'deceased', label: 'Deceased', color: 'text-slate-400 bg-slate-500/10 border-slate-500/30' },
 ];
 
-const DEFAULT_STATE = { vehicles: [], patients: [] };
-let vid = 1, pid = 1;
+let nextVid = 1;
+let nextPid = 1;
 
-const emptyVehicle = () => ({ id: vid++, state: 'MA', plate: '', vin: '', year: '', make: '', model: '', color: '', insurance: '' });
-const emptyPatient = () => ({ id: pid++, severity: 'minor', sex: '', dob: '', hospital: '', notes: '' });
+const emptyVehicle = () => ({
+  id: nextVid++,
+  state: 'MA', plate: '', vin: '', year: '', make: '', model: '', color: '', insurance: '',
+  occupants: '',
+  expanded: true,
+});
+
+const emptyPatient = (vehicleId) => ({
+  id: nextPid++,
+  vehicleId,
+  name: '', severity: 'minor', sex: '', dob: '', hospital: '', notes: '',
+});
+
+const DEFAULT = { vehicles: [], patients: [] };
 
 export default function MVAPanel({ incidentId }) {
-  const [data, setData] = useState(DEFAULT_STATE);
+  const [data, setData]   = useState(DEFAULT);
   const [photos, setPhotos] = useState([]);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved]  = useState(false);
   const cameraRef = useRef(null);
 
   useEffect(() => {
@@ -75,7 +79,7 @@ export default function MVAPanel({ incidentId }) {
     if (raw) { try { setData(JSON.parse(raw)); } catch {} }
   }, [incidentId]);
 
-  const save = (next) => {
+  const persist = (next) => {
     setData(next);
     if (incidentId) {
       localStorage.setItem(`mva_${incidentId}`, JSON.stringify(next));
@@ -84,46 +88,86 @@ export default function MVAPanel({ incidentId }) {
     }
   };
 
-  // Vehicle helpers
-  const addVehicle    = () => save({ ...data, vehicles: [...data.vehicles, emptyVehicle()] });
-  const removeVehicle = (id) => save({ ...data, vehicles: data.vehicles.filter(v => v.id !== id) });
-  const setVehicle    = (id, field, val) => save({ ...data, vehicles: data.vehicles.map(v => v.id === id ? { ...v, [field]: val, ...(field === 'make' ? { model: '' } : {}) } : v) });
+  // ── Vehicle ops ──────────────────────────────────────────────────────────────
+  const addVehicle = () => persist({ ...data, vehicles: [...data.vehicles, emptyVehicle()] });
 
-  // Patient helpers
-  const addPatient    = () => save({ ...data, patients: [...data.patients, emptyPatient()] });
-  const removePatient = (id) => save({ ...data, patients: data.patients.filter(p => p.id !== id) });
-  const setPatient    = (id, field, val) => save({ ...data, patients: data.patients.map(p => p.id === id ? { ...p, [field]: val } : p) });
+  const removeVehicle = (vid) => persist({
+    vehicles: data.vehicles.filter(v => v.id !== vid),
+    patients: data.patients.filter(p => p.vehicleId !== vid),
+  });
 
-  // Photos
+  const setVehicle = (vid, field, val) => persist({
+    ...data,
+    vehicles: data.vehicles.map(v =>
+      v.id !== vid ? v : { ...v, [field]: val, ...(field === 'make' ? { model: '' } : {}) }
+    ),
+  });
+
+  const toggleVehicle = (vid) => persist({
+    ...data,
+    vehicles: data.vehicles.map(v => v.id === vid ? { ...v, expanded: !v.expanded } : v),
+  });
+
+  // Create patient records for a vehicle based on occupant count
+  const createPatients = (vid) => {
+    const vehicle = data.vehicles.find(v => v.id === vid);
+    if (!vehicle) return;
+    const count = parseInt(vehicle.occupants) || 0;
+    if (count < 1) return;
+    // Remove existing patients for this vehicle and recreate
+    const existing = data.patients.filter(p => p.vehicleId !== vid);
+    const newPatients = Array.from({ length: count }, () => emptyPatient(vid));
+    persist({ ...data, patients: [...existing, ...newPatients] });
+  };
+
+  // ── Patient ops ──────────────────────────────────────────────────────────────
+  const setPatient = (pid, field, val) => persist({
+    ...data,
+    patients: data.patients.map(p => p.id === pid ? { ...p, [field]: val } : p),
+  });
+
+  const removePatient = (pid) => persist({
+    ...data,
+    patients: data.patients.filter(p => p.id !== pid),
+  });
+
+  const addUnassignedPatient = () => persist({
+    ...data,
+    patients: [...data.patients, emptyPatient(null)],
+  });
+
+  // ── Photos ────────────────────────────────────────────────────────────────────
   const handleCamera = (e) => {
-    Array.from(e.target.files).forEach(f => {
-      setPhotos(prev => [...prev, { id: Date.now() + Math.random(), url: URL.createObjectURL(f) }]);
-    });
+    Array.from(e.target.files).forEach(f =>
+      setPhotos(prev => [...prev, { id: Date.now() + Math.random(), url: URL.createObjectURL(f) }])
+    );
     e.target.value = '';
   };
 
+  // ── Summary counts ────────────────────────────────────────────────────────────
+  const totalPatients = data.patients.length;
   const critCount = data.patients.filter(p => p.severity === 'critical').length;
 
   return (
-    <div className="space-y-6 p-4 max-w-4xl mx-auto">
+    <div className="space-y-6 p-4 max-w-5xl mx-auto">
 
-      {/* Summary bar */}
+      {/* Summary */}
       <div className="flex items-center justify-between">
         <div className="flex gap-4 text-sm font-mono">
           <span className="text-muted-foreground">
             <span className="text-foreground font-bold">{data.vehicles.length}</span> vehicle{data.vehicles.length !== 1 ? 's' : ''}
           </span>
           <span className="text-muted-foreground">
-            <span className="text-foreground font-bold">{data.patients.length}</span> patient{data.patients.length !== 1 ? 's' : ''}
+            <span className="text-foreground font-bold">{totalPatients}</span> patient{totalPatients !== 1 ? 's' : ''}
             {critCount > 0 && <span className="text-red-400 ml-1">· {critCount} critical</span>}
           </span>
         </div>
         {saved && <span className="text-xs font-mono text-emerald-400">✓ Auto-saved</span>}
       </div>
 
-      {/* ── VEHICLES ── */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
+      {/* ── VEHICLES + LINKED PATIENTS ──────────────────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="flex items-center justify-between">
           <h2 className="text-sm font-mono font-bold flex items-center gap-2">
             <Car className="w-4 h-4 text-primary" /> Vehicles
           </h2>
@@ -136,219 +180,259 @@ export default function MVAPanel({ incidentId }) {
           <p className="text-muted-foreground text-xs italic py-2">No vehicles recorded — tap Add Vehicle</p>
         )}
 
-        <div className="space-y-4">
-          {data.vehicles.map((v, idx) => (
-            <div key={v.id} className="bg-secondary/30 border border-border/50 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-mono font-bold text-foreground">Vehicle {idx + 1}</span>
-                <button onClick={() => removeVehicle(v.id)} className="text-muted-foreground hover:text-red-400 transition-colors p-1">
+        {data.vehicles.map((v, vIdx) => {
+          const vPatients = data.patients.filter(p => p.vehicleId === v.id);
+          return (
+            <div key={v.id} className="border border-border/60 rounded-xl overflow-hidden">
+
+              {/* Vehicle header */}
+              <div className="bg-secondary/40 px-4 py-3 flex items-center gap-3">
+                <button onClick={() => toggleVehicle(v.id)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                  {v.expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <span className="font-mono font-bold text-sm text-foreground">Vehicle {vIdx + 1}</span>
+                  {(v.make || v.plate) && (
+                    <span className="text-xs font-mono text-muted-foreground truncate">
+                      {[v.state && v.plate ? `${v.state} ${v.plate}` : v.plate, v.color, v.year, v.make, v.model].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
+                  {vPatients.length > 0 && (
+                    <span className="ml-auto shrink-0 text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      {vPatients.length} patient{vPatients.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </button>
+                <button onClick={() => removeVehicle(v.id)} className="text-muted-foreground hover:text-red-400 transition-colors shrink-0 p-1">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Plate with state */}
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">State</label>
-                  <Select value={v.state} onValueChange={val => setVehicle(v.id, 'state', val)}>
-                    <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Plate Number</label>
-                  <Input
-                    value={v.plate}
-                    onChange={e => setVehicle(v.id, 'plate', e.target.value.toUpperCase())}
-                    placeholder={v.state !== 'Other' ? `${v.state} plate…` : 'Enter plate number'}
-                    className="h-9 text-sm font-mono bg-secondary/60 mt-1"
-                  />
-                </div>
-              </div>
+              {v.expanded && (
+                <div className="p-4 space-y-3 bg-card/30">
+                  {/* Plate + State */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">State</label>
+                      <Select value={v.state} onValueChange={val => setVehicle(v.id, 'state', val)}>
+                        <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>{STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Plate Number</label>
+                      <Input value={v.plate} onChange={e => setVehicle(v.id, 'plate', e.target.value.toUpperCase())}
+                        placeholder={v.state !== 'Other' ? `${v.state} plate…` : 'Plate number'}
+                        className="h-9 text-sm font-mono bg-secondary/60 mt-1" />
+                    </div>
+                  </div>
 
-              {/* Year / Make / Model / Color */}
-              <div className="grid grid-cols-4 gap-2">
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Year</label>
-                  <Input
-                    value={v.year}
-                    onChange={e => setVehicle(v.id, 'year', e.target.value)}
-                    placeholder="2021"
-                    className="h-9 text-sm font-mono bg-secondary/60 mt-1"
-                    maxLength={4}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Make</label>
-                  <Select value={v.make} onValueChange={val => setVehicle(v.id, 'make', val)}>
-                    <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1">
-                      <SelectValue placeholder="Make…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(MAKES_MODELS).map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Model</label>
-                  {v.make && v.make !== 'Other' && MAKES_MODELS[v.make]?.length > 0 ? (
-                    <Select value={v.model} onValueChange={val => setVehicle(v.id, 'model', val)}>
-                      <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1">
-                        <SelectValue placeholder="Model…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MAKES_MODELS[v.make].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      value={v.model}
-                      onChange={e => setVehicle(v.id, 'model', e.target.value)}
-                      placeholder="Model…"
-                      className="h-9 text-sm font-mono bg-secondary/60 mt-1"
-                    />
-                  )}
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Color</label>
-                  <Select value={v.color} onValueChange={val => setVehicle(v.id, 'color', val)}>
-                    <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1">
-                      <SelectValue placeholder="Color…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COLORS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                  {/* Year / Make / Model / Color */}
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Year</label>
+                      <Input value={v.year} onChange={e => setVehicle(v.id, 'year', e.target.value)}
+                        placeholder="2022" className="h-9 text-sm font-mono bg-secondary/60 mt-1" maxLength={4} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Make</label>
+                      <Select value={v.make} onValueChange={val => setVehicle(v.id, 'make', val)}>
+                        <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1"><SelectValue placeholder="Make…" /></SelectTrigger>
+                        <SelectContent>{Object.keys(MAKES_MODELS).map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Model</label>
+                      {v.make && v.make !== 'Other' && MAKES_MODELS[v.make]?.length > 0 ? (
+                        <Select value={v.model} onValueChange={val => setVehicle(v.id, 'model', val)}>
+                          <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1"><SelectValue placeholder="Model…" /></SelectTrigger>
+                          <SelectContent>{MAKES_MODELS[v.make].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={v.model} onChange={e => setVehicle(v.id, 'model', e.target.value)}
+                          placeholder="Model…" className="h-9 text-sm font-mono bg-secondary/60 mt-1" />
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Color</label>
+                      <Select value={v.color} onValueChange={val => setVehicle(v.id, 'color', val)}>
+                        <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1"><SelectValue placeholder="Color…" /></SelectTrigger>
+                        <SelectContent>{COLORS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-              {/* VIN + Insurance */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">VIN</label>
-                  <Input
-                    value={v.vin}
-                    onChange={e => setVehicle(v.id, 'vin', e.target.value.toUpperCase())}
-                    placeholder="17-character VIN"
-                    className="h-9 text-sm font-mono bg-secondary/60 mt-1"
-                    maxLength={17}
-                  />
+                  {/* VIN + Insurance */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">VIN</label>
+                      <Input value={v.vin} onChange={e => setVehicle(v.id, 'vin', e.target.value.toUpperCase())}
+                        placeholder="17-character VIN" className="h-9 text-sm font-mono bg-secondary/60 mt-1" maxLength={17} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Insurance</label>
+                      <Input value={v.insurance} onChange={e => setVehicle(v.id, 'insurance', e.target.value)}
+                        placeholder="Company / Policy #" className="h-9 text-sm font-mono bg-secondary/60 mt-1" />
+                    </div>
+                  </div>
+
+                  {/* Occupant count → generate patients */}
+                  <div className="flex items-end gap-3 pt-1 border-t border-border/40 mt-2">
+                    <div className="w-32">
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono flex items-center gap-1">
+                        <Users className="w-3 h-3" /> Occupants
+                      </label>
+                      <Input
+                        type="number" min="1" max="20"
+                        value={v.occupants}
+                        onChange={e => setVehicle(v.id, 'occupants', e.target.value)}
+                        placeholder="0"
+                        className="h-9 text-sm font-mono bg-secondary/60 mt-1"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      className="h-9 gap-1.5 text-xs"
+                      disabled={!v.occupants || parseInt(v.occupants) < 1}
+                      onClick={() => createPatients(v.id)}
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      {vPatients.length > 0 ? 'Regenerate Patient Logs' : 'Create Patient Logs'}
+                    </Button>
+                    {vPatients.length > 0 && (
+                      <span className="text-xs font-mono text-muted-foreground">{vPatients.length} log{vPatients.length !== 1 ? 's' : ''} created</span>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Insurance</label>
-                  <Input
-                    value={v.insurance}
-                    onChange={e => setVehicle(v.id, 'insurance', e.target.value)}
-                    placeholder="Company / Policy #"
-                    className="h-9 text-sm font-mono bg-secondary/60 mt-1"
-                  />
+              )}
+
+              {/* Patient records for this vehicle */}
+              {vPatients.length > 0 && (
+                <div className="border-t border-border/40 divide-y divide-border/30">
+                  {vPatients.map((p, pIdx) => {
+                    const sev = SEVERITY.find(s => s.value === p.severity) || SEVERITY[0];
+                    return (
+                      <div key={p.id} className="px-4 py-3 bg-card/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-mono font-bold text-muted-foreground">
+                            V{vIdx + 1} · Patient {pIdx + 1}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${sev.color}`}>
+                            {sev.label}
+                          </span>
+                          <button onClick={() => removePatient(p.id)} className="ml-auto text-muted-foreground hover:text-red-400 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Name + Sex + DOB */}
+                        <div className="grid grid-cols-3 gap-2 mb-2">
+                          <div>
+                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">Full Name</label>
+                            <Input value={p.name} onChange={e => setPatient(p.id, 'name', e.target.value)}
+                              placeholder="Last, First" className="h-8 text-xs font-mono bg-secondary/60 mt-0.5" />
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">Sex</label>
+                            <Select value={p.sex} onValueChange={v => setPatient(p.id, 'sex', v)}>
+                              <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60 mt-0.5"><SelectValue placeholder="Select…" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                                <SelectItem value="unknown">Unknown</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">
+                              Date of Birth{p.dob ? ` · Age ${Math.floor((Date.now() - new Date(p.dob)) / 31557600000)}` : ''}
+                            </label>
+                            <Input type="date" value={p.dob} onChange={e => setPatient(p.id, 'dob', e.target.value)}
+                              className="h-8 text-xs font-mono bg-secondary/60 mt-0.5" />
+                          </div>
+                        </div>
+
+                        {/* Severity + Hospital + Notes */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">Severity</label>
+                            <Select value={p.severity} onValueChange={v => setPatient(p.id, 'severity', v)}>
+                              <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60 mt-0.5"><SelectValue /></SelectTrigger>
+                              <SelectContent>{SEVERITY.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono flex items-center gap-1">
+                              <Ambulance className="w-2.5 h-2.5" /> Hospital
+                            </label>
+                            <Select value={p.hospital} onValueChange={v => setPatient(p.id, 'hospital', v)}>
+                              <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60 mt-0.5"><SelectValue placeholder="Select…" /></SelectTrigger>
+                              <SelectContent>{HOSPITALS.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">Notes</label>
+                            <Input value={p.notes} onChange={e => setPatient(p.id, 'notes', e.target.value)}
+                              placeholder="Injuries, restrained…" className="h-8 text-xs font-mono bg-secondary/60 mt-0.5" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+              )}
             </div>
-          ))}
-        </div>
+          );
+        })}
       </section>
 
-      {/* ── PATIENTS ── */}
+      {/* ── UNASSIGNED PATIENTS ── */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-mono font-bold flex items-center gap-2">
-            <User className="w-4 h-4 text-primary" /> Patients
+          <h2 className="text-sm font-mono font-bold flex items-center gap-2 text-muted-foreground">
+            <User className="w-4 h-4" /> Additional Patients
           </h2>
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addPatient}>
-            <Plus className="w-3 h-3" /> Add Patient
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addUnassignedPatient}>
+            <Plus className="w-3 h-3" /> Add
           </Button>
         </div>
-
-        {data.patients.length === 0 && (
-          <p className="text-muted-foreground text-xs italic py-2">No patients recorded — tap Add Patient</p>
-        )}
-
-        <div className="space-y-4">
-          {data.patients.map((p, idx) => {
-            const sev = SEVERITY.find(s => s.value === p.severity) || SEVERITY[0];
-            return (
-              <div key={p.id} className="bg-secondary/30 border border-border/50 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-mono font-bold text-foreground">Patient {idx + 1}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${sev.color}`}>
-                      {sev.label.toUpperCase()}
-                    </span>
-                  </div>
-                  <button onClick={() => removePatient(p.id)} className="text-muted-foreground hover:text-red-400 transition-colors p-1">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Severity</label>
-                    <Select value={p.severity} onValueChange={v => setPatient(p.id, 'severity', v)}>
-                      <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SEVERITY.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Sex</label>
-                    <Select value={p.sex} onValueChange={v => setPatient(p.id, 'sex', v)}>
-                      <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1">
-                        <SelectValue placeholder="Select…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="unknown">Unknown</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Date of Birth</label>
-                    <Input
-                      type="date"
-                      value={p.dob}
-                      onChange={e => setPatient(p.id, 'dob', e.target.value)}
-                      className="h-9 text-sm font-mono bg-secondary/60 mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono flex items-center gap-1">
-                      <Ambulance className="w-3 h-3" /> Hospital
-                    </label>
-                    <Select value={p.hospital} onValueChange={v => setPatient(p.id, 'hospital', v)}>
-                      <SelectTrigger className="h-9 text-sm font-mono bg-secondary/60 mt-1">
-                        <SelectValue placeholder="Select hospital…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HOSPITALS.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Notes</label>
-                    <Input
-                      value={p.notes}
-                      onChange={e => setPatient(p.id, 'notes', e.target.value)}
-                      placeholder="Restrained, airbag deployed…"
-                      className="h-9 text-sm font-mono bg-secondary/60 mt-1"
-                    />
-                  </div>
+        {data.patients.filter(p => !p.vehicleId).map((p, idx) => {
+          const sev = SEVERITY.find(s => s.value === p.severity) || SEVERITY[0];
+          return (
+            <div key={p.id} className="bg-secondary/30 border border-border/50 rounded-xl p-3 mb-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold">Patient</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${sev.color}`}>{sev.label}</span>
+                <button onClick={() => removePatient(p.id)} className="ml-auto text-muted-foreground hover:text-red-400">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Input value={p.name} onChange={e => setPatient(p.id, 'name', e.target.value)} placeholder="Last, First" className="h-8 text-xs font-mono bg-secondary/60" />
+                <Select value={p.sex} onValueChange={v => setPatient(p.id, 'sex', v)}>
+                  <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue placeholder="Sex…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="relative">
+                  <Input type="date" value={p.dob} onChange={e => setPatient(p.id, 'dob', e.target.value)} className="h-8 text-xs font-mono bg-secondary/60" />
+                  {p.dob && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-primary pointer-events-none">Age {Math.floor((Date.now() - new Date(p.dob)) / 31557600000)}</span>}
                 </div>
               </div>
-            );
-          })}
-        </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={p.severity} onValueChange={v => setPatient(p.id, 'severity', v)}>
+                  <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue /></SelectTrigger>
+                  <SelectContent>{SEVERITY.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <Select value={p.hospital} onValueChange={v => setPatient(p.id, 'hospital', v)}>
+                  <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue placeholder="Hospital…" /></SelectTrigger>
+                  <SelectContent>{HOSPITALS.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       {/* ── SCENE PHOTOS ── */}
@@ -363,11 +447,7 @@ export default function MVAPanel({ incidentId }) {
           <input ref={cameraRef} type="file" accept="image/*" capture="environment"
             className="hidden" onChange={handleCamera} />
         </div>
-
-        {photos.length === 0 && (
-          <p className="text-muted-foreground text-xs italic py-2">No photos taken — tap Take Photo to capture scene</p>
-        )}
-
+        {photos.length === 0 && <p className="text-muted-foreground text-xs italic py-2">No photos yet</p>}
         <div className="grid grid-cols-3 gap-2">
           {photos.map(photo => (
             <div key={photo.id} className="relative rounded-xl overflow-hidden border border-border/40 aspect-square">
