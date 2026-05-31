@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users, Mic, MicOff, Loader2, ExternalLink } from 'lucide-react';
+import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users, Mic, MicOff, Loader2, ExternalLink, Search, Phone, MapPin } from 'lucide-react';
 
 // ── Insurance company website lookup ─────────────────────────────────────────
 const INSURANCE_SITES = {
@@ -32,6 +32,31 @@ const INSURANCE_SITES = {
   'metropolitan':     'metlife.com',
   'hartford':         'thehartford.com',
 };
+
+async function lookupInsurance(company, city) {
+  const resp = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: `What is the claims phone number and address for ${company} insurance${city ? ` in ${city}` : ''}?
+
+Return ONLY valid JSON:
+{"phone": "claims phone number or main number", "address": "street address, city, state zip or null if unknown"}
+
+Use null if you don't have reliable information. For major insurers (Geico, State Farm, Progressive, Allstate, etc.) return their national claims number.`
+      }]
+    })
+  });
+  const data = await resp.json();
+  const text = (data.content || []).map(b => b.text || '').join('');
+  const match = text.replace(/```json/g,'').replace(/```/g,'').trim().match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('No JSON');
+  return JSON.parse(match[0]);
+}
 
 function getInsuranceLink(company, city) {
   if (!company || !city) return null;
@@ -218,10 +243,97 @@ let nextPid = 1;
 const emptyVehicle = () => ({
   id: nextVid++,
   state: 'MA', plate: '', vin: '', year: '', make: '', model: '', color: '',
-  insuranceCompany: '', insuranceCity: '',
+  insuranceCompany: '', insuranceCity: '', insurancePhone: '', insuranceAddress: '',
   occupants: '',
   expanded: true,
 });
+
+// ── Insurance lookup section ──────────────────────────────────────────────────
+function InsuranceSection({ v, setVehicle }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+
+  const lookup = async () => {
+    if (!v.insuranceCompany) return;
+    setLoading(true);
+    setError('');
+    try {
+      const result = await lookupInsurance(v.insuranceCompany, v.insuranceCity);
+      if (result.phone)   setVehicle(v.id, 'insurancePhone',   result.phone);
+      if (result.address) setVehicle(v.id, 'insuranceAddress', result.address);
+    } catch {
+      setError('Could not look up — enter manually');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const webLink = getInsuranceLink(v.insuranceCompany, v.insuranceCity);
+
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Insurance</label>
+
+      {/* Company + City */}
+      <div className="grid grid-cols-2 gap-2">
+        <Input value={v.insuranceCompany}
+          onChange={e => setVehicle(v.id, 'insuranceCompany', e.target.value)}
+          placeholder="Company name"
+          className="h-9 text-sm font-mono bg-secondary/60" />
+        <Input value={v.insuranceCity}
+          onChange={e => setVehicle(v.id, 'insuranceCity', e.target.value)}
+          placeholder="Agent city"
+          className="h-9 text-sm font-mono bg-secondary/60" />
+      </div>
+
+      {/* Action row */}
+      {v.insuranceCompany && (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5"
+            onClick={lookup} disabled={loading}>
+            {loading
+              ? <><Loader2 className="w-3 h-3 animate-spin" /> Looking up…</>
+              : <><Search className="w-3 h-3" /> Look Up Phone &amp; Address</>
+            }
+          </Button>
+          {webLink && (
+            <a href={webLink} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-mono text-primary hover:text-primary/80 transition-colors">
+              <ExternalLink className="w-3 h-3" /> Website
+            </a>
+          )}
+          {error && <span className="text-xs text-red-400 font-mono">{error}</span>}
+        </div>
+      )}
+
+      {/* Phone */}
+      {(v.insurancePhone !== undefined) && (
+        <div className="flex items-center gap-2">
+          <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <Input value={v.insurancePhone}
+            onChange={e => setVehicle(v.id, 'insurancePhone', e.target.value)}
+            placeholder="Claims phone number"
+            className="h-8 text-sm font-mono bg-secondary/60 flex-1" />
+          {v.insurancePhone && (
+            <a href={`tel:${v.insurancePhone.replace(/\D/g,'')}`}
+              className="text-xs font-mono text-primary hover:text-primary/80">Call</a>
+          )}
+        </div>
+      )}
+
+      {/* Address */}
+      {(v.insuranceAddress !== undefined) && (
+        <div className="flex items-start gap-2">
+          <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-2" />
+          <Input value={v.insuranceAddress}
+            onChange={e => setVehicle(v.id, 'insuranceAddress', e.target.value)}
+            placeholder="Office address"
+            className="h-8 text-sm font-mono bg-secondary/60 flex-1" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Patient row with dictation support ────────────────────────────────────────
 function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
@@ -551,31 +663,7 @@ export default function MVAPanel({ incidentId }) {
                   </div>
 
                   {/* Insurance */}
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Insurance</label>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <Input value={v.insuranceCompany}
-                        onChange={e => setVehicle(v.id, 'insuranceCompany', e.target.value)}
-                        placeholder="Company name"
-                        className="h-9 text-sm font-mono bg-secondary/60" />
-                      <Input value={v.insuranceCity}
-                        onChange={e => setVehicle(v.id, 'insuranceCity', e.target.value)}
-                        placeholder="Agent city"
-                        className="h-9 text-sm font-mono bg-secondary/60" />
-                    </div>
-                    {(() => {
-                      const link = getInsuranceLink(v.insuranceCompany, v.insuranceCity);
-                      return link ? (
-                        <a href={link} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-mono text-primary hover:text-primary/80 transition-colors">
-                          <ExternalLink className="w-3 h-3" />
-                          {INSURANCE_SITES[v.insuranceCompany?.toLowerCase().trim()]
-                            ? `Open ${v.insuranceCompany}`
-                            : `Search "${v.insuranceCompany} ${v.insuranceCity}"`}
-                        </a>
-                      ) : null;
-                    })()}
-                  </div>
+                  <InsuranceSection v={v} setVehicle={setVehicle} />
 
                   {/* Occupant count → generate patients */}
                   <div className="flex items-end gap-3 pt-1 border-t border-border/40 mt-2">
