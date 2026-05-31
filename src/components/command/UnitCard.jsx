@@ -209,6 +209,20 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
           </div>
         )}
 
+        {/* Split toggle — rescue only, sits in flow so nothing overlaps */}
+        {isRescue && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsSplit(s => !s); }}
+            className={`flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition-colors mt-0.5
+              ${isSplit
+                ? 'bg-blue-500/20 text-blue-400 border-blue-500/40 hover:bg-blue-500/30'
+                : 'bg-transparent text-muted-foreground border-border/30 hover:text-foreground opacity-0 group-hover:opacity-100'
+              }`}
+          >
+            <Split className="w-2.5 h-2.5" /> {isSplit ? 'SPLIT ▲' : 'SPLIT'}
+          </button>
+        )}
+
         {/* Split teams view — rescue units only */}
         {isRescue && isSplit && (
           <div className="mt-1 pt-1 border-t border-border/40 pb-1 space-y-1.5">
@@ -283,21 +297,6 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
         )}
       </div>
 
-      {/* Split toggle button — rescue units only, bottom right */}
-      {isRescue && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setIsSplit(s => !s); }}
-          title={isSplit ? 'Merge teams' : 'Split into 2 teams'}
-          className={`absolute bottom-1 right-1 flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-colors
-            ${isSplit
-              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30'
-              : 'bg-secondary/60 text-muted-foreground border border-border/40 hover:text-foreground opacity-0 group-hover:opacity-100'
-            }`}
-        >
-          <Split className="w-2.5 h-2.5" />
-          {isSplit ? 'SPLIT' : 'SPLIT'}
-        </button>
-      )}
     </div>
   );
 }
