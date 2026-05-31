@@ -117,7 +117,7 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
       className={`
         relative rounded-lg cursor-grab active:cursor-grabbing select-none overflow-hidden
         border transition-all duration-150
-        hover:shadow-lg hover:shadow-black/20 group ${unit.notes ? 'min-h-[68px]' : 'h-[68px]'}
+        hover:shadow-lg hover:shadow-black/20 group ${(unit.notes || isRescue) ? 'min-h-[68px]' : 'h-[68px]'}
         ${cfg.bg}
         ${isMayday     ? 'animate-pulse-red border-red-500/60 ring-1 ring-red-500/60' :
           rehabWarning  ? 'animate-pulse border-violet-400/80 ring-1 ring-violet-400/50' :
