@@ -41,46 +41,92 @@ Return ONLY valid JSON. Use null for any field not mentioned.
   return JSON.parse(match[0]);
 }
 
-// Hook: dictate patient info with mic → AI parse → returns parsed fields
+// Hook: dictate patient info — keeps mic open until user taps Stop
 function usePatientDictation(onParsed, hospitals) {
-  const [listening, setListening] = useState(false);
+  const [listening, setListening]   = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState('');
-  const recRef = useRef(null);
+  const [interim, setInterim]       = useState('');
+  const [error, setError]           = useState('');
+  const recRef       = useRef(null);
+  const transcriptRef = useRef('');  // accumulated final text
+  const manualStop   = useRef(false);
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  const boot = () => {
+    if (manualStop.current) return;
+    const rec = new SpeechRecognition();
+    rec.lang = 'en-US';
+    rec.interimResults = true;
+    rec.continuous = !isIOS;
+    rec.maxAlternatives = 1;
+
+    rec.onstart  = () => setListening(true);
+
+    rec.onresult = (e) => {
+      let final = '', inter = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t;
+        else inter += t;
+      }
+      if (final) {
+        transcriptRef.current += (transcriptRef.current ? ' ' : '') + final;
+        setInterim('');
+      } else {
+        setInterim(inter);
+      }
+    };
+
+    rec.onerror = (e) => {
+      if (e.error === 'no-speech') return; // normal pause, restart
+      setError(e.error === 'not-allowed'
+        ? 'Mic blocked — allow access in browser settings'
+        : `Mic error: ${e.error}`);
+      setListening(false);
+      manualStop.current = true;
+    };
+
+    rec.onend = () => {
+      setInterim('');
+      if (!manualStop.current) {
+        // Browser cut off on its own (iOS/pause) — restart silently
+        setTimeout(boot, 150);
+      }
+    };
+
+    recRef.current = rec;
+    try { rec.start(); } catch { /* already started */ }
+  };
 
   const start = () => {
     if (!SpeechRecognition) { setError('Speech not supported in this browser'); return; }
     setError('');
-    const rec = new SpeechRecognition();
-    rec.lang = 'en-US';
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-    rec.onstart = () => setListening(true);
-    rec.onresult = async (e) => {
-      const transcript = e.results[0][0].transcript;
-      setListening(false);
-      setProcessing(true);
-      try {
-        const parsed = await parsePatientSpeech(transcript, hospitals);
-        onParsed(parsed);
-      } catch {
-        setError('Could not parse — try again');
-      } finally {
-        setProcessing(false);
-      }
-    };
-    rec.onerror = (e) => {
-      setError(e.error === 'not-allowed' ? 'Mic blocked — allow access in browser settings' : `Mic error: ${e.error}`);
-      setListening(false);
-    };
-    rec.onend = () => setListening(false);
-    recRef.current = rec;
-    rec.start();
+    transcriptRef.current = '';
+    manualStop.current = false;
+    boot();
   };
 
-  const stop = () => { recRef.current?.stop(); setListening(false); };
+  const stop = async () => {
+    manualStop.current = true;
+    recRef.current?.stop();
+    setListening(false);
+    setInterim('');
+    const transcript = transcriptRef.current.trim();
+    if (!transcript) return;
+    setProcessing(true);
+    try {
+      const parsed = await parsePatientSpeech(transcript, hospitals);
+      onParsed(parsed);
+    } catch {
+      setError('Could not parse — try again');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
-  return { listening, processing, error, start, stop };
+  return { listening, processing, interim, error, start, stop };
 }
 
 const MAKES_MODELS = {
@@ -140,7 +186,7 @@ const emptyVehicle = () => ({
 
 // ── Patient row with dictation support ────────────────────────────────────────
 function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
-  const { listening, processing, error, start, stop } = usePatientDictation((parsed) => {
+  const { listening, processing, interim, error, start, stop } = usePatientDictation((parsed) => {
     if (parsed.name     !== null) onUpdate('name',     parsed.name);
     if (parsed.sex      !== null) onUpdate('sex',      parsed.sex);
     if (parsed.dob      !== null) onUpdate('dob',      parsed.dob);
@@ -204,7 +250,12 @@ function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
         </button>
       </div>
       {error && <p className="text-[10px] text-red-400 font-mono mb-1">{error}</p>}
-      {listening && <p className="text-[10px] text-green-400 font-mono mb-1 animate-pulse">Listening… e.g. "John Smith male born June 3 1990 moderate Lahey"</p>}
+      {listening && (
+        <p className="text-[10px] font-mono mb-1">
+          <span className="text-green-400 animate-pulse">● Listening — tap Stop when done &nbsp;</span>
+          {interim && <span className="text-muted-foreground italic">{interim}</span>}
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-2 mb-2">
         <Input value={p.name} onChange={e => onUpdate('name', e.target.value)}
