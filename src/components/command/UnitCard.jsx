@@ -209,14 +209,14 @@ export default function UnitCard({ unit, onEdit, onClearAssignment, deptPrefix =
           </div>
         )}
 
-        {/* Split toggle — rescue only, sits in flow so nothing overlaps */}
+        {/* Split toggle — rescue only */}
         {isRescue && (
           <button
             onClick={(e) => { e.stopPropagation(); setIsSplit(s => !s); }}
             className={`flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition-colors mt-0.5
               ${isSplit
                 ? 'bg-blue-500/20 text-blue-400 border-blue-500/40 hover:bg-blue-500/30'
-                : 'bg-transparent text-muted-foreground border-border/30 hover:text-foreground opacity-0 group-hover:opacity-100'
+                : 'bg-secondary/40 text-muted-foreground border-border/40 hover:text-foreground hover:border-border'
               }`}
           >
             <Split className="w-2.5 h-2.5" /> {isSplit ? 'SPLIT ▲' : 'SPLIT'}
