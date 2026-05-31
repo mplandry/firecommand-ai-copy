@@ -167,13 +167,14 @@ Return ONLY valid JSON. Use null for any field not mentioned.
 
 // Hook: dictate patient info — keeps mic open until user taps Stop
 function usePatientDictation(onParsed, hospitals) {
-  const [listening, setListening]   = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [interim, setInterim]       = useState('');
-  const [error, setError]           = useState('');
-  const recRef       = useRef(null);
-  const transcriptRef = useRef('');  // accumulated final text
-  const manualStop   = useRef(false);
+  const [listening, setListening]     = useState(false);
+  const [processing, setProcessing]   = useState(false);
+  const [interim, setInterim]         = useState('');
+  const [accumulated, setAccumulated] = useState('');
+  const [error, setError]             = useState('');
+  const recRef        = useRef(null);
+  const transcriptRef = useRef('');
+  const manualStop    = useRef(false);
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -186,7 +187,7 @@ function usePatientDictation(onParsed, hospitals) {
     rec.continuous = !isIOS;
     rec.maxAlternatives = 1;
 
-    rec.onstart  = () => setListening(true);
+    rec.onstart = () => setListening(true);
 
     rec.onresult = (e) => {
       let final = '', inter = '';
@@ -197,6 +198,7 @@ function usePatientDictation(onParsed, hospitals) {
       }
       if (final) {
         transcriptRef.current += (transcriptRef.current ? ' ' : '') + final;
+        setAccumulated(transcriptRef.current);
         setInterim('');
       } else {
         setInterim(inter);
@@ -204,7 +206,7 @@ function usePatientDictation(onParsed, hospitals) {
     };
 
     rec.onerror = (e) => {
-      if (e.error === 'no-speech') return; // normal pause, restart
+      if (e.error === 'no-speech') return;
       setError(e.error === 'not-allowed'
         ? 'Mic blocked — allow access in browser settings'
         : `Mic error: ${e.error}`);
@@ -215,8 +217,7 @@ function usePatientDictation(onParsed, hospitals) {
     rec.onend = () => {
       setInterim('');
       if (!manualStop.current) {
-        // Browser cut off on its own (iOS/pause) — restart silently
-        setTimeout(boot, 150);
+        setTimeout(boot, 50); // fast restart to minimize gap
       }
     };
 
@@ -227,6 +228,7 @@ function usePatientDictation(onParsed, hospitals) {
   const start = () => {
     if (!SpeechRecognition) { setError('Speech not supported in this browser'); return; }
     setError('');
+    setAccumulated('');
     transcriptRef.current = '';
     manualStop.current = false;
     boot();
@@ -247,10 +249,11 @@ function usePatientDictation(onParsed, hospitals) {
       setError('Could not parse — try again');
     } finally {
       setProcessing(false);
+      setAccumulated('');
     }
   };
 
-  return { listening, processing, interim, error, start, stop };
+  return { listening, processing, interim, accumulated, error, start, stop };
 }
 
 const MAKES_MODELS = {
@@ -458,7 +461,7 @@ function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
     }
   };
 
-  const { listening, processing, interim, error, start, stop } = usePatientDictation((parsed) => {
+  const { listening, processing, interim, accumulated, error, start, stop } = usePatientDictation((parsed) => {
     if (parsed.name     !== null) onUpdate('name',     parsed.name);
     if (parsed.sex      !== null) onUpdate('sex',      parsed.sex);
     if (parsed.dob      !== null) onUpdate('dob',      parsed.dob);
@@ -538,10 +541,13 @@ function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
       </div>
       {(error || scanError) && <p className="text-[10px] text-red-400 font-mono mb-1">{error || scanError}</p>}
       {listening && (
-        <div className="text-[10px] font-mono mb-1 space-y-0.5">
+        <div className="text-[10px] font-mono mb-2 space-y-1 bg-green-500/5 border border-green-500/20 rounded-lg p-2">
           <p><span className="text-green-400 animate-pulse">● Listening — tap Stop when done</span></p>
           <p className="text-muted-foreground">Say: <span className="text-foreground">first name · last name · male or female · born [date] · minor/moderate/critical · hospital</span></p>
-          {interim && <p className="text-primary italic">{interim}</p>}
+          {accumulated && (
+            <p className="text-foreground font-medium leading-snug">{accumulated}<span className="text-primary italic"> {interim}</span></p>
+          )}
+          {!accumulated && interim && <p className="text-primary italic">{interim}</p>}
         </div>
       )}
 
