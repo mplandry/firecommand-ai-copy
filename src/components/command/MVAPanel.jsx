@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car, Plus, Trash2, User, Hospital, Camera, X } from 'lucide-react';
+import { Car, Plus, Trash2, User, Ambulance, Camera, X } from 'lucide-react';
 
 const SEVERITY = [
   { value: 'minor',    label: 'Minor',    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
@@ -262,7 +262,7 @@ export default function MVAPanel({ incidentId }) {
                   </div>
                   <div>
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                      <Hospital className="w-2.5 h-2.5" /> Hospital
+                      <Ambulance className="w-2.5 h-2.5" /> Hospital
                     </label>
                     <Select value={p.hospital} onValueChange={v => updatePatient(p.id, 'hospital', v)}>
                       <SelectTrigger className="h-7 text-xs font-mono bg-secondary/60 mt-0.5">
