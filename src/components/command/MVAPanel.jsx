@@ -2,7 +2,44 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users, Mic, MicOff, Loader2 } from 'lucide-react';
+import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users, Mic, MicOff, Loader2, ExternalLink } from 'lucide-react';
+
+// ── Insurance company website lookup ─────────────────────────────────────────
+const INSURANCE_SITES = {
+  'geico':            'geico.com',
+  'progressive':      'progressive.com',
+  'state farm':       'statefarm.com',
+  'allstate':         'allstate.com',
+  'usaa':             'usaa.com',
+  'liberty mutual':   'libertymutual.com',
+  'nationwide':       'nationwide.com',
+  'travelers':        'travelers.com',
+  'farmers':          'farmers.com',
+  'american family':  'amfam.com',
+  'erie':             'erieinsurance.com',
+  'auto-owners':      'auto-owners.com',
+  'metlife':          'metlife.com',
+  'aaa':              'aaa.com',
+  'amica':            'amica.com',
+  'arbella':          'arbella.com',
+  'plymouth rock':    'plymouthrock.com',
+  'commerce':         'commerceinsurance.com',
+  'safety insurance': 'safetyinsurance.com',
+  'mapfre':           'mapfreinsurance.com',
+  'hanover':          'hanover.com',
+  'peerless':         'peerlessinsurance.com',
+  'bristol west':     'bristolwest.com',
+  'metropolitan':     'metlife.com',
+  'hartford':         'thehartford.com',
+};
+
+function getInsuranceLink(company, city) {
+  if (!company || !city) return null;
+  const key = company.toLowerCase().trim();
+  const site = Object.entries(INSURANCE_SITES).find(([k]) => key.includes(k));
+  if (site) return `https://www.${site[1]}`;
+  return `https://www.google.com/search?q=${encodeURIComponent(`${company} insurance ${city}`)}`;
+}
 
 const WORKER_URL = 'https://anthripic-proxy.mplandry77.workers.dev';
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -17,17 +54,18 @@ async function parsePatientSpeech(transcript, hospitals) {
       max_tokens: 400,
       messages: [{
         role: 'user',
-        content: `Parse this spoken patient information from an MVA scene into structured fields.
+        content: `You are parsing spoken patient information collected at an MVA scene by a firefighter.
+The speaker says the info in natural order — typically first name, last name, sex, date of birth, severity, hospital.
 
-Spoken: "${transcript}"
+Spoken transcript: "${transcript}"
 
-Extract:
-- name: full name in "First Last" format (e.g. "John Smith")
-- sex: "male", "female", or "unknown"
-- dob: date of birth in YYYY-MM-DD format (interpret spoken dates like "March 15 1985" → "1985-03-15")
-- severity: one of "minor", "moderate", "critical", "deceased"
-- hospital: best match from this list: ${hospitals.join(', ')}
-- notes: any other info (injuries, restrained, airbag, etc.)
+Rules:
+- name: First name then last name, "First Last" format. The first two words that sound like a person's name are likely first and last name.
+- sex: listen for "male", "female", "man", "woman", "guy", "lady", "he", "she" — return "male" or "female" or "unknown"
+- dob: spoken as "born [date]", "date of birth [date]", "DOB [date]", or just a date. Convert to YYYY-MM-DD. Examples: "March 15 1985"→"1985-03-15", "6/3/90"→"1990-06-03", "January 5th 1992"→"1992-01-05". For 2-digit years: 00-30 = 2000s, 31-99 = 1900s.
+- severity: "minor", "moderate", "critical", or "deceased". Also accept: "stable"→"minor", "serious"→"moderate", "critical"→"critical", "DOA"/"dead"→"deceased"
+- hospital: best match from: ${hospitals.join(', ')}. "Lahey" matches "Lahey Clinic", "Mass General" or "MGH" matches "Mass General", etc.
+- notes: anything else (injuries, restrained, airbag deployed, unconscious, etc.)
 
 Return ONLY valid JSON. Use null for any field not mentioned.
 {"name":null,"sex":null,"dob":null,"severity":null,"hospital":null,"notes":null}`
@@ -179,7 +217,8 @@ let nextPid = 1;
 
 const emptyVehicle = () => ({
   id: nextVid++,
-  state: 'MA', plate: '', vin: '', year: '', make: '', model: '', color: '', insurance: '',
+  state: 'MA', plate: '', vin: '', year: '', make: '', model: '', color: '',
+  insuranceCompany: '', insuranceCity: '',
   occupants: '',
   expanded: true,
 });
@@ -251,10 +290,11 @@ function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
       </div>
       {error && <p className="text-[10px] text-red-400 font-mono mb-1">{error}</p>}
       {listening && (
-        <p className="text-[10px] font-mono mb-1">
-          <span className="text-green-400 animate-pulse">● Listening — tap Stop when done &nbsp;</span>
-          {interim && <span className="text-muted-foreground italic">{interim}</span>}
-        </p>
+        <div className="text-[10px] font-mono mb-1 space-y-0.5">
+          <p><span className="text-green-400 animate-pulse">● Listening — tap Stop when done</span></p>
+          <p className="text-muted-foreground">Say: <span className="text-foreground">first name · last name · male or female · born [date] · minor/moderate/critical · hospital</span></p>
+          {interim && <p className="text-primary italic">{interim}</p>}
+        </div>
       )}
 
       <div className="grid grid-cols-3 gap-2 mb-2">
@@ -502,18 +542,38 @@ export default function MVAPanel({ incidentId }) {
                     </div>
                   </div>
 
-                  {/* VIN + Insurance */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">VIN</label>
-                      <Input value={v.vin} onChange={e => setVehicle(v.id, 'vin', e.target.value.toUpperCase())}
-                        placeholder="17-character VIN" className="h-9 text-sm font-mono bg-secondary/60 mt-1" maxLength={17} />
+                  {/* VIN */}
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">VIN</label>
+                    <Input value={v.vin} onChange={e => setVehicle(v.id, 'vin', e.target.value.toUpperCase())}
+                      placeholder="17-character VIN" className="h-9 text-sm font-mono bg-secondary/60 mt-1" maxLength={17} />
+                  </div>
+
+                  {/* Insurance */}
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Insurance</label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <Input value={v.insuranceCompany}
+                        onChange={e => setVehicle(v.id, 'insuranceCompany', e.target.value)}
+                        placeholder="Company name"
+                        className="h-9 text-sm font-mono bg-secondary/60" />
+                      <Input value={v.insuranceCity}
+                        onChange={e => setVehicle(v.id, 'insuranceCity', e.target.value)}
+                        placeholder="Agent city"
+                        className="h-9 text-sm font-mono bg-secondary/60" />
                     </div>
-                    <div>
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Insurance</label>
-                      <Input value={v.insurance} onChange={e => setVehicle(v.id, 'insurance', e.target.value)}
-                        placeholder="Company / Policy #" className="h-9 text-sm font-mono bg-secondary/60 mt-1" />
-                    </div>
+                    {(() => {
+                      const link = getInsuranceLink(v.insuranceCompany, v.insuranceCity);
+                      return link ? (
+                        <a href={link} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-mono text-primary hover:text-primary/80 transition-colors">
+                          <ExternalLink className="w-3 h-3" />
+                          {INSURANCE_SITES[v.insuranceCompany?.toLowerCase().trim()]
+                            ? `Open ${v.insuranceCompany}`
+                            : `Search "${v.insuranceCompany} ${v.insuranceCity}"`}
+                        </a>
+                      ) : null;
+                    })()}
                   </div>
 
                   {/* Occupant count → generate patients */}
