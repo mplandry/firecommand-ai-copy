@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, ShieldCheck, LayoutGrid, CheckCircle, Layers,
-  Map, Siren, Camera, FlaskConical, Ambulance,
+  Map, Siren, Camera, FlaskConical, Ambulance, Car,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ICAccountabilitySummary from '@/components/command/ICAccountabilitySummary';
@@ -17,6 +17,7 @@ import MaydayCommand from '@/components/command/MaydayCommand';
 import PhotoPanel from '@/components/command/PhotoPanel';
 import HazmatPanel from '@/components/command/HazmatPanel';
 import MCIPanel from '@/components/command/MCIPanel';
+import MVAPanel from '@/components/command/MVAPanel';
 import { useDepartment } from '@/hooks/useDepartment';
 
 const BASE_TABS = [
@@ -68,6 +69,8 @@ export default function IncidentPanel() {
       tabs.splice(tabs.length - 1, 0, { id: 'hazmat', label: 'HazMat', icon: FlaskConical });
     } else if (incidentType === 'mci') {
       tabs.splice(tabs.length - 1, 0, { id: 'mci', label: 'MCI', icon: Ambulance });
+    } else if (incidentType === 'mva') {
+      tabs.splice(tabs.length - 1, 0, { id: 'mva', label: 'MVA', icon: Car });
     }
     return tabs;
   }, [incidentType]);
@@ -239,6 +242,12 @@ export default function IncidentPanel() {
         {tab === 'mci' && (
           <div className="max-w-4xl mx-auto p-6">
             <MCIPanel units={units} isReadOnly={false} />
+          </div>
+        )}
+
+        {tab === 'mva' && (
+          <div className="max-w-2xl mx-auto">
+            <MVAPanel incidentId={incidentId} />
           </div>
         )}
 

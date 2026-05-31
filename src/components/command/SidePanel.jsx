@@ -9,6 +9,7 @@ import {
   Camera,
   FlaskConical,
   Ambulance,
+  Car,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMayday } from "@/contexts/MaydayContext";
@@ -48,6 +49,8 @@ export default function SidePanel({
       tabs.splice(tabs.length - 1, 0, { id: 'hazmat', label: 'HazMat', icon: FlaskConical });
     } else if (incidentType === 'mci') {
       tabs.splice(tabs.length - 1, 0, { id: 'mci', label: 'MCI', icon: Ambulance });
+    } else if (incidentType === 'mva') {
+      tabs.splice(tabs.length - 1, 0, { id: 'mva', label: 'MVA', icon: Car });
     }
     return tabs;
   }, [incidentType]);
