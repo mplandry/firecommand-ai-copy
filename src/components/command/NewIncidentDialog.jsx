@@ -158,21 +158,35 @@ export default function NewIncidentDialog({
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-xs font-mono">1st Alarm Units</Label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedUnits(allUnits.map(u => u.unit_name))}
-                  className="text-[10px] font-mono text-primary hover:text-primary/80 transition-colors"
-                >
-                  All
-                </button>
-                <span className="text-[10px] font-mono text-muted-foreground">/</span>
+              <div className="flex gap-1.5">
+                {[
+                  { label: 'Moody St',   station: 'MOODY ST.'   },
+                  { label: 'Central St', station: 'CENTRAL ST.' },
+                  { label: 'All',        station: null           },
+                ].map(({ label, station }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      const names = allUnits
+                        .filter(u => station ? (u.station === station || u.unit_type === 'deputy') : true)
+                        .map(u => u.unit_name);
+                      setSelectedUnits(prev => {
+                        const merged = [...new Set([...prev, ...names])];
+                        return merged;
+                      });
+                    }}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+                  >
+                    {label}
+                  </button>
+                ))}
                 <button
                   type="button"
                   onClick={() => setSelectedUnits([])}
-                  className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors ml-1"
                 >
-                  None
+                  Clear
                 </button>
               </div>
             </div>
