@@ -43,7 +43,7 @@ export default function CommandBoard() {
 
   // Auto-navigate to MVA panel when incident type is MVA
   React.useEffect(() => {
-    if (incident?.incident_type === 'mva') {
+    if (incident?.incident_type === 'vehicle_fire') {
       navigate(`/incident/${incidentId}/panel?tab=mva`);
     }
   }, [incident?.incident_type]);

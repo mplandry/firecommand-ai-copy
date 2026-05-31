@@ -49,7 +49,7 @@ export default function SidePanel({
       tabs.splice(tabs.length - 1, 0, { id: 'hazmat', label: 'HazMat', icon: FlaskConical });
     } else if (incidentType === 'mci') {
       tabs.splice(tabs.length - 1, 0, { id: 'mci', label: 'MCI', icon: Ambulance });
-    } else if (incidentType === 'mva') {
+    } else if (incidentType === 'vehicle_fire') {
       tabs.splice(tabs.length - 1, 0, { id: 'mva', label: 'MVA', icon: Car });
     }
     return tabs;

@@ -120,7 +120,7 @@ export default function NewIncidentDialog({
                   <SelectItem value="wildland_fire">Wildland Fire</SelectItem>
                   <SelectItem value="vehicle_fire">Vehicle Fire</SelectItem>
                   <SelectItem value="hazmat">HazMat</SelectItem>
-                  <SelectItem value="mva">MVA</SelectItem>
+                  <SelectItem value="vehicle_fire">MVA / Vehicle</SelectItem>
                   <SelectItem value="rescue">Rescue</SelectItem>
                   <SelectItem value="mci">MCI</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
