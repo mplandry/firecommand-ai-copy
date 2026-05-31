@@ -62,18 +62,25 @@ export default function IncidentPanel() {
 
   const incidentType = incident?.incident_type || 'structure_fire';
 
-  // Dynamic tab list — inject Hazmat or MCI tab before Photos
+  const isMVA = incidentType === 'vehicle_fire';
+
+  // Dynamic tab list — MVA gets a stripped-down set, others get full set
   const TABS = useMemo(() => {
+    if (isMVA) {
+      return [
+        { id: 'mva',     label: 'MVA',    icon: Car      },
+        { id: 'sitemap', label: 'Map',    icon: Map      },
+        { id: 'photos',  label: 'Photos', icon: Camera   },
+      ];
+    }
     const tabs = [...BASE_TABS];
     if (incidentType === 'hazmat') {
       tabs.splice(tabs.length - 1, 0, { id: 'hazmat', label: 'HazMat', icon: FlaskConical });
     } else if (incidentType === 'mci') {
       tabs.splice(tabs.length - 1, 0, { id: 'mci', label: 'MCI', icon: Ambulance });
-    } else if (incidentType === 'vehicle_fire') {
-      tabs.splice(tabs.length - 1, 0, { id: 'mva', label: 'MVA', icon: Car });
     }
     return tabs;
-  }, [incidentType]);
+  }, [incidentType, isMVA]);
 
   // Mutation with cache invalidation so tactical board refreshes immediately
   const updateUnitMutation = useMutation({
@@ -129,9 +136,9 @@ export default function IncidentPanel() {
           variant="ghost"
           size="sm"
           className={`gap-1.5 text-xs shrink-0 ${isMayday ? 'text-white hover:bg-red-700' : 'text-muted-foreground'}`}
-          onClick={() => navigate(`/incident/${incidentId}`)}
+          onClick={() => navigate(isMVA ? '/' : `/incident/${incidentId}`)}
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to Board
+          <ArrowLeft className="w-3.5 h-3.5" /> {isMVA ? 'Back to Incidents' : 'Back to Board'}
         </Button>
         <div className="flex-1 min-w-0">
           {incident && (
@@ -160,8 +167,8 @@ export default function IncidentPanel() {
             </button>
           ))}
 
-          {/* MAYDAY tab — always red */}
-          <button
+          {/* MAYDAY tab — not shown for MVA */}
+          {!isMVA && <button
             onClick={() => setSearchParams({ tab: 'mayday' })}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-semibold uppercase tracking-wider transition-colors
               ${isMayday
@@ -171,7 +178,7 @@ export default function IncidentPanel() {
           >
             <Siren className="w-3.5 h-3.5" />
             MAYDAY
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -246,7 +253,7 @@ export default function IncidentPanel() {
         )}
 
         {tab === 'mva' && (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-5xl mx-auto w-full px-2">
             <MVAPanel incidentId={incidentId} />
           </div>
         )}
