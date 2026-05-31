@@ -183,11 +183,11 @@ function PatientRow({ p, label, onUpdate, onRemove }) {
         </button>
       </div>
       {error && <p className="text-[10px] text-red-400 font-mono mb-1">{error}</p>}
-      {listening && <p className="text-[10px] text-green-400 font-mono mb-1 animate-pulse">Listening… say name, sex, DOB, severity, hospital</p>}
+      {listening && <p className="text-[10px] text-green-400 font-mono mb-1 animate-pulse">Listening… e.g. "John Smith male born June 3 1990 moderate Lahey"</p>}
 
       <div className="grid grid-cols-3 gap-2 mb-2">
         <Input value={p.name} onChange={e => onUpdate('name', e.target.value)}
-          placeholder="Last, First" className="h-8 text-xs font-mono bg-secondary/60" />
+          placeholder="First Last" className="h-8 text-xs font-mono bg-secondary/60" />
         <Select value={p.sex} onValueChange={v => onUpdate('sex', v)}>
           <SelectTrigger className="h-8 text-xs font-mono bg-secondary/60"><SelectValue placeholder="Sex…" /></SelectTrigger>
           <SelectContent>
