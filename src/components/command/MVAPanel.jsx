@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users, Mic, MicOff, Loader2, ExternalLink, Search, Phone, MapPin } from 'lucide-react';
+import { Car, Plus, Trash2, User, Ambulance, Camera, X, ChevronDown, ChevronUp, Users, Mic, MicOff, Loader2, ExternalLink, Search, Phone, MapPin, ScanLine } from 'lucide-react';
 
 // ── Insurance company website lookup ─────────────────────────────────────────
 const INSURANCE_SITES = {
@@ -68,6 +68,67 @@ function getInsuranceLink(company, city) {
 
 const WORKER_URL = 'https://anthripic-proxy.mplandry77.workers.dev';
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+// ── Document scanner helpers ──────────────────────────────────────────────────
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function scanDocumentWithAI(base64, mediaType, prompt) {
+  const resp = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  });
+  const data = await resp.json();
+  const text = (data.content || []).map(b => b.text || '').join('');
+  const match = text.replace(/```json/g,'').replace(/```/g,'').trim().match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('No JSON in response');
+  return JSON.parse(match[0]);
+}
+
+async function parseRegistrationScan(base64, mediaType) {
+  return scanDocumentWithAI(base64, mediaType, `This is a vehicle registration document or registration sticker. Extract all visible fields.
+
+Return ONLY valid JSON — use null for anything not visible:
+{"plate":"","state":"","vin":"","year":"","make":"","model":"","insuranceCompany":""}
+
+Rules:
+- plate: license plate number, uppercase, no spaces
+- state: 2-letter state abbreviation (e.g. "MA")
+- vin: 17-character VIN if visible
+- year: 4-digit model year
+- make: vehicle manufacturer (e.g. "Toyota", "Ford")
+- model: vehicle model (e.g. "Camry", "F-150")
+- insuranceCompany: insurance company name if shown on registration`);
+}
+
+async function parseIDScan(base64, mediaType) {
+  return scanDocumentWithAI(base64, mediaType, `This is a driver's license or state ID. Extract the fields.
+
+Return ONLY valid JSON — use null for anything not visible:
+{"name":"","dob":"","sex":""}
+
+Rules:
+- name: "First Last" format from the license
+- dob: date of birth as YYYY-MM-DD
+- sex: "male" or "female" based on the M/F field on the ID`);
+}
 
 // Parse spoken patient info into structured fields via AI
 async function parsePatientSpeech(transcript, hospitals) {
@@ -248,6 +309,46 @@ const emptyVehicle = () => ({
   expanded: true,
 });
 
+// ── Scan Registration button ──────────────────────────────────────────────────
+function ScanRegistrationButton({ onScanned }) {
+  const [scanning, setScanning] = useState(false);
+  const [error, setError]       = useState('');
+  const inputRef = useRef(null);
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    setError('');
+    setScanning(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const mediaType = file.type || 'image/jpeg';
+      const fields = await parseRegistrationScan(base64, mediaType);
+      onScanned(fields);
+    } catch {
+      setError('Scan failed — fill in manually');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5"
+        onClick={() => inputRef.current?.click()} disabled={scanning}>
+        {scanning
+          ? <><Loader2 className="w-3 h-3 animate-spin" /> Scanning…</>
+          : <><ScanLine className="w-3 h-3" /> Scan Registration</>
+        }
+      </Button>
+      {error && <span className="text-xs text-red-400 font-mono">{error}</span>}
+      <input ref={inputRef} type="file" accept="image/*" capture="environment"
+        className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
 // ── Insurance lookup section ──────────────────────────────────────────────────
 function InsuranceSection({ v, setVehicle }) {
   const [loading, setLoading] = useState(false);
@@ -307,36 +408,56 @@ function InsuranceSection({ v, setVehicle }) {
       )}
 
       {/* Phone */}
-      {(v.insurancePhone !== undefined) && (
-        <div className="flex items-center gap-2">
-          <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          <Input value={v.insurancePhone}
-            onChange={e => setVehicle(v.id, 'insurancePhone', e.target.value)}
-            placeholder="Claims phone number"
-            className="h-8 text-sm font-mono bg-secondary/60 flex-1" />
-          {v.insurancePhone && (
-            <a href={`tel:${v.insurancePhone.replace(/\D/g,'')}`}
-              className="text-xs font-mono text-primary hover:text-primary/80">Call</a>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <Input value={v.insurancePhone}
+          onChange={e => setVehicle(v.id, 'insurancePhone', e.target.value)}
+          placeholder="Claims phone number"
+          className="h-8 text-sm font-mono bg-secondary/60 flex-1" />
+        {v.insurancePhone && (
+          <a href={`tel:${v.insurancePhone.replace(/\D/g,'')}`}
+            className="text-xs font-mono text-primary hover:text-primary/80">Call</a>
+        )}
+      </div>
 
       {/* Address */}
-      {(v.insuranceAddress !== undefined) && (
-        <div className="flex items-start gap-2">
-          <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-2" />
-          <Input value={v.insuranceAddress}
-            onChange={e => setVehicle(v.id, 'insuranceAddress', e.target.value)}
-            placeholder="Office address"
-            className="h-8 text-sm font-mono bg-secondary/60 flex-1" />
-        </div>
-      )}
+      <div className="flex items-start gap-2">
+        <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-2" />
+        <Input value={v.insuranceAddress}
+          onChange={e => setVehicle(v.id, 'insuranceAddress', e.target.value)}
+          placeholder="Office address"
+          className="h-8 text-sm font-mono bg-secondary/60 flex-1" />
+      </div>
     </div>
   );
 }
 
-// ── Patient row with dictation support ────────────────────────────────────────
+// ── Patient row with dictation + ID scan support ─────────────────────────────
 function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
+  const [scanningId, setScanningId] = useState(false);
+  const [scanError, setScanError]   = useState('');
+  const idInputRef = useRef(null);
+
+  const handleIDFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    setScanError('');
+    setScanningId(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const mediaType = file.type || 'image/jpeg';
+      const fields = await parseIDScan(base64, mediaType);
+      if (fields.name) onUpdate('name', fields.name);
+      if (fields.dob)  onUpdate('dob',  fields.dob);
+      if (fields.sex)  onUpdate('sex',  fields.sex);
+    } catch {
+      setScanError('ID scan failed');
+    } finally {
+      setScanningId(false);
+    }
+  };
+
   const { listening, processing, interim, error, start, stop } = usePatientDictation((parsed) => {
     if (parsed.name     !== null) onUpdate('name',     parsed.name);
     if (parsed.sex      !== null) onUpdate('sex',      parsed.sex);
@@ -396,11 +517,26 @@ function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
             }
           </button>
         )}
+        {/* Scan ID button */}
+        <button
+          onClick={() => idInputRef.current?.click()}
+          disabled={scanningId}
+          title="Scan driver's license"
+          className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border transition-colors bg-secondary/40 text-muted-foreground border-border/40 hover:text-foreground hover:border-border disabled:opacity-50"
+        >
+          {scanningId
+            ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Scanning…</>
+            : <><ScanLine className="w-2.5 h-2.5" /> Scan ID</>
+          }
+        </button>
+        <input ref={idInputRef} type="file" accept="image/*" capture="environment"
+          className="hidden" onChange={handleIDFile} />
+
         <button onClick={onRemove} className="ml-auto text-muted-foreground hover:text-red-400 transition-colors">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
-      {error && <p className="text-[10px] text-red-400 font-mono mb-1">{error}</p>}
+      {(error || scanError) && <p className="text-[10px] text-red-400 font-mono mb-1">{error || scanError}</p>}
       {listening && (
         <div className="text-[10px] font-mono mb-1 space-y-0.5">
           <p><span className="text-green-400 animate-pulse">● Listening — tap Stop when done</span></p>
@@ -599,6 +735,16 @@ export default function MVAPanel({ incidentId }) {
 
               {v.expanded && (
                 <div className="p-4 space-y-3 bg-card/30">
+                  {/* Scan Registration */}
+                  <ScanRegistrationButton onScanned={(fields) => {
+                    if (fields.plate)            setVehicle(v.id, 'plate',            fields.plate);
+                    if (fields.state)            setVehicle(v.id, 'state',            fields.state);
+                    if (fields.vin)              setVehicle(v.id, 'vin',              fields.vin);
+                    if (fields.year)             setVehicle(v.id, 'year',             fields.year);
+                    if (fields.make)             setVehicle(v.id, 'make',             fields.make);
+                    if (fields.model)            setVehicle(v.id, 'model',            fields.model);
+                    if (fields.insuranceCompany) setVehicle(v.id, 'insuranceCompany', fields.insuranceCompany);
+                  }} />
                   {/* Plate + State */}
                   <div className="grid grid-cols-3 gap-3">
                     <div>
