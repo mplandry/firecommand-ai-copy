@@ -139,7 +139,7 @@ const emptyVehicle = () => ({
 });
 
 // ── Patient row with dictation support ────────────────────────────────────────
-function PatientRow({ p, label, onUpdate, onRemove }) {
+function PatientRow({ p, label, onUpdate, onRemove, driverTaken }) {
   const { listening, processing, error, start, stop } = usePatientDictation((parsed) => {
     if (parsed.name     !== null) onUpdate('name',     parsed.name);
     if (parsed.sex      !== null) onUpdate('sex',      parsed.sex);
@@ -153,8 +153,29 @@ function PatientRow({ p, label, onUpdate, onRemove }) {
 
   return (
     <div className="px-4 py-3 bg-card/20">
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
         <span className="text-xs font-mono font-bold text-muted-foreground">{label}</span>
+        {/* Position dropdown */}
+        <Select value={p.position} onValueChange={v => onUpdate('position', v)}>
+          <SelectTrigger className={`h-6 text-[10px] font-mono w-36 border transition-colors ${
+            p.position === 'Driver'
+              ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+              : 'bg-secondary/60 border-border/40 text-muted-foreground'
+          }`}>
+            <SelectValue placeholder="Position…" />
+          </SelectTrigger>
+          <SelectContent>
+            {POSITIONS.map(pos => (
+              <SelectItem
+                key={pos}
+                value={pos}
+                disabled={pos === 'Driver' && driverTaken && p.position !== 'Driver'}
+              >
+                {pos === 'Driver' && driverTaken && p.position !== 'Driver' ? 'Driver (assigned)' : pos}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${sev.color}`}>{sev.label}</span>
         {/* Dictate button */}
         {SpeechRecognition && (
@@ -222,9 +243,12 @@ function PatientRow({ p, label, onUpdate, onRemove }) {
   );
 }
 
+const POSITIONS = ['Driver', 'Front Passenger', 'Middle Passenger', 'Rear Passenger', 'Unknown'];
+
 const emptyPatient = (vehicleId) => ({
   id: nextPid++,
   vehicleId,
+  position: '',
   name: '', severity: 'minor', sex: '', dob: '', hospital: '', notes: '',
 });
 
@@ -474,15 +498,19 @@ export default function MVAPanel({ incidentId }) {
               {/* Patient records for this vehicle */}
               {vPatients.length > 0 && (
                 <div className="border-t border-border/40 divide-y divide-border/30">
-                  {vPatients.map((p, pIdx) => (
-                    <PatientRow
-                      key={p.id}
-                      p={p}
-                      label={`V${vIdx + 1} · Patient ${pIdx + 1}`}
-                      onUpdate={(field, val) => setPatient(p.id, field, val)}
-                      onRemove={() => removePatient(p.id)}
-                    />
-                  ))}
+                  {vPatients.map((p, pIdx) => {
+                    const driverTaken = vPatients.some(op => op.id !== p.id && op.position === 'Driver');
+                    return (
+                      <PatientRow
+                        key={p.id}
+                        p={p}
+                        label={`V${vIdx + 1} · Patient ${pIdx + 1}`}
+                        onUpdate={(field, val) => setPatient(p.id, field, val)}
+                        onRemove={() => removePatient(p.id)}
+                        driverTaken={driverTaken}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
